@@ -1,85 +1,85 @@
 # CODEOWNERS — har papkaga avtomatik reviewer biriktiradi.
 # PR shu fayllarga tegsa, tegishli egaga review so'rovi avtomatik yuboriladi.
 #
-# ⚠️ MUHIM: quyidagi @username lar HAQIQIY GitHub login'lar bilan almashtirilsin!
-#   @sardor      → Sardorning GitHub username'i
-#   @fazilov     → Fazilovning GitHub username'i
-#   @hidoyatov   → Hidoyatovning GitHub username'i
-# Ular repo'ga write huquqli collaborator bo'lishi shart, aks holda qoida ishlamaydi.
+# GitHub akkauntlar:
+#   @SARDORALOYEV → Sardor    (Xavfsizlik & Anti-cheat)
+#   @Kamron5505   → Fazilov   (UI dizayn & Test kontenti)
+#   @zone24uzz    → Hidoyatov (Admin, E'lonlar, Filtrlar)
+# Uchalasi ham repo'ga write huquqli collaborator bo'lishi shart.
 #
 # Qoida: pastdagi mos keluvchi ENG OXIRGI satr g'olib bo'ladi (last match wins).
 
 # ---------------------------------------------------------------------------
 # Default — umumiy/infra fayllar: uchalasi ham ko'radi
 # ---------------------------------------------------------------------------
-*                                   @sardor @fazilov @hidoyatov
-/CLAUDE.md                          @sardor @fazilov @hidoyatov
-/package.json                       @sardor @fazilov @hidoyatov
-/docs/team/README.md                @sardor @fazilov @hidoyatov
+*                                   @SARDORALOYEV @Kamron5505 @zone24uzz
+/CLAUDE.md                          @SARDORALOYEV @Kamron5505 @zone24uzz
+/package.json                       @SARDORALOYEV @Kamron5505 @zone24uzz
+/docs/team/README.md                @SARDORALOYEV @Kamron5505 @zone24uzz
 
 # Umumiy frontend fayllar (birgalikda ehtiyot bo'linadi)
-/frontend/src/lib/api.ts            @sardor @fazilov @hidoyatov
-/frontend/src/types/                @sardor @fazilov @hidoyatov
-/frontend/messages/                 @fazilov @sardor @hidoyatov
-/backend/src/routes/index.ts        @sardor @fazilov @hidoyatov
+/frontend/src/lib/api.ts            @SARDORALOYEV @Kamron5505 @zone24uzz
+/frontend/src/types/                @SARDORALOYEV @Kamron5505 @zone24uzz
+/frontend/messages/                 @Kamron5505 @SARDORALOYEV @zone24uzz
+/backend/src/routes/index.ts        @SARDORALOYEV @Kamron5505 @zone24uzz
 
 # ===========================================================================
 # 🔐 SARDOR — Xavfsizlik, Anti-cheat, Auth, Infra
 # ===========================================================================
-/backend/src/config/                @sardor
-/backend/src/utils/                 @sardor
-/backend/src/middleware/            @sardor
-/backend/src/sockets/               @sardor
-/backend/src/controllers/authController.ts   @sardor
-/backend/src/routes/authRoutes.ts   @sardor
-/backend/src/models/User.ts         @sardor
-/backend/src/models/Session.ts      @sardor
+/backend/src/config/                @SARDORALOYEV
+/backend/src/utils/                 @SARDORALOYEV
+/backend/src/middleware/            @SARDORALOYEV
+/backend/src/sockets/               @SARDORALOYEV
+/backend/src/controllers/authController.ts   @SARDORALOYEV
+/backend/src/routes/authRoutes.ts   @SARDORALOYEV
+/backend/src/models/User.ts         @SARDORALOYEV
+/backend/src/models/Session.ts      @SARDORALOYEV
 # Test engine yadrosi (kontent Fazilovniki — pastda qayta belgilanadi)
-/backend/src/controllers/testController.ts   @sardor
-/backend/src/routes/testRoutes.ts   @sardor
-/backend/src/services/              @sardor
-/backend/src/models/Question.ts     @sardor
-/backend/src/validation/testSchemas.ts       @sardor
+/backend/src/controllers/testController.ts   @SARDORALOYEV
+/backend/src/routes/testRoutes.ts   @SARDORALOYEV
+/backend/src/services/              @SARDORALOYEV
+/backend/src/models/Question.ts     @SARDORALOYEV
+/backend/src/validation/testSchemas.ts       @SARDORALOYEV
 # Frontend: anti-cheat, socket, login
-/frontend/src/hooks/                @sardor
-/frontend/src/lib/socket.ts         @sardor
-/frontend/src/components/AntiCheatBanner.tsx @sardor
-/frontend/src/components/ViolationDialog.tsx @sardor
-/frontend/src/app/[locale]/login/   @sardor
-/docs/team/Sardor.md                @sardor
+/frontend/src/hooks/                @SARDORALOYEV
+/frontend/src/lib/socket.ts         @SARDORALOYEV
+/frontend/src/components/AntiCheatBanner.tsx @SARDORALOYEV
+/frontend/src/components/ViolationDialog.tsx @SARDORALOYEV
+/frontend/src/app/[locale]/login/   @SARDORALOYEV
+/docs/team/Sardor.md                @SARDORALOYEV
 
 # ===========================================================================
 # 🎨 FAZILOV — UI dizayn & Test kontenti
 # ===========================================================================
-/backend/src/data/                  @fazilov
-/backend/src/config/catalog.ts      @fazilov
-/frontend/src/components/ui/         @fazilov
-/frontend/src/components/theme-provider.tsx  @fazilov
-/frontend/src/components/theme-toggle.tsx    @fazilov
-/frontend/src/components/badges.tsx @fazilov
-/frontend/src/components/rating.tsx @fazilov
-/frontend/src/components/locale-switcher.tsx @fazilov
-/frontend/src/app/globals.css       @fazilov
-/frontend/src/app/[locale]/layout.tsx        @fazilov
-/frontend/src/app/[locale]/test/    @fazilov
-/frontend/src/components/QuestionCard.tsx    @fazilov
-/frontend/src/components/Timer.tsx  @fazilov
-/frontend/src/components/ResultCard.tsx      @fazilov
-/docs/team/Fazilov.md               @fazilov
+/backend/src/data/                  @Kamron5505
+/backend/src/config/catalog.ts      @Kamron5505
+/frontend/src/components/ui/         @Kamron5505
+/frontend/src/components/theme-provider.tsx  @Kamron5505
+/frontend/src/components/theme-toggle.tsx    @Kamron5505
+/frontend/src/components/badges.tsx @Kamron5505
+/frontend/src/components/rating.tsx @Kamron5505
+/frontend/src/components/locale-switcher.tsx @Kamron5505
+/frontend/src/app/globals.css       @Kamron5505
+/frontend/src/app/[locale]/layout.tsx        @Kamron5505
+/frontend/src/app/[locale]/test/    @Kamron5505
+/frontend/src/components/QuestionCard.tsx    @Kamron5505
+/frontend/src/components/Timer.tsx  @Kamron5505
+/frontend/src/components/ResultCard.tsx      @Kamron5505
+/docs/team/Fazilov.md               @Kamron5505
 
 # ===========================================================================
 # 🛠 HIDOYATOV — Admin, E'lonlar, Filtrlar, Narxlar
 # ===========================================================================
-/backend/src/controllers/jobController.ts    @hidoyatov
-/backend/src/controllers/userController.ts   @hidoyatov
-/backend/src/routes/jobRoutes.ts    @hidoyatov
-/backend/src/routes/userRoutes.ts   @hidoyatov
-/backend/src/models/Job.ts          @hidoyatov
-/backend/src/validation/jobSchemas.ts        @hidoyatov
-/frontend/src/app/[locale]/page.tsx @hidoyatov
-/frontend/src/app/[locale]/jobs/    @hidoyatov
-/frontend/src/app/[locale]/leaderboard/      @hidoyatov
-/frontend/src/components/JobCard.tsx         @hidoyatov
-/frontend/src/components/JobDetailDialog.tsx @hidoyatov
-/frontend/src/components/SiteNav.tsx         @hidoyatov
-/docs/team/Hidoyatov.md             @hidoyatov
+/backend/src/controllers/jobController.ts    @zone24uzz
+/backend/src/controllers/userController.ts   @zone24uzz
+/backend/src/routes/jobRoutes.ts    @zone24uzz
+/backend/src/routes/userRoutes.ts   @zone24uzz
+/backend/src/models/Job.ts          @zone24uzz
+/backend/src/validation/jobSchemas.ts        @zone24uzz
+/frontend/src/app/[locale]/page.tsx @zone24uzz
+/frontend/src/app/[locale]/jobs/    @zone24uzz
+/frontend/src/app/[locale]/leaderboard/      @zone24uzz
+/frontend/src/components/JobCard.tsx         @zone24uzz
+/frontend/src/components/JobDetailDialog.tsx @zone24uzz
+/frontend/src/components/SiteNav.tsx         @zone24uzz
+/docs/team/Hidoyatov.md             @zone24uzz

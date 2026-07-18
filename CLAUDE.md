@@ -91,8 +91,8 @@ bo'limini qo'shadi, kichik va tez-tez PR qiladi.
 - Branch nomi ish bo'yicha: `feature/...`, `fix/...`, `content/...`.
 - Har kuni `git pull origin main`. `.env` fayllar **hech qachon** commit qilinmaydi.
 - **PR shabloni:** `.github/pull_request_template.md` — har PR'da checklist avtomatik chiqadi.
-- **CODEOWNERS:** `.github/CODEOWNERS` — har papkaga avtomatik reviewer biriktiradi
-  (⚠️ ichidagi `@sardor/@fazilov/@hidoyatov` haqiqiy GitHub username'lar bilan almashtirilsin).
+- **CODEOWNERS:** `.github/CODEOWNERS` — har papkaga avtomatik reviewer biriktiradi.
+  GitHub akkauntlar: Sardor=`@SARDORALOYEV`, Fazilov=`@Kamron5505`, Hidoyatov=`@zone24uzz`.
 
 ## 📝 Hujjatlarni yangilab borish (MAJBURIY)
 

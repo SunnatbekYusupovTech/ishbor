@@ -3,11 +3,11 @@
 Loyiha 3 o'quvchiga bo'lingan. Har kim o'z domenining **backend + frontend** qismini
 to'liq egallaydi (full-stack). Batafsil vazifalar har kimning faylida.
 
-| O'quvchi | Domen | Fayl |
-|---|---|---|
-| **Sardor** | 🔐 Xavfsizlik & Anti-cheat (eng og'ir yadro) | [Sardor.md](./Sardor.md) |
-| **Fazilov** | 🎨 UI dizayn & Test kontenti (har stack uchun savollar) | [Fazilov.md](./Fazilov.md) |
-| **Hidoyatov** | 🛠 Admin panel, e'lonlar, filtrlar, narxlar, buglar | [Hidoyatov.md](./Hidoyatov.md) |
+| O'quvchi | GitHub | Domen | Fayl |
+|---|---|---|---|
+| **Sardor** | [@SARDORALOYEV](https://github.com/SARDORALOYEV) | 🔐 Xavfsizlik & Anti-cheat (eng og'ir yadro) | [Sardor.md](./Sardor.md) |
+| **Fazilov** | [@Kamron5505](https://github.com/Kamron5505) | 🎨 UI dizayn & Test kontenti (har stack uchun savollar) | [Fazilov.md](./Fazilov.md) |
+| **Hidoyatov** | [@zone24uzz](https://github.com/zone24uzz) | 🛠 Admin panel, e'lonlar, filtrlar, narxlar, buglar | [Hidoyatov.md](./Hidoyatov.md) |
 
 ## Umumiy fayllar (hamma tegadi — ehtiyot bo'ling)
 
