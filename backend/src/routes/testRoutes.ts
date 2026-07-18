@@ -1,0 +1,26 @@
+import { Router } from 'express';
+import {
+  getCatalog,
+  startTest,
+  submitTest,
+  recordTabSwitch,
+  getSession,
+} from '@/controllers/testController';
+import { authenticate } from '@/middleware/authenticate';
+import { validate } from '@/middleware/validate';
+import { startTestSchema, submitTestSchema, tabSwitchSchema } from '@/validation/testSchemas';
+
+const router = Router();
+
+// Public — taxonomy for the technology picker.
+router.get('/catalog', getCatalog);
+
+// Every other assessment route requires a valid candidate token.
+router.use(authenticate);
+
+router.post('/start', validate(startTestSchema), startTest);
+router.post('/submit', validate(submitTestSchema), submitTest);
+router.post('/tab-switch', validate(tabSwitchSchema), recordTabSwitch);
+router.get('/session/:sessionId', getSession);
+
+export default router;
