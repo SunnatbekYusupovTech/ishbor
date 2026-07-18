@@ -1,0 +1,85 @@
+# CODEOWNERS — har papkaga avtomatik reviewer biriktiradi.
+# PR shu fayllarga tegsa, tegishli egaga review so'rovi avtomatik yuboriladi.
+#
+# ⚠️ MUHIM: quyidagi @username lar HAQIQIY GitHub login'lar bilan almashtirilsin!
+#   @sardor      → Sardorning GitHub username'i
+#   @fazilov     → Fazilovning GitHub username'i
+#   @hidoyatov   → Hidoyatovning GitHub username'i
+# Ular repo'ga write huquqli collaborator bo'lishi shart, aks holda qoida ishlamaydi.
+#
+# Qoida: pastdagi mos keluvchi ENG OXIRGI satr g'olib bo'ladi (last match wins).
+
+# ---------------------------------------------------------------------------
+# Default — umumiy/infra fayllar: uchalasi ham ko'radi
+# ---------------------------------------------------------------------------
+*                                   @sardor @fazilov @hidoyatov
+/CLAUDE.md                          @sardor @fazilov @hidoyatov
+/package.json                       @sardor @fazilov @hidoyatov
+/docs/team/README.md                @sardor @fazilov @hidoyatov
+
+# Umumiy frontend fayllar (birgalikda ehtiyot bo'linadi)
+/frontend/src/lib/api.ts            @sardor @fazilov @hidoyatov
+/frontend/src/types/                @sardor @fazilov @hidoyatov
+/frontend/messages/                 @fazilov @sardor @hidoyatov
+/backend/src/routes/index.ts        @sardor @fazilov @hidoyatov
+
+# ===========================================================================
+# 🔐 SARDOR — Xavfsizlik, Anti-cheat, Auth, Infra
+# ===========================================================================
+/backend/src/config/                @sardor
+/backend/src/utils/                 @sardor
+/backend/src/middleware/            @sardor
+/backend/src/sockets/               @sardor
+/backend/src/controllers/authController.ts   @sardor
+/backend/src/routes/authRoutes.ts   @sardor
+/backend/src/models/User.ts         @sardor
+/backend/src/models/Session.ts      @sardor
+# Test engine yadrosi (kontent Fazilovniki — pastda qayta belgilanadi)
+/backend/src/controllers/testController.ts   @sardor
+/backend/src/routes/testRoutes.ts   @sardor
+/backend/src/services/              @sardor
+/backend/src/models/Question.ts     @sardor
+/backend/src/validation/testSchemas.ts       @sardor
+# Frontend: anti-cheat, socket, login
+/frontend/src/hooks/                @sardor
+/frontend/src/lib/socket.ts         @sardor
+/frontend/src/components/AntiCheatBanner.tsx @sardor
+/frontend/src/components/ViolationDialog.tsx @sardor
+/frontend/src/app/[locale]/login/   @sardor
+/docs/team/Sardor.md                @sardor
+
+# ===========================================================================
+# 🎨 FAZILOV — UI dizayn & Test kontenti
+# ===========================================================================
+/backend/src/data/                  @fazilov
+/backend/src/config/catalog.ts      @fazilov
+/frontend/src/components/ui/         @fazilov
+/frontend/src/components/theme-provider.tsx  @fazilov
+/frontend/src/components/theme-toggle.tsx    @fazilov
+/frontend/src/components/badges.tsx @fazilov
+/frontend/src/components/rating.tsx @fazilov
+/frontend/src/components/locale-switcher.tsx @fazilov
+/frontend/src/app/globals.css       @fazilov
+/frontend/src/app/[locale]/layout.tsx        @fazilov
+/frontend/src/app/[locale]/test/    @fazilov
+/frontend/src/components/QuestionCard.tsx    @fazilov
+/frontend/src/components/Timer.tsx  @fazilov
+/frontend/src/components/ResultCard.tsx      @fazilov
+/docs/team/Fazilov.md               @fazilov
+
+# ===========================================================================
+# 🛠 HIDOYATOV — Admin, E'lonlar, Filtrlar, Narxlar
+# ===========================================================================
+/backend/src/controllers/jobController.ts    @hidoyatov
+/backend/src/controllers/userController.ts   @hidoyatov
+/backend/src/routes/jobRoutes.ts    @hidoyatov
+/backend/src/routes/userRoutes.ts   @hidoyatov
+/backend/src/models/Job.ts          @hidoyatov
+/backend/src/validation/jobSchemas.ts        @hidoyatov
+/frontend/src/app/[locale]/page.tsx @hidoyatov
+/frontend/src/app/[locale]/jobs/    @hidoyatov
+/frontend/src/app/[locale]/leaderboard/      @hidoyatov
+/frontend/src/components/JobCard.tsx         @hidoyatov
+/frontend/src/components/JobDetailDialog.tsx @hidoyatov
+/frontend/src/components/SiteNav.tsx         @hidoyatov
+/docs/team/Hidoyatov.md             @hidoyatov
