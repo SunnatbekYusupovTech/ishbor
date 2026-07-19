@@ -19,7 +19,7 @@ import {
 
 /** Seconds allotted per question on the client — mirrored here to size the
  *  server-side deadline (with a buffer) so long selections never expire early. */
-const PER_QUESTION_SECONDS = 30;
+const PER_QUESTION_SECONDS = 20;
 const DEADLINE_BUFFER_MS = 120_000;
 
 /**

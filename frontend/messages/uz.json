@@ -142,7 +142,7 @@
     "selectIntro": "Yo'nalishingizni tanlang va bilgan texnologiyalaringizni belgilang. Har biri bo'yicha eng qiyin savollar beriladi.",
     "chooseDirection": "Yo'nalishni tanlang",
     "chooseTech": "Texnologiyalarni belgilang",
-    "techHint": "Har bir texnologiya bo'yicha {count} ta savol. Har savolga 30 soniya.",
+    "techHint": "Har bir texnologiya bo'yicha {count} ta savol. Har savolga 20 soniya.",
     "selectedSummary": "{techs} texnologiya · {questions} savol",
     "startTest": "Testni boshlash",
     "progress": "Savol {current} / {total}",

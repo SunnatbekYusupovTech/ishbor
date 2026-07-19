@@ -33,7 +33,7 @@ export default function TestPage() {
   const [session, setSession] = useState<StartTestResponse | null>(null);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [secondsLeft, setSecondsLeft] = useState(30);
+  const [secondsLeft, setSecondsLeft] = useState(20);
   const [result, setResult] = useState<SubmitTestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,7 +91,7 @@ export default function TestPage() {
   // Per-question countdown: resets each question, auto-advances at zero.
   useEffect(() => {
     if (phase !== 'active') return;
-    const perQ = sessionRef.current?.perQuestionSeconds ?? 30;
+    const perQ = sessionRef.current?.perQuestionSeconds ?? 20;
     setSecondsLeft(perQ);
     const id = setInterval(() => {
       setSecondsLeft((s) => {
@@ -264,7 +264,7 @@ export default function TestPage() {
   const total = session.questions.length;
   const selected = answers[question._id];
   const isLast = index + 1 >= total;
-  const perQ = session.perQuestionSeconds || 30;
+  const perQ = session.perQuestionSeconds || 20;
   const timePercent = (secondsLeft / perQ) * 100;
   const urgent = secondsLeft <= 10;
 

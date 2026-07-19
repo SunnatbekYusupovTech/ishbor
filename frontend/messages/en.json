@@ -142,7 +142,7 @@
     "selectIntro": "Choose your direction and mark the technologies you know. You'll get the hardest questions for each.",
     "chooseDirection": "Choose a direction",
     "chooseTech": "Mark your technologies",
-    "techHint": "{count} questions per technology. 30 seconds each.",
+    "techHint": "{count} questions per technology. 20 seconds each.",
     "selectedSummary": "{techs} technologies · {questions} questions",
     "startTest": "Start the test",
     "progress": "Question {current} / {total}",
