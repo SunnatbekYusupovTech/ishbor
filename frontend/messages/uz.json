@@ -10,7 +10,9 @@
     "leaderboard": "Reyting",
     "post": "E'lon berish",
     "login": "Kirish",
-    "logout": "Chiqish"
+    "logout": "Chiqish",
+    "logoutAll": "Barcha qurilmalardan",
+    "logoutAllConfirm": "Barcha qurilmalardan chiqishni xohlaysizmi? Boshqa telefon/kompyuterlardagi kirishlar ham bekor qilinadi."
   },
   "auth": {
     "title": "Ishbor Malaka Tasdig'i",
@@ -28,7 +30,9 @@
     "createAccount": "Hisob yaratish va davom etish",
     "logIn": "Kirish",
     "pleaseWait": "Iltimos, kuting…",
-    "genericError": "Nimadir xato ketdi."
+    "genericError": "Nimadir xato ketdi.",
+    "passwordPolicyHint": "Kamida 8 belgi: katta va kichik harf, raqam va maxsus belgi (masalan !@#$) bo'lishi kerak.",
+    "passwordPolicyError": "Parol kamida 8 belgi bo'lib, katta-kichik harf, raqam va maxsus belgi o'z ichiga olishi kerak."
   },
   "jobs": {
     "title": "Ish e'lonlari",
@@ -142,7 +146,7 @@
     "selectIntro": "Yo'nalishingizni tanlang va bilgan texnologiyalaringizni belgilang. Har biri bo'yicha eng qiyin savollar beriladi.",
     "chooseDirection": "Yo'nalishni tanlang",
     "chooseTech": "Texnologiyalarni belgilang",
-    "techHint": "Har bir texnologiya bo'yicha {count} ta savol. Har savolga 30 soniya.",
+    "techHint": "Har bir texnologiya bo'yicha {count} ta savol. Har savolga 20 soniya.",
     "selectedSummary": "{techs} texnologiya · {questions} savol",
     "startTest": "Testni boshlash",
     "progress": "Savol {current} / {total}",
@@ -167,5 +171,21 @@
     "levelJunior": "Junior Tasdiqlangan",
     "levelMiddle": "Middle Tasdiqlangan",
     "levelSenior": "Senior Tasdiqlangan"
+  },
+  "proctor": {
+    "limitUnknown": "noma'lum",
+    "active": "Nazorat faol",
+    "reconnecting": "Qayta ulanmoqda…",
+    "tabSwitches": "{count} / {max} oyna almashtirish",
+    "violations": "{count} / {max} boshqa qoidabuzarlik",
+    "warningsLeft": "{remaining} ta ogohlantirish qoldi",
+    "violationTitle": "Qoidabuzarlik aniqlandi",
+    "violationBody": "Test oynasidan chiqib ketdingiz. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
+    "violationBodyCopyPaste": "Nusxa ko'chirish yoki qo'yish aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
+    "violationBodyRightClick": "O'ng tugma menyusi aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
+    "violationBodyScreenshot": "Skrinshot olishga urinish (PrintScreen) aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
+    "violationBodyDevtools": "Brauzer Dasturchi paneli (DevTools) ochilgani aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
+    "violationRemaining": "Yana {remaining} marta shunday qilsangiz test tugatiladi.",
+    "acknowledge": "Tushundim"
   }
 }

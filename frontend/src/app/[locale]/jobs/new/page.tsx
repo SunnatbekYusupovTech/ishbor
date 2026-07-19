@@ -14,6 +14,16 @@ import { cn } from '@/lib/utils';
 const LEVELS: Level[] = ['junior', 'middle', 'senior'];
 const STACKS: Stack[] = ['frontend', 'backend', 'fullstack', 'mobile'];
 
+// Formats the part after the fixed "+998" prefix as the user types: XX-XXX-XX-XX.
+function formatUzPhoneLocal(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 9);
+  let out = digits.slice(0, 2);
+  if (digits.length > 2) out += `-${digits.slice(2, 5)}`;
+  if (digits.length > 5) out += `-${digits.slice(5, 7)}`;
+  if (digits.length > 7) out += `-${digits.slice(7, 9)}`;
+  return out;
+}
+
 type Gate = 'checking' | 'unverified' | 'ready';
 
 export default function NewJobPage() {
@@ -94,9 +104,16 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [phoneLocal, setPhoneLocal] = useState('');
 
   const set = <K extends keyof CreateJobInput>(k: K, v: CreateJobInput[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
+
+  const onPhoneChange = (raw: string) => {
+    const formatted = formatUzPhoneLocal(raw);
+    setPhoneLocal(formatted);
+    set('contactPhone', formatted ? `+998 ${formatted}` : '');
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,12 +231,19 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
                 />
               </Field>
               <Field label={t('phone')}>
-                <input
-                  value={form.contactPhone}
-                  onChange={(e) => set('contactPhone', e.target.value)}
-                  placeholder="+998..."
-                  className={inputCls}
-                />
+                <div className="flex">
+                  <div className="flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                    +998
+                  </div>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={phoneLocal}
+                    onChange={(e) => onPhoneChange(e.target.value)}
+                    placeholder="90-123-45-67"
+                    className={cn(inputCls, 'rounded-l-none')}
+                  />
+                </div>
               </Field>
             </div>
 

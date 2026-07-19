@@ -10,7 +10,9 @@
     "leaderboard": "Leaderboard",
     "post": "Post a job",
     "login": "Log in",
-    "logout": "Log out"
+    "logout": "Log out",
+    "logoutAll": "All devices",
+    "logoutAllConfirm": "Sign out of all devices? Sessions on your other phones/computers will end too."
   },
   "auth": {
     "title": "Ishbor Skill Verification",
@@ -28,7 +30,9 @@
     "createAccount": "Create account and continue",
     "logIn": "Log in",
     "pleaseWait": "Please wait…",
-    "genericError": "Something went wrong."
+    "genericError": "Something went wrong.",
+    "passwordPolicyHint": "At least 8 characters: uppercase, lowercase, a number, and a symbol (e.g. !@#$).",
+    "passwordPolicyError": "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol."
   },
   "jobs": {
     "title": "Job listings",
@@ -142,7 +146,7 @@
     "selectIntro": "Choose your direction and mark the technologies you know. You'll get the hardest questions for each.",
     "chooseDirection": "Choose a direction",
     "chooseTech": "Mark your technologies",
-    "techHint": "{count} questions per technology. 30 seconds each.",
+    "techHint": "{count} questions per technology. 20 seconds each.",
     "selectedSummary": "{techs} technologies · {questions} questions",
     "startTest": "Start the test",
     "progress": "Question {current} / {total}",
@@ -167,5 +171,21 @@
     "levelJunior": "Junior Verified",
     "levelMiddle": "Middle Verified",
     "levelSenior": "Senior Verified"
+  },
+  "proctor": {
+    "limitUnknown": "unknown",
+    "active": "Monitoring active",
+    "reconnecting": "Reconnecting…",
+    "tabSwitches": "{count} / {max} tab switches",
+    "violations": "{count} / {max} other violations",
+    "warningsLeft": "{remaining} warnings left",
+    "violationTitle": "Violation detected",
+    "violationBody": "You left the test window. This has been logged as a violation — exceeding the limit will end the test automatically.",
+    "violationBodyCopyPaste": "Copy or paste was detected. This has been logged as a violation — exceeding the limit will end the test automatically.",
+    "violationBodyRightClick": "Right-click / context menu was detected. This has been logged as a violation — exceeding the limit will end the test automatically.",
+    "violationBodyScreenshot": "A screenshot attempt (PrintScreen) was detected. This has been logged as a violation — exceeding the limit will end the test automatically.",
+    "violationBodyDevtools": "The browser DevTools panel was detected as open. This has been logged as a violation — exceeding the limit will end the test automatically.",
+    "violationRemaining": "{remaining} more and the test will be terminated.",
+    "acknowledge": "Got it"
   }
 }

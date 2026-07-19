@@ -42,17 +42,36 @@ Autentifikatsiya, xavfsizlik, anti-cheat tizimi va backend infratuzilmasi. Foyda
 
 ## 🚀 Yangi vazifalar (doimiy ish)
 
-- [ ] **Anti-cheat kuchaytirish:** copy/paste bloklash, DevTools aniqlash, ko'p oyna/tab nazorati, right-click va screenshot ogohlantirish
-- [ ] **Server tomonda taymer nazorati** — klient vaqtni aldab bo'lmasin (⚠️ eng muhim)
-- [ ] **Rate-limiting** + `helmet` + input sanitizatsiya (brute-force va injection himoyasi)
-- [ ] **JWT refresh token** + parol siyosati + sessiyani majburan bekor qilish
-- [ ] Anti-cheat hodisalarini loglash va admin panelga uzatish
+- [x] **Anti-cheat kuchaytirish:** ~~copy/paste bloklash~~ ✅, ~~DevTools aniqlash~~ ✅, ~~ko'p oyna/tab nazorati~~ ✅
+      (fullscreen-asosli, brauzer cheklovi sababli 100% oldini olib bo'lmaydi — batafsili notepadda),
+      ~~right-click va screenshot ogohlantirish~~ ✅ (screenshot faqat PrintScreen holatida — texnik chegara, batafsili notepadda)
+      — barcha kod tomoni tugadi. **Real brauzerda qo'lda tekshirildi (2026-07-19):** boshqa tabga
+      o'tilganda `ViolationDialog` to'g'ri chiqdi va ogohlantirdi — qo'lda tekshirish bosqichi yopildi.
+      Shu safar kichik i18n xatosi ham topildi va tuzatildi: `AntiCheatBanner.tsx`da limit hali
+      noma'lum bo'lganda literal inglizcha `'none'` so'zi qattiq yozilgan edi (uz/ru interfeysida ham
+      shunday chiqardi) — endi `proctor.limitUnknown` tarjima kaliti orqali uch tilda to'g'ri ko'rsatiladi.
+- [x] **Server tomonda taymer nazorati** — `testController.ts`da `Session.deadline` bilan tekshiriladi (⚠️ eng muhim, tasdiqlandi)
+- [x] **Rate-limiting** — `middleware/rateLimiter.ts`, `/auth/login` va `/auth/register` uchun 15 daqiqada 10 urinish (2026-07-19)
+- [x] Input sanitizatsiya (NoSQL injection himoyasi) — `middleware/sanitize.ts`, global ulandi (2026-07-19)
+- [x] `helmet` sozlamalarini qattiqlashtirish — CSP, CORP, shartli HSTS (2026-07-19)
+- [x] **JWT refresh token** — opaque token + `RefreshToken` modeli, rotatsiya,
+      `POST /auth/refresh`/`logout`, frontendda avtomatik yangilash oqimi (2026-07-19)
+- [x] **Parol siyosati** — faqat register uchun murakkablik talabi, login har doim
+      qabul qiladi (legacy foydalanuvchilar qulflanib qolmasin) (2026-07-19)
+- [x] **Sessiyani majburan bekor qilish** — `POST /auth/logout-all`, barcha
+      refresh tokenlarni bekor qiladi, `SiteNav`da UI (⚠️ Fazilov bilan
+      joylashuv hali kelishilmagan) (2026-07-19)
+- [x] Anti-cheat hodisalarini loglash va admin panelga uzatish — `GET /api/admin/violations`
+      kod tomoni tayyor (taklif qilingan formatda, `admin` roli bilan himoyalangan)
+      (2026-07-19). ⚠️ Hidoyatov formatni hali tasdiqlamagan — batafsili notepadda.
+
+> Batafsil, bosqichma-bosqich checklist: [`docs/workspace/SardorTasks.md`](../workspace/SardorTasks.md)
 
 ---
 
 ## 🔗 Kim bilan kelishasan
 
-- **Hidoyatov (admin):** `User.ts` ga **`admin` roli** qo'shasan; admin himoya middleware yozasan. Anti-cheat loglarini admin dashboard uchun berasan.
+- **Hidoyatov (admin):** ~~`User.ts` ga `admin` roli qo'shasan; admin himoya middleware yozasan. Anti-cheat loglarini admin dashboard uchun berasan.~~ Kod tomoni tayyor (2026-07-19) — `admin` roli, `requireAdmin` middleware, `GET /api/admin/violations`. Endi faqat Hidoyatov bilan format/vaqt tasdiqlash qoldi.
 - **Fazilov (test):** savollar formati (`Question.ts`, `testSchemas.ts`) va ballash tizimi bo'yicha kelishasan.
 
 ---

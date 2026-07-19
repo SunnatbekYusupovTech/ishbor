@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
-import { tokenStore } from '@/lib/api';
+import { api, tokenStore } from '@/lib/api';
 import { LocaleSwitcher } from '@/components/locale-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,18 @@ export function SiteNav() {
   }, [pathname]);
 
   const logout = () => {
-    tokenStore.clear();
+    // Revoke the refresh token server-side (best-effort) and drop both local
+    // tokens — fire-and-forget so the UI doesn't wait on a network round-trip.
+    void api.logout();
+    setAuthed(false);
+    router.push('/');
+  };
+
+  const logoutAll = () => {
+    // A stronger, less common action (signs out every other device too) —
+    // confirm before firing it, unlike the single-device `logout` above.
+    if (!window.confirm(t('logoutAllConfirm'))) return;
+    void api.logoutAllDevices();
     setAuthed(false);
     router.push('/');
   };
@@ -58,12 +69,23 @@ export function SiteNav() {
 
         <div className="flex items-center gap-1">
           {authed ? (
-            <button
-              onClick={logout}
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
-            >
-              {t('logout')}
-            </button>
+            <>
+              <button
+                onClick={logout}
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
+              >
+                {t('logout')}
+              </button>
+              {/* Secondary, less common action — smaller and quieter than the
+                  primary logout button on purpose. */}
+              <button
+                onClick={logoutAll}
+                className="hidden rounded-md px-2 py-1.5 text-xs text-muted-foreground/70 transition-colors hover:bg-accent hover:text-muted-foreground sm:block"
+                title={t('logoutAllConfirm')}
+              >
+                {t('logoutAll')}
+              </button>
+            </>
           ) : (
             <Link
               href="/login"

@@ -39,6 +39,8 @@ export interface ISession extends Document {
 
   // Anti-cheat telemetry
   tabSwitchCount: number;
+  /** Non-tab-switch integrity violations: copy/paste, right-click, devtools, etc. */
+  violationCount: number;
   terminationReason?: string;
 
   // Result (populated only after scoring)
@@ -88,6 +90,7 @@ const sessionSchema = new Schema<ISession>(
     endTime: { type: Date },
 
     tabSwitchCount: { type: Number, default: 0, min: 0 },
+    violationCount: { type: Number, default: 0, min: 0 },
     terminationReason: { type: String },
 
     score: { type: Number, min: 0 },
