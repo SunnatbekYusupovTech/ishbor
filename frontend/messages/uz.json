@@ -1,4 +1,8 @@
 {
+  "meta": {
+    "title": "Ishbor — Tasdiqlangan malaka va ish e'lonlari",
+    "description": "Xavfsiz malaka testidan o'ting, tasdiqlangan daraja oling va ish toping. Ish beruvchilar uchun: tasdiqlangan mutaxassislarni ishga oling."
+  },
   "common": {
     "appName": "Ishbor Portal",
     "footer": "Ishbor — Malaka tasdiqlash platformasi",
@@ -51,6 +55,10 @@
     "filterStack": "Yo'nalish",
     "filterLocation": "Joylashuv",
     "filterSalary": "Maosh",
+    "sortBy": "Saralash",
+    "locationPlaceholder": "Shahar yoki hudud",
+    "salaryMinPlaceholder": "min",
+    "salaryMaxPlaceholder": "max",
     "all": "Hammasi",
     "resultsCount": "{count} ta e'lon topildi",
     "employer": "Ish beruvchi",
@@ -72,7 +80,30 @@
     "sort_newest": "Eng yangi",
     "sort_oldest": "Eng eski",
     "sort_salary_asc": "Maosh (kam→ko'p)",
-    "sort_salary_desc": "Maosh (ko'p→kam)"
+    "sort_salary_desc": "Maosh (ko'p→kam)",
+    "contactAction": "Bog'lanish",
+    "favorite": "Saqlash",
+    "favorited": "Saqlangan",
+    "hide": "Yashirish",
+    "verifiedTitle": "Malakasi tasdiqlangan",
+    "sidebarTitle": "Faoliyatingiz",
+    "sidebarFavorites": "Saqlanganlar",
+    "sidebarApplications": "Arizalar",
+    "sidebarSearches": "Saqlangan qidiruvlar",
+    "promoTitle": "Malakangizni tasdiqlang",
+    "promoBody": "Testdan o'ting va tasdiqlangan daraja oling — e'loningiz ishonchliroq ko'rinadi.",
+    "promoCta": "Testni boshlash",
+    "guestPrompt": "Faoliyatni kuzatish uchun kiring.",
+    "signIn": "Kirish"
+  },
+  "header": {
+    "city": "Toshkent",
+    "search": "Qidirish",
+    "favorites": "Saqlanganlar",
+    "notifications": "Bildirishnomalar",
+    "noNotifications": "Hozircha bildirishnoma yo'q.",
+    "messages": "Xabarlar",
+    "profile": "Profil"
   },
   "levels": {
     "junior": "Junior",

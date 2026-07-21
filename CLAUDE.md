@@ -77,6 +77,23 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
   - Frontend: Dashboard, Users, Jobs, Sessions, Questions sahifalari
   - `User` modeliga `admin` roli qo'shildi
   - `SiteNav` da faqat adminlarga ko'rinadigan Admin linki
+- **hh.uz-uslubidagi redizayn** (Fazilov): dizayn-token'lar **ko'k `primary`** (harakat
+  aksenti, `#0069f5`) + **qizil `brand`** (faqat logo/xato, `#d6001c`), `success` yashil
+  maosh uchun. Onest + JetBrains Mono (`next/font`), radius `0.75rem`. Batafsil:
+  `frontend/CLAUDE.md` → "Dizayn tili".
+- **E'lonlar sahifasi — hh.uz job-board layout:**
+  - Yuqorida keng qidiruv + rol segmenti; pastda **ikki ustun** — chapda sticky sidebar
+    vidjetlar (Faoliyatingiz/Saqlanganlar, Filtrlar, Saqlangan qidiruvlar preset'lari,
+    malaka-promo, mehmon-kirish), o'ngda **bitta ustunli keng karta lentasi**.
+  - `SiteNav` header: qizil `ish` logo, `Toshkent` city pill, saqlanganlar (yurak+counter),
+    bildirishnoma qo'ng'irog'i (empty-state popover).
+  - `JobCard`: keng "orol" karta — ko'k `BadgeCheck` verifikatsiya, `EyeOff` yashirish +
+    `Heart` saqlash, ko'k `Bog'lanish`; bosilganda `JobDetailDialog`.
+  - **Saqlanganlar:** `lib/favorites.ts` (localStorage + `useSyncExternalStore`) — header,
+    kartalar va sidebar counteri sinxron.
+  - **Reyting:** `jobController` egasining test natijalarini `populate` qiladi;
+    `components/rating.tsx` yulduz + avatar.
+  - Yangi fayllar: `lib/favorites.ts`, `components/rating.tsx`, `components/JobDetailDialog.tsx`.
 
 ## Jamoaviy taqsimot
 
