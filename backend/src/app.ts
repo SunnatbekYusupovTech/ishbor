@@ -35,7 +35,14 @@ export function createApp(): Application {
   );
   app.use(
     cors({
-      origin: env.clientOrigin,
+      origin: (origin, callback) => {
+        // No `Origin` header (curl, Postman, server-to-server) — allow.
+        if (!origin || env.clientOrigins.includes(origin)) {
+          callback(null, origin);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       credentials: true,
     }),
   );
