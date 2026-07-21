@@ -20,7 +20,13 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 ## Marshrutlar (`app/[locale]/`)
 
 - `page.tsx` — **e'lonlar sahifasi** (asosiy): rol segmenti, filtrlar, qidiruv, card grid.
-- `jobs/new/page.tsx` — e'lon berish.
+  Kengaytirilgan filtrlar: joylashuv, maosh oralig'i, sort (newest/oldest/salary_asc/salary_desc).
+- `jobs/new/page.tsx` — e'lon berish (location maydoni qo'shilgan).
+- `admin/page.tsx` — Admin dashboard (statistika, bo'limlar bo'yicha tahlil).
+- `admin/users/page.tsx` — Foydalanuvchilarni boshqarish (qidiruv, pagination, o'chirish).
+- `admin/jobs/page.tsx` — E'lonlarni boshqarish (qidiruv, pagination, o'chirish).
+- `admin/sessions/page.tsx` — Anti-cheat sessiyalar (status filter, loglarni ko'rish).
+- `admin/questions/page.tsx` — Savollar bazasi (texnologiya va qiyinchilik bo'yicha filter).
 - `test/page.tsx` — malaka testi (anti-cheat, taymer).
 - `leaderboard/page.tsx` — reyting.
 - `login/page.tsx` — kirish/ro'yxatdan o'tish.
@@ -95,5 +101,6 @@ uchtala tilga qo'shing. Batafsil qoida: ildiz `/CLAUDE.md` → "Hujjatlarni yang
 ## Domen egalari (`docs/team/`)
 
 - **Fazilov** — `components/ui/*`, `rating`, `badges`, `theme`, `layout`, `globals.css`, test UI, i18n.
-- **Hidoyatov** — `page.tsx` (e'lonlar), `jobs/new`, `JobCard`, `JobDetailDialog` + admin (yangi).
+- **Hidoyatov** — `page.tsx` (e'lonlar), `jobs/new`, `JobCard`, `JobDetailDialog`,
+  `admin/*` (dashboard, users, jobs, sessions, questions), `SiteNav` (admin link).
 - **Sardor** — `hooks/*` (anti-cheat), `lib/socket.ts`, `AntiCheatBanner`, `ViolationDialog`, login.

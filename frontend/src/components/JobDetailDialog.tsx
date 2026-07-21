@@ -11,6 +11,7 @@ import {
   Target,
   Repeat,
   ShieldCheck,
+  MapPin,
 } from 'lucide-react';
 import type { Job } from '@/types/domain';
 import {
@@ -111,6 +112,19 @@ export function JobDetailDialog({
               </span>
             )}
           </div>
+
+          {/* Location */}
+          {job.location && (
+            <div>
+              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t('filterLocation')}
+              </h4>
+              <p className="flex items-center gap-1.5 text-sm">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                {job.location}
+              </p>
+            </div>
+          )}
 
           {/* Description */}
           <div>

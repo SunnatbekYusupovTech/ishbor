@@ -19,6 +19,11 @@ export interface IJob extends Document {
   level: JobLevel;
   stack: JobStack;
   salary?: string;
+  /** Numeric salary bounds extracted from the display string — used for range filtering. */
+  salaryMin?: number;
+  salaryMax?: number;
+  /** Job location (city / remote / hybrid). */
+  location?: string;
   contactPhone?: string;
   contactTelegram?: string;
   /** The user who posted this listing. */
@@ -48,6 +53,9 @@ const jobSchema = new Schema<IJob>(
       index: true,
     },
     salary: { type: String, trim: true, maxlength: 60 },
+    salaryMin: { type: Number, min: 0 },
+    salaryMax: { type: Number, min: 0 },
+    location: { type: String, trim: true, maxlength: 100 },
     contactPhone: { type: String, trim: true, maxlength: 40 },
     contactTelegram: { type: String, trim: true, maxlength: 60 },
     postedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },

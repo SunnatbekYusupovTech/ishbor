@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Shield } from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { api, tokenStore } from '@/lib/api';
 import { LocaleSwitcher } from '@/components/locale-switcher';
@@ -19,10 +20,19 @@ export function SiteNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Read auth state on mount + whenever the route changes (login/logout).
   useEffect(() => {
     setAuthed(!!tokenStore.get());
+    if (tokenStore.get()) {
+      api
+        .me()
+        .then((p) => setIsAdmin(p?.role === 'admin'))
+        .catch(() => setIsAdmin(false));
+    } else {
+      setIsAdmin(false);
+    }
   }, [pathname]);
 
   const logout = () => {
@@ -65,6 +75,18 @@ export function SiteNav() {
               {t(l.key)}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={cn(
+                'flex items-center gap-1 rounded-md px-3 py-1.5 font-medium transition-colors hover:bg-accent',
+                pathname.startsWith('/admin') ? 'text-foreground' : 'text-muted-foreground',
+              )}
+            >
+              <Shield className="h-3.5 w-3.5" />
+              {t('admin')}
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-1">

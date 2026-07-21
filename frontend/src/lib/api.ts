@@ -98,6 +98,17 @@ async function request<T>(path: string, options: RequestInit = {}, _isRetry = fa
   return payload.data as T;
 }
 
+/**
+ * Low-level authenticated request helper. Same base URL + 401 refresh-and-retry
+ * as every `api.*` method. Exposed for feature areas (e.g. the admin panel) that
+ * need ad-hoc endpoints not worth a dedicated `api.*` wrapper — always use this
+ * instead of a bare `fetch('/api/...')`, which would hit the frontend origin and
+ * skip token refresh.
+ */
+export function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  return request<T>(path, options);
+}
+
 export const api = {
   // --- Auth (dev-friendly helpers) ---
   register: (body: { name?: string; email: string; password: string; role?: string }) =>
@@ -182,11 +193,25 @@ export const api = {
   me: () => request<Me>('/auth/me'),
 
   // --- Jobs ---
-  getJobs: (filters: { type?: string; level?: string; stack?: string } = {}) => {
+  getJobs: (filters: {
+    type?: string;
+    level?: string;
+    stack?: string;
+    keyword?: string;
+    location?: string;
+    salaryMin?: number;
+    salaryMax?: number;
+    sort?: string;
+  } = {}) => {
     const qs = new URLSearchParams();
     if (filters.type) qs.set('type', filters.type);
     if (filters.level) qs.set('level', filters.level);
     if (filters.stack) qs.set('stack', filters.stack);
+    if (filters.keyword) qs.set('keyword', filters.keyword);
+    if (filters.location) qs.set('location', filters.location);
+    if (filters.salaryMin !== undefined) qs.set('salaryMin', String(filters.salaryMin));
+    if (filters.salaryMax !== undefined) qs.set('salaryMax', String(filters.salaryMax));
+    if (filters.sort) qs.set('sort', filters.sort);
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     return request<Job[]>(`/jobs${suffix}`);
   },

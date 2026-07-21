@@ -67,12 +67,16 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
-- **E'lonlar sahifasi to'liq qayta dizayn** (zamonaviy UI):
-  - Rol segmenti (Hammasi / Ish beruvchilar / Ish qidiruvchilar), yo'nalish + daraja filtrlari, matnli qidiruv, natijalar soni, skeleton yuklanish.
-  - Flex/grid card layout; ish beruvchi = indigo, ish qidiruvchi = emerald aksent.
-  - Card ustiga bosilganda **to'liq detal modal** (`JobDetailDialog`) — barcha ma'lumot + reyting + bog'lanish.
-  - **Reyting tizimi:** `jobController` e'lon egasining test natijalarini (`verificationLevel`, `bestPercentage`, urinishlar) `populate` qiladi; `components/rating.tsx` yulduzli reyting + avatar chizadi.
-  - Yangi fayllar: `components/rating.tsx`, `components/JobDetailDialog.tsx`.
+- **Kengaytirilgan filtrlar:** `Job` modeliga `location`, `salaryMin`/`salaryMax` qo'shildi.
+  Server-side keyword qidiruv (title, company, description, postedByName), location filter,
+  salary range filter, sort (newest/oldest/salary_asc/salary_desc). Frontendda barcha yangi
+  filtrlar UI ga qo'shildi (joylashuv inputi, maosh min/max, sort select, kengaytirilgan filtrlar toggle).
+- **Admin panel (yangi modul):**
+  - Backend: `adminOnly` middleware, `adminController` (stats, users CRUD, jobs CRUD, sessions,
+    questions), `adminRoutes`
+  - Frontend: Dashboard, Users, Jobs, Sessions, Questions sahifalari
+  - `User` modeliga `admin` roli qo'shildi
+  - `SiteNav` da faqat adminlarga ko'rinadigan Admin linki
 
 ## Jamoaviy taqsimot
 
