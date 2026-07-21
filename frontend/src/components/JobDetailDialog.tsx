@@ -48,8 +48,8 @@ export function JobDetailDialog({
         <div
           className={
             isResume
-              ? 'bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent px-6 pb-5 pt-6'
-              : 'bg-gradient-to-br from-indigo-500/15 via-indigo-500/5 to-transparent px-6 pb-5 pt-6'
+              ? 'bg-gradient-to-br from-success/15 via-success/5 to-transparent px-6 pb-5 pt-6'
+              : 'bg-gradient-to-br from-primary/15 via-primary/5 to-transparent px-6 pb-5 pt-6'
           }
         >
           <DialogHeader className="space-y-0 text-left">
@@ -59,8 +59,8 @@ export function JobDetailDialog({
                 <span
                   className={
                     isResume
-                      ? 'inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300'
-                      : 'inline-flex items-center rounded-full bg-indigo-500/15 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300'
+                      ? 'inline-flex items-center rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success'
+                      : 'inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary'
                   }
                 >
                   {roleLabel}
@@ -105,7 +105,7 @@ export function JobDetailDialog({
             <LevelBadge level={job.level} />
             <StackBadge stack={job.stack} />
             {job.salary && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">
                 <Wallet className="h-3.5 w-3.5" />
                 {job.salary}
               </span>
@@ -134,7 +134,7 @@ export function JobDetailDialog({
                     href={`https://t.me/${job.contactTelegram.replace(/^@/, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-600"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                   >
                     <Send className="h-4 w-4" />
                     {job.contactTelegram}

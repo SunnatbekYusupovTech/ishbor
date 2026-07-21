@@ -1,4 +1,8 @@
 {
+  "meta": {
+    "title": "Ishbor — Verified Skills & Jobs",
+    "description": "Pass a secure skill assessment, earn a verified level and find a job. For employers: hire verified specialists."
+  },
   "common": {
     "appName": "Ishbor Portal",
     "footer": "Ishbor — Skill verification platform",
@@ -61,7 +65,30 @@
     "loading": "Loading…",
     "empty": "No listings yet.",
     "loadError": "Could not load listings.",
-    "postedBy": "Posted by: {name}"
+    "postedBy": "Posted by: {name}",
+    "contactAction": "Contact",
+    "favorite": "Save",
+    "favorited": "Saved",
+    "hide": "Hide",
+    "verifiedTitle": "Skills verified",
+    "sidebarTitle": "Your activity",
+    "sidebarFavorites": "Saved",
+    "sidebarApplications": "Applications",
+    "sidebarSearches": "Saved searches",
+    "promoTitle": "Verify your skills",
+    "promoBody": "Take the test and earn a verified level — your listing looks more trustworthy.",
+    "promoCta": "Take the test",
+    "guestPrompt": "Log in to track your activity.",
+    "signIn": "Log in"
+  },
+  "header": {
+    "city": "Tashkent",
+    "search": "Search",
+    "favorites": "Saved",
+    "notifications": "Notifications",
+    "noNotifications": "No notifications yet.",
+    "messages": "Messages",
+    "profile": "Profile"
   },
   "levels": {
     "junior": "Junior",

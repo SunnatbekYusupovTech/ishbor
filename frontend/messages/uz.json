@@ -1,4 +1,8 @@
 {
+  "meta": {
+    "title": "Ishbor — Tasdiqlangan malaka va ish e'lonlari",
+    "description": "Xavfsiz malaka testidan o'ting, tasdiqlangan daraja oling va ish toping. Ish beruvchilar uchun: tasdiqlangan mutaxassislarni ishga oling."
+  },
   "common": {
     "appName": "Ishbor Portal",
     "footer": "Ishbor — Malaka tasdiqlash platformasi",
@@ -61,7 +65,30 @@
     "loading": "Yuklanmoqda…",
     "empty": "Hozircha e'lonlar yo'q.",
     "loadError": "E'lonlarni yuklab bo'lmadi.",
-    "postedBy": "E'lon beruvchi: {name}"
+    "postedBy": "E'lon beruvchi: {name}",
+    "contactAction": "Bog'lanish",
+    "favorite": "Saqlash",
+    "favorited": "Saqlangan",
+    "hide": "Yashirish",
+    "verifiedTitle": "Malakasi tasdiqlangan",
+    "sidebarTitle": "Faoliyatingiz",
+    "sidebarFavorites": "Saqlanganlar",
+    "sidebarApplications": "Arizalar",
+    "sidebarSearches": "Saqlangan qidiruvlar",
+    "promoTitle": "Malakangizni tasdiqlang",
+    "promoBody": "Testdan o'ting va tasdiqlangan daraja oling — e'loningiz ishonchliroq ko'rinadi.",
+    "promoCta": "Testni boshlash",
+    "guestPrompt": "Faoliyatni kuzatish uchun kiring.",
+    "signIn": "Kirish"
+  },
+  "header": {
+    "city": "Toshkent",
+    "search": "Qidirish",
+    "favorites": "Saqlanganlar",
+    "notifications": "Bildirishnomalar",
+    "noNotifications": "Hozircha bildirishnoma yo'q.",
+    "messages": "Xabarlar",
+    "profile": "Profil"
   },
   "levels": {
     "junior": "Junior",

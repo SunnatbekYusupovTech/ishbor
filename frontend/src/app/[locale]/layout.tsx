@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Onest, JetBrains_Mono } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
@@ -7,10 +8,29 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { SiteNav } from '@/components/SiteNav';
 import '../globals.css';
 
-export const metadata: Metadata = {
-  title: 'Ishbor — Verified Skill Assessment',
-  description: 'Secure, anti-cheat skill assessment for the Ishbor job portal.',
-};
+/* UI face — covers uz (latin-ext), ru (cyrillic) and en. */
+const fontSans = Onest({
+  subsets: ['latin', 'latin-ext', 'cyrillic'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+/* Timers, scores, code — anything tabular/monospaced. */
+const fontMono = JetBrains_Mono({
+  subsets: ['latin', 'cyrillic'],
+  variable: '--font-mono',
+  display: 'swap',
+});
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'meta' });
+  return { title: t('title'), description: t('description') };
+}
 
 /** Pre-render every locale at build time. */
 export function generateStaticParams() {
@@ -33,8 +53,12 @@ export default async function LocaleLayout({
   const t = await getTranslations('common');
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body className="min-h-screen bg-background text-foreground">
+    <html
+      lang={locale}
+      suppressHydrationWarning
+      className={`${fontSans.variable} ${fontMono.variable}`}
+    >
+      <body className="min-h-screen bg-background font-sans text-foreground">
         <NextIntlClientProvider>
           <ThemeProvider
             attribute="class"

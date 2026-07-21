@@ -67,12 +67,23 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
-- **E'lonlar sahifasi to'liq qayta dizayn** (zamonaviy UI):
-  - Rol segmenti (Hammasi / Ish beruvchilar / Ish qidiruvchilar), yo'nalish + daraja filtrlari, matnli qidiruv, natijalar soni, skeleton yuklanish.
-  - Flex/grid card layout; ish beruvchi = indigo, ish qidiruvchi = emerald aksent.
-  - Card ustiga bosilganda **to'liq detal modal** (`JobDetailDialog`) — barcha ma'lumot + reyting + bog'lanish.
-  - **Reyting tizimi:** `jobController` e'lon egasining test natijalarini (`verificationLevel`, `bestPercentage`, urinishlar) `populate` qiladi; `components/rating.tsx` yulduzli reyting + avatar chizadi.
-  - Yangi fayllar: `components/rating.tsx`, `components/JobDetailDialog.tsx`.
+- **hh.uz-uslubidagi redizayn** (Fazilov): dizayn-token'lar **ko'k `primary`** (harakat
+  aksenti, `#0069f5`) + **qizil `brand`** (faqat logo/xato, `#d6001c`), `success` yashil
+  maosh uchun. Onest + JetBrains Mono (`next/font`), radius `0.75rem`. Batafsil:
+  `frontend/CLAUDE.md` → "Dizayn tili".
+- **E'lonlar sahifasi — hh.uz job-board layout:**
+  - Yuqorida keng qidiruv + rol segmenti; pastda **ikki ustun** — chapda sticky sidebar
+    vidjetlar (Faoliyatingiz/Saqlanganlar, Filtrlar, Saqlangan qidiruvlar preset'lari,
+    malaka-promo, mehmon-kirish), o'ngda **bitta ustunli keng karta lentasi**.
+  - `SiteNav` header: qizil `ish` logo, `Toshkent` city pill, saqlanganlar (yurak+counter),
+    bildirishnoma qo'ng'irog'i (empty-state popover).
+  - `JobCard`: keng "orol" karta — ko'k `BadgeCheck` verifikatsiya, `EyeOff` yashirish +
+    `Heart` saqlash, ko'k `Bog'lanish`; bosilganda `JobDetailDialog`.
+  - **Saqlanganlar:** `lib/favorites.ts` (localStorage + `useSyncExternalStore`) — header,
+    kartalar va sidebar counteri sinxron.
+  - **Reyting:** `jobController` egasining test natijalarini `populate` qiladi;
+    `components/rating.tsx` yulduz + avatar.
+  - Yangi fayllar: `lib/favorites.ts`, `components/rating.tsx`, `components/JobDetailDialog.tsx`.
 
 ## Jamoaviy taqsimot
 
