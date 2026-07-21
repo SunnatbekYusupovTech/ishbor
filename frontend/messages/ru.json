@@ -1,4 +1,8 @@
 {
+  "meta": {
+    "title": "Ishbor — Подтверждённые навыки и вакансии",
+    "description": "Пройдите защищённый тест навыков, получите подтверждённый уровень и найдите работу. Работодателям: нанимайте проверенных специалистов."
+  },
   "common": {
     "appName": "Ishbor Portal",
     "footer": "Ishbor — Платформа проверки навыков",
@@ -72,7 +76,30 @@
     "sort_newest": "Сначала новые",
     "sort_oldest": "Сначала старые",
     "sort_salary_asc": "Зарплата (низ→выс)",
-    "sort_salary_desc": "Зарплата (выс→низ)"
+    "sort_salary_desc": "Зарплата (выс→низ)",
+    "contactAction": "Связаться",
+    "favorite": "В избранное",
+    "favorited": "В избранном",
+    "hide": "Скрыть",
+    "verifiedTitle": "Навыки подтверждены",
+    "sidebarTitle": "Ваша активность",
+    "sidebarFavorites": "Избранное",
+    "sidebarApplications": "Отклики",
+    "sidebarSearches": "Сохранённые поиски",
+    "promoTitle": "Подтвердите навыки",
+    "promoBody": "Пройдите тест и получите подтверждённый уровень — ваше объявление вызовет больше доверия.",
+    "promoCta": "Пройти тест",
+    "guestPrompt": "Войдите, чтобы отслеживать активность.",
+    "signIn": "Войти"
+  },
+  "header": {
+    "city": "Ташкент",
+    "search": "Поиск",
+    "favorites": "Избранное",
+    "notifications": "Уведомления",
+    "noNotifications": "Пока нет уведомлений.",
+    "messages": "Сообщения",
+    "profile": "Профиль"
   },
   "levels": {
     "junior": "Junior",
