@@ -10,6 +10,16 @@ import { env } from '@/config/env';
 export function createApp(): Application {
   const app = express();
 
+  // Behind a hosting proxy (Railway, Render, Fly, Heroku...) the real client IP
+  // arrives in `X-Forwarded-For`. Trust exactly one proxy hop so `req.ip` — and
+  // therefore express-rate-limit's per-client keying — reflects the real caller
+  // instead of the proxy. Without this the rate limiter throws a validation
+  // error / buckets every user together. Only trust the proxy in production;
+  // locally there is no proxy and trusting a spoofable header would be wrong.
+  if (env.isProduction) {
+    app.set('trust proxy', 1);
+  }
+
   app.use(
     helmet({
       // This server only ever emits JSON (see errorHandler/notFoundHandler) —
