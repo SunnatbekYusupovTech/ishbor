@@ -26,7 +26,11 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   isProduction: process.env.NODE_ENV === 'production',
   port: numberFromEnv('PORT', 5000),
-  clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:3000',
+  /** Comma-separated list of allowed CORS origins (e.g. local dev + deployed frontend). */
+  clientOrigins: (process.env.CLIENT_ORIGIN ?? 'http://localhost:3000')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   mongoUri: required('MONGO_URI'),
   jwtSecret: required('JWT_SECRET'),
 

@@ -113,6 +113,12 @@ tab-switch, violation) · `/jobs` (GET list `?type=&level=&stack=`, POST create)
 
 ## Konvensiyalar
 
+- **CORS:** `CLIENT_ORIGIN` (`.env`) — comma-separated ro'yxat (`env.clientOrigins`,
+  `config/env.ts`), `app.ts`dagi `cors()` va `sockets/antiCheat.ts`dagi socket.io
+  CORS'ga to'g'ridan-to'g'ri array sifatida beriladi. Prod'da deploy qilingan
+  frontend domenini shu ro'yxatga qo'sh (masalan
+  `http://localhost:3000,https://ishbor-frontend.vercel.app`) — aks holda
+  brauzer preflight so'rovni CORS xatosi bilan bloklaydi.
 - Path alias `@/` → `backend/src/`.
 - Yangi endpoint: model → controller (`asyncHandler`) → Zod sxema → route → `routes/index.ts` ga ulash.
 - Sirlarni hech qachon commit qilma; `.env.example` ni yangilab qo'y.

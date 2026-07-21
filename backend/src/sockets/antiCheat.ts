@@ -37,7 +37,7 @@ async function terminateSession(sessionId: string, userId: string, reason: strin
 
 export function initAntiCheatSocket(httpServer: HttpServer): Server {
   const io = new Server(httpServer, {
-    cors: { origin: env.clientOrigin, methods: ['GET', 'POST'] },
+    cors: { origin: env.clientOrigins, methods: ['GET', 'POST'] },
     pingTimeout: 20_000,
   });
 
