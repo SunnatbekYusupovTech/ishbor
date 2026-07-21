@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations, useFormatter } from 'next-intl';
+import { useTranslations, useFormatter, useNow } from 'next-intl';
 import { Building2, UserRound, Wallet, ArrowRight, Clock, MapPin } from 'lucide-react';
 import type { Job } from '@/types/domain';
 import { DialogTrigger } from '@/components/ui/dialog';
@@ -12,6 +12,9 @@ import { cn } from '@/lib/utils';
 export function JobCard({ job }: { job: Job }) {
   const t = useTranslations('jobs');
   const format = useFormatter();
+  // Stable "now" shared by server and client render — without it next-intl falls
+  // back to Date.now() on each side and the relative time hydrates mismatched.
+  const now = useNow();
 
   const isResume = job.type === 'resume';
   const subtitle = isResume ? job.postedByName : job.company ?? job.postedByName;
@@ -98,7 +101,7 @@ export function JobCard({ job }: { job: Job }) {
           <div className="mt-auto flex items-center justify-between pt-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
-              {format.relativeTime(new Date(job.createdAt))}
+              {format.relativeTime(new Date(job.createdAt), now)}
             </span>
             <span
               className={cn(

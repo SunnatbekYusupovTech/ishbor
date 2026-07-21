@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations, useFormatter } from 'next-intl';
+import { useTranslations, useFormatter, useNow } from 'next-intl';
 import {
   Phone,
   Send,
@@ -34,6 +34,8 @@ export function JobDetailDialog({
   const t = useTranslations('jobs');
   const tl = useTranslations('levels');
   const format = useFormatter();
+  // Stable "now" shared by server/client render — avoids relativeTime hydration mismatch.
+  const now = useNow();
 
   const isResume = job.type === 'resume';
   const subtitle = isResume ? job.postedByName : job.company ?? job.postedByName;
@@ -171,7 +173,7 @@ export function JobDetailDialog({
 
           <p className="flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
-            {format.relativeTime(new Date(job.createdAt))} · {t('postedBy', { name: job.postedByName })}
+            {format.relativeTime(new Date(job.createdAt), now)} · {t('postedBy', { name: job.postedByName })}
           </p>
         </div>
       </DialogContent>
