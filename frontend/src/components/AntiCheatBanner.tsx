@@ -8,18 +8,29 @@ import { cn } from '@/lib/utils';
 interface AntiCheatBannerProps {
   tabSwitchCount: number;
   maxTabSwitches: number | null;
+  /** Non-tab-switch violations: copy/paste, right-click, PrintScreen, ... */
+  violationCount?: number;
+  maxViolations?: number | null;
   connected: boolean;
 }
 
-/** Live integrity indicator: connection health + tab-switch budget (shadcn Alert). */
+/** Live integrity indicator: connection health + tab-switch/violation budget (shadcn Alert). */
 export function AntiCheatBanner({
   tabSwitchCount,
   maxTabSwitches,
+  violationCount = 0,
+  maxViolations = null,
   connected,
 }: AntiCheatBannerProps) {
   const t = useTranslations('proctor');
-  const remaining =
+  const tabRemaining =
     maxTabSwitches !== null ? Math.max(0, maxTabSwitches - tabSwitchCount) : null;
+  const violationRemaining =
+    maxViolations !== null ? Math.max(0, maxViolations - violationCount) : null;
+  const remaining =
+    tabRemaining !== null && violationRemaining !== null
+      ? Math.min(tabRemaining, violationRemaining)
+      : (tabRemaining ?? violationRemaining);
   const danger = remaining !== null && remaining <= 1;
 
   return (
@@ -36,8 +47,10 @@ export function AntiCheatBanner({
         <span className="font-medium">
           {t('tabSwitches', {
             count: tabSwitchCount,
-            max: maxTabSwitches === null ? 'none' : String(maxTabSwitches),
+            max: maxTabSwitches === null ? t('limitUnknown') : String(maxTabSwitches),
           })}
+          {maxViolations !== null &&
+            ` · ${t('violations', { count: violationCount, max: maxViolations })}`}
           {remaining !== null && ` — ${t('warningsLeft', { remaining })}`}
         </span>
       </AlertDescription>

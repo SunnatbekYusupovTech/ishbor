@@ -10,6 +10,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
+/** Mirrors the server-side `passwordPolicy` in `backend/src/controllers/authController.ts`
+ *  (register only — login accepts any non-empty password, see that file's comment). */
+const PASSWORD_POLICY = {
+  minLength: 8,
+  hasLower: /[a-z]/,
+  hasUpper: /[A-Z]/,
+  hasDigit: /[0-9]/,
+  hasSymbol: /[^A-Za-z0-9]/,
+};
+
+function isPasswordStrongEnough(password: string): boolean {
+  return (
+    password.length >= PASSWORD_POLICY.minLength &&
+    PASSWORD_POLICY.hasLower.test(password) &&
+    PASSWORD_POLICY.hasUpper.test(password) &&
+    PASSWORD_POLICY.hasDigit.test(password) &&
+    PASSWORD_POLICY.hasSymbol.test(password)
+  );
+}
+
 function LoginForm() {
   const t = useTranslations('auth');
   const router = useRouter();
@@ -27,6 +47,15 @@ function LoginForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Client-side pre-check on register only: gives instant feedback instead
+    // of a round-trip. The server enforces the same rule regardless — this
+    // is a UX shortcut, not the security boundary.
+    if (mode === 'register' && !isPasswordStrongEnough(password)) {
+      setError(t('passwordPolicyError'));
+      return;
+    }
+
     setLoading(true);
     try {
       const res =
@@ -34,6 +63,7 @@ function LoginForm() {
           ? await api.register({ name, email, password, role })
           : await api.login({ email, password });
       tokenStore.set(res.token);
+      tokenStore.setRefresh(res.refreshToken);
       // `next` is a locale-agnostic internal path (e.g. /jobs/new).
       router.push(next as '/');
     } catch (err) {
@@ -125,6 +155,9 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
+              {mode === 'register' && (
+                <p className="mt-1 text-xs text-muted-foreground">{t('passwordPolicyHint')}</p>
+              )}
             </div>
 
             {error && (

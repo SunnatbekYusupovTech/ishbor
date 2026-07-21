@@ -30,10 +30,18 @@ export const env = {
   mongoUri: required('MONGO_URI'),
   jwtSecret: required('JWT_SECRET'),
 
+  // Auth token lifetimes
+  /** Short-lived access token — sent on every request. */
+  accessTokenTtl: process.env.ACCESS_TOKEN_TTL ?? '15m',
+  /** Long-lived refresh token — only sent to POST /auth/refresh. */
+  refreshTokenTtlDays: numberFromEnv('REFRESH_TOKEN_TTL_DAYS', 30),
+
   // Assessment tuning
   testDurationMinutes: numberFromEnv('TEST_DURATION_MINUTES', 30),
   heartbeatTimeoutMs: numberFromEnv('HEARTBEAT_TIMEOUT_MS', 15000),
   maxTabSwitches: numberFromEnv('MAX_TAB_SWITCHES', 3),
+  /** Non-tab-switch violations (copy/paste, right-click, devtools...) before termination. */
+  maxViolations: numberFromEnv('MAX_VIOLATIONS', 5),
 } as const;
 
 export type Env = typeof env;

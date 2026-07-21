@@ -49,5 +49,14 @@ export interface TabSwitchResponse {
   status: string;
 }
 
+export type ViolationType = 'copy-paste' | 'right-click' | 'screenshot-key' | 'devtools';
+
+export interface ViolationResponse {
+  violationCount: number;
+  maxViolations: number;
+  terminated: boolean;
+  status: string;
+}
+
 /** The form shape: maps questionId -> selected option index (as string). */
 export type AnswersForm = Record<string, string>;

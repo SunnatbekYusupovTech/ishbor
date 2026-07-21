@@ -11,26 +11,40 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import type { ViolationType } from '@/types/test';
+
+type ViolationKind = 'tab-switch' | ViolationType;
 
 interface ViolationDialogProps {
   open: boolean;
+  type: ViolationKind;
   onAcknowledge: () => void;
-  tabSwitchCount: number;
-  maxTabSwitches: number | null;
+  count: number;
+  maxCount: number | null;
 }
 
+const bodyKeyByType: Record<ViolationKind, string> = {
+  'tab-switch': 'violationBody',
+  'copy-paste': 'violationBodyCopyPaste',
+  'right-click': 'violationBodyRightClick',
+  'screenshot-key': 'violationBodyScreenshot',
+  devtools: 'violationBodyDevtools',
+};
+
 /**
- * Mandatory anti-cheat warning shown after a detected tab/visibility violation.
- * Non-dismissible via the close affordance — the candidate must acknowledge.
+ * Mandatory anti-cheat warning shown after a detected violation (tab-switch,
+ * clipboard misuse, right-click, or a PrintScreen key press). Non-dismissible
+ * via the close affordance — the candidate must acknowledge before continuing.
  */
 export function ViolationDialog({
   open,
+  type,
   onAcknowledge,
-  tabSwitchCount,
-  maxTabSwitches,
+  count,
+  maxCount,
 }: ViolationDialogProps) {
   const t = useTranslations('proctor');
-  const remaining = maxTabSwitches !== null ? Math.max(0, maxTabSwitches - tabSwitchCount) : null;
+  const remaining = maxCount !== null ? Math.max(0, maxCount - count) : null;
 
   return (
     <Dialog open={open}>
@@ -41,7 +55,7 @@ export function ViolationDialog({
           </div>
           <DialogTitle className="text-center text-destructive">{t('violationTitle')}</DialogTitle>
           <DialogDescription className="text-center">
-            {t('violationBody')}
+            {t(bodyKeyByType[type])}
             {remaining !== null && <> {t('violationRemaining', { remaining })}</>}
           </DialogDescription>
         </DialogHeader>

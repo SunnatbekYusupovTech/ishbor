@@ -1,9 +1,15 @@
 import { Schema, model, type Document, type Types } from 'mongoose';
 
 export type VerificationLevel = 'none' | 'junior' | 'middle' | 'senior';
-export type UserRole = 'employer' | 'seeker';
+/**
+ * `admin` is deliberately NOT selectable through public registration
+ * (`authController.registerSchema` only allows `employer`/`seeker`) —
+ * it can only be granted by editing the database directly (or an
+ * admin-only user-management endpoint). Never trust a role from user input.
+ */
+export type UserRole = 'employer' | 'seeker' | 'admin';
 
-export const USER_ROLES: UserRole[] = ['employer', 'seeker'];
+export const USER_ROLES: UserRole[] = ['employer', 'seeker', 'admin'];
 
 export interface IUser extends Document {
   _id: Types.ObjectId;

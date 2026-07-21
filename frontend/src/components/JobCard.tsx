@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations, useFormatter } from 'next-intl';
-import { Building2, UserRound, Wallet, ArrowRight, Clock } from 'lucide-react';
+import { Building2, UserRound, Wallet, ArrowRight, Clock, MapPin } from 'lucide-react';
 import type { Job } from '@/types/domain';
 import { DialogTrigger } from '@/components/ui/dialog';
 import { LevelBadge, StackBadge } from '@/components/badges';
@@ -30,6 +30,14 @@ export function JobCard({ job }: { job: Job }) {
             isResume ? 'hover:border-emerald-400/60' : 'hover:border-indigo-400/60',
           )}
         >
+          {/* Location chip */}
+          {job.location && (
+            <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              {job.location}
+            </p>
+          )}
+
           {/* Type accent bar */}
           <span
             className={cn(

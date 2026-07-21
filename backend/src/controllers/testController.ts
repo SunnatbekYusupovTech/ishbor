@@ -19,7 +19,7 @@ import {
 
 /** Seconds allotted per question on the client — mirrored here to size the
  *  server-side deadline (with a buffer) so long selections never expire early. */
-const PER_QUESTION_SECONDS = 30;
+const PER_QUESTION_SECONDS = 20;
 const DEADLINE_BUFFER_MS = 120_000;
 
 /**
@@ -310,6 +310,48 @@ export const recordTabSwitch = asyncHandler(async (req: Request, res: Response) 
     data: {
       tabSwitchCount: session.tabSwitchCount,
       maxTabSwitches: env.maxTabSwitches,
+      terminated,
+      status: session.status,
+    },
+  });
+});
+
+/**
+ * POST /api/test/violation
+ * Records a non-tab-switch integrity violation (copy/paste, right-click,
+ * devtools, ...). Over `env.maxViolations` the session is terminated
+ * server-side, mirroring `recordTabSwitch`.
+ */
+export const recordViolation = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { sessionId, type } = req.body as { sessionId: string; type: string };
+
+  const session = await Session.findOne({ _id: sessionId, userId });
+  if (!session) {
+    throw ApiError.notFound('Session not found.');
+  }
+  if (session.status !== 'in-progress') {
+    throw ApiError.conflict('Session is no longer active.');
+  }
+
+  session.violationCount += 1;
+
+  let terminated = false;
+  if (session.violationCount > env.maxViolations) {
+    session.status = 'terminated';
+    session.terminationReason = `Exceeded max integrity violations (${env.maxViolations}): last was "${type}".`;
+    session.endTime = new Date();
+    terminated = true;
+    logger.warn(`Session ${session._id} TERMINATED: too many violations (last: ${type})`);
+  }
+
+  await session.save();
+
+  res.status(200).json({
+    success: true,
+    data: {
+      violationCount: session.violationCount,
+      maxViolations: env.maxViolations,
       terminated,
       status: session.status,
     },

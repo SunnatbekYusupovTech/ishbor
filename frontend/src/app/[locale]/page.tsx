@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, Search, Users, Building2, SlidersHorizontal, X } from 'lucide-react';
+import { Plus, Search, Users, Building2, SlidersHorizontal, X, MapPin, DollarSign, ArrowUpDown } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { api, ApiError } from '@/lib/api';
-import type { Job, Level, Stack, ListingType } from '@/types/domain';
+import type { Job, Level, Stack, ListingType, SortOption } from '@/types/domain';
 import { JobCard } from '@/components/JobCard';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 
 const LEVELS: Level[] = ['junior', 'middle', 'senior'];
 const STACKS: Stack[] = ['frontend', 'backend', 'fullstack', 'mobile'];
+const SORT_OPTIONS: SortOption[] = ['newest', 'oldest', 'salary_asc', 'salary_desc'];
 
 /** Role filter — 'all' shows employers + seekers side by side. */
 type RoleFilter = 'all' | ListingType;
@@ -26,6 +27,11 @@ export default function JobsPage() {
   const [level, setLevel] = useState<Level | null>(null);
   const [stack, setStack] = useState<Stack | null>(null);
   const [query, setQuery] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [salaryMin, setSalaryMin] = useState('');
+  const [salaryMax, setSalaryMax] = useState('');
+  const [sort, setSort] = useState<SortOption>('newest');
+  const [showExtraFilters, setShowExtraFilters] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +45,11 @@ export default function JobsPage() {
         type: role === 'all' ? undefined : role,
         level: level ?? undefined,
         stack: stack ?? undefined,
+        keyword: query.trim() || undefined,
+        location: locationFilter.trim() || undefined,
+        salaryMin: salaryMin ? Number(salaryMin) : undefined,
+        salaryMax: salaryMax ? Number(salaryMax) : undefined,
+        sort: sort || undefined,
       })
       .then((data) => !cancelled && setJobs(data))
       .catch((err) => !cancelled && setError(err instanceof ApiError ? err.message : t('loadError')))
@@ -46,24 +57,17 @@ export default function JobsPage() {
     return () => {
       cancelled = true;
     };
-  }, [role, level, stack, t]);
+  }, [role, level, stack, query, locationFilter, salaryMin, salaryMax, sort, t]);
 
-  // Client-side text search over already-filtered results.
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return jobs;
-    return jobs.filter((j) =>
-      [j.title, j.company, j.description, j.postedByName]
-        .filter(Boolean)
-        .some((v) => v!.toLowerCase().includes(q)),
-    );
-  }, [jobs, query]);
-
-  const hasFilters = level !== null || stack !== null || query.trim() !== '';
+  const hasFilters = level !== null || stack !== null || query.trim() !== '' || locationFilter.trim() !== '' || salaryMin !== '' || salaryMax !== '';
   const resetFilters = () => {
     setLevel(null);
     setStack(null);
     setQuery('');
+    setLocationFilter('');
+    setSalaryMin('');
+    setSalaryMax('');
+    setSort('newest');
   };
 
   const roleTabs: { value: RoleFilter; label: string; icon: React.ReactNode }[] = [
@@ -132,15 +136,43 @@ export default function JobsPage() {
             className="h-11 w-full rounded-xl border bg-background pl-9 pr-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
           />
         </div>
+
+        {/* Sort */}
+        <div className="relative w-40">
+          <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortOption)}
+            className="h-11 w-full appearance-none rounded-xl border bg-background pl-9 pr-8 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>{t(`sort_${opt}`)}</option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="space-y-3 rounded-2xl border bg-card p-4">
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-sm font-semibold">
+          <button
+            onClick={() => setShowExtraFilters(!showExtraFilters)}
+            className="flex items-center gap-1.5 text-sm font-semibold"
+          >
             <SlidersHorizontal className="h-4 w-4" />
             {t('filters')}
-          </span>
+            <svg
+              className={cn('h-3.5 w-3.5 transition-transform', showExtraFilters && 'rotate-180')}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
           {hasFilters && (
             <button
               onClick={resetFilters}
@@ -167,12 +199,55 @@ export default function JobsPage() {
           render={(v) => tl(v)}
           allLabel={t('all')}
         />
+
+        {/* Extra filters */}
+        {showExtraFilters && (
+          <div className="animate-in slide-in-from-top-2 space-y-3 border-t pt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground w-20 shrink-0">
+                <MapPin className="h-3.5 w-3.5" />
+                {t('filterLocation')}
+              </label>
+              <input
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                placeholder="Toshkent, Remote…"
+                className="h-9 flex-1 rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20 min-w-[140px]"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground w-20 shrink-0">
+                <DollarSign className="h-3.5 w-3.5" />
+                {t('filterSalary')}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  value={salaryMin}
+                  onChange={(e) => setSalaryMin(e.target.value)}
+                  placeholder="Min"
+                  className="h-9 w-28 rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+                />
+                <span className="text-muted-foreground">—</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={salaryMax}
+                  onChange={(e) => setSalaryMax(e.target.value)}
+                  placeholder="Max"
+                  className="h-9 w-28 rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Results header */}
       {!loading && !error && (
         <p className="text-sm text-muted-foreground">
-          {t('resultsCount', { count: filtered.length })}
+          {t('resultsCount', { count: jobs.length })}
         </p>
       )}
 
@@ -189,7 +264,7 @@ export default function JobsPage() {
             <div key={i} className="h-52 animate-pulse rounded-2xl border bg-muted/40" />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : jobs.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed py-20 text-center text-muted-foreground">
           <Search className="h-10 w-10 opacity-40" />
           <p>{t('empty')}</p>
@@ -201,7 +276,7 @@ export default function JobsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((job) => (
+          {jobs.map((job) => (
             <JobCard key={job.id} job={job} />
           ))}
         </div>

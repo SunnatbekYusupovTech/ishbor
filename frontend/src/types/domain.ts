@@ -2,7 +2,7 @@ export type Level = 'junior' | 'middle' | 'senior';
 export type Stack = 'frontend' | 'backend' | 'fullstack' | 'mobile';
 export type Direction = 'frontend' | 'backend' | 'fullstack' | 'mobile';
 export type VerificationLevel = 'none' | 'junior' | 'middle' | 'senior';
-export type Role = 'employer' | 'seeker';
+export type Role = 'employer' | 'seeker' | 'admin';
 export type ListingType = 'vacancy' | 'resume';
 
 export interface Catalog {
@@ -30,6 +30,7 @@ export interface Job {
   level: Level;
   stack: Stack;
   salary: string | null;
+  location: string | null;
   contactPhone: string | null;
   contactTelegram: string | null;
   postedByName: string;
@@ -46,9 +47,12 @@ export interface CreateJobInput {
   level?: Level;
   stack: Stack;
   salary?: string;
+  location?: string;
   contactPhone?: string;
   contactTelegram?: string;
 }
+
+export type SortOption = 'newest' | 'oldest' | 'salary_asc' | 'salary_desc';
 
 export interface LeaderboardEntry {
   rank: number;

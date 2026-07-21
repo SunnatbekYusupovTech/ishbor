@@ -4,11 +4,17 @@ import {
   startTest,
   submitTest,
   recordTabSwitch,
+  recordViolation,
   getSession,
 } from '@/controllers/testController';
 import { authenticate } from '@/middleware/authenticate';
 import { validate } from '@/middleware/validate';
-import { startTestSchema, submitTestSchema, tabSwitchSchema } from '@/validation/testSchemas';
+import {
+  startTestSchema,
+  submitTestSchema,
+  tabSwitchSchema,
+  violationSchema,
+} from '@/validation/testSchemas';
 
 const router = Router();
 
@@ -21,6 +27,7 @@ router.use(authenticate);
 router.post('/start', validate(startTestSchema), startTest);
 router.post('/submit', validate(submitTestSchema), submitTest);
 router.post('/tab-switch', validate(tabSwitchSchema), recordTabSwitch);
+router.post('/violation', validate(violationSchema), recordViolation);
 router.get('/session/:sessionId', getSession);
 
 export default router;

@@ -124,6 +124,35 @@ export function initAntiCheatSocket(httpServer: HttpServer): Server {
       });
     });
 
+    // Belt-and-suspenders companion to POST /api/test/violation — mirrors the
+    // tab-switch dual-path design so a dropped HTTP request doesn't silently
+    // lose a violation while the socket is still alive.
+    socket.on('violation', async (payload: { type?: string }) => {
+      const session = await Session.findOne({
+        _id: auth.sessionId,
+        userId: auth.userId,
+        status: 'in-progress',
+      });
+      if (!session) return;
+
+      session.violationCount += 1;
+      if (session.violationCount > env.maxViolations) {
+        session.status = 'terminated';
+        session.terminationReason = `Exceeded max integrity violations (${env.maxViolations}).`;
+        session.endTime = new Date();
+        await session.save();
+        socket.emit('session:terminated', { reason: 'violation-limit' });
+        socket.disconnect(true);
+        return;
+      }
+      await session.save();
+      socket.emit('violation:ack', {
+        violationCount: session.violationCount,
+        maxViolations: env.maxViolations,
+        type: payload?.type,
+      });
+    });
+
     socket.on('disconnect', (reason) => {
       if (socket.data.heartbeatTimer) clearTimeout(socket.data.heartbeatTimer);
       logger.info(`Anti-cheat socket disconnected: session ${auth.sessionId} (${reason})`);

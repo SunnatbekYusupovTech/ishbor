@@ -7,6 +7,12 @@ import { useRouter } from '@/i18n/navigation';
 import { api, tokenStore, ApiError } from '@/lib/api';
 import { ResultCard } from '@/components/ResultCard';
 import { LevelBadge } from '@/components/badges';
+import { AntiCheatBanner } from '@/components/AntiCheatBanner';
+import { ViolationDialog } from '@/components/ViolationDialog';
+import { useHeartbeat } from '@/hooks/useHeartbeat';
+import { useAntiCheat } from '@/hooks/useAntiCheat';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { useExamLockdown } from '@/hooks/useExamLockdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -33,7 +39,7 @@ export default function TestPage() {
   const [session, setSession] = useState<StartTestResponse | null>(null);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [secondsLeft, setSecondsLeft] = useState(30);
+  const [secondsLeft, setSecondsLeft] = useState(20);
   const [result, setResult] = useState<SubmitTestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +47,61 @@ export default function TestPage() {
   const answersRef = useRef<Record<string, number>>({});
   const indexRef = useRef(0);
   const submittingRef = useRef(false);
+
+  // The server killed the session (heartbeat lost / violation limit exceeded).
+  // No submit call is made — the session is already terminated server-side —
+  // we just render the same terminal screen submitTest would have produced.
+  const handleTerminated = useCallback(() => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    void fullscreen.exit();
+    const s = sessionRef.current;
+    setResult({
+      sessionId: s?.sessionId ?? '',
+      status: 'terminated',
+      score: 0,
+      maxScore: 0,
+      percentage: 0,
+      correctCount: 0,
+      totalQuestions: s?.questions.length ?? 0,
+      awardedLevel: 'none',
+      passedCount: 0,
+      technologies: [],
+      tabSwitchCount: 0,
+      late: false,
+    });
+    setPhase('result');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const { socket, connected } = useHeartbeat({
+    sessionId: session?.sessionId ?? '',
+    enabled: phase === 'active',
+    onTerminated: handleTerminated,
+  });
+
+  const anti = useAntiCheat({
+    sessionId: session?.sessionId ?? '',
+    enabled: phase === 'active',
+    socket,
+    onTerminated: handleTerminated,
+  });
+
+  // Leaving fullscreen (opening another window, a second monitor, Esc, ...) is
+  // routed through the SAME channel as a tab-switch — it's the same integrity
+  // signal (left the locked-down exam viewport) and sharing the debounce lock
+  // means a single alt-tab that fires both `blur` and `fullscreenchange`
+  // within the same tick is counted once, not twice.
+  const fullscreen = useFullscreen({
+    enabled: phase === 'active',
+    onExit: () => void anti.report(),
+  });
+
+  // Best-effort client-side deterrents (blocks common devtools/save/print
+  // shortcuts, text selection). Not a security boundary on its own — the
+  // server-side counters above are — but it raises the effort bar and is
+  // one of the few signals that doesn't depend on a network round-trip.
+  useExamLockdown({ enabled: phase === 'active' });
 
   // Guard + load taxonomy.
   useEffect(() => {
@@ -67,6 +128,7 @@ export default function TestPage() {
 
     try {
       const res = await api.submitTest({ sessionId: s.sessionId, answers: arr });
+      void fullscreen.exit();
       setResult(res);
       setPhase('result');
     } catch (err) {
@@ -74,6 +136,7 @@ export default function TestPage() {
       submittingRef.current = false;
       setPhase('active');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
   const advance = useCallback(() => {
@@ -91,7 +154,7 @@ export default function TestPage() {
   // Per-question countdown: resets each question, auto-advances at zero.
   useEffect(() => {
     if (phase !== 'active') return;
-    const perQ = sessionRef.current?.perQuestionSeconds ?? 30;
+    const perQ = sessionRef.current?.perQuestionSeconds ?? 20;
     setSecondsLeft(perQ);
     const id = setInterval(() => {
       setSecondsLeft((s) => {
@@ -125,6 +188,10 @@ export default function TestPage() {
     setError(null);
     setResult(null);
     submittingRef.current = false;
+    // Fire synchronously, still inside the click's user-activation window —
+    // fullscreen requests made after an `await` can be silently rejected by
+    // the browser once that activation has expired.
+    void fullscreen.request();
     try {
       const res = await api.startTest({ direction, technologies: Array.from(techs) });
       sessionRef.current = res;
@@ -145,6 +212,7 @@ export default function TestPage() {
   };
 
   const restart = () => {
+    void fullscreen.exit();
     setPhase('select');
     setSession(null);
     sessionRef.current = null;
@@ -264,12 +332,26 @@ export default function TestPage() {
   const total = session.questions.length;
   const selected = answers[question._id];
   const isLast = index + 1 >= total;
-  const perQ = session.perQuestionSeconds || 30;
+  const perQ = session.perQuestionSeconds || 20;
   const timePercent = (secondsLeft / perQ) * 100;
   const urgent = secondsLeft <= 10;
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
+      <AntiCheatBanner
+        tabSwitchCount={anti.tabSwitchCount}
+        maxTabSwitches={anti.maxTabSwitches}
+        violationCount={anti.violationCount}
+        maxViolations={anti.maxViolations}
+        connected={connected}
+      />
+      <ViolationDialog
+        open={anti.violationDialog !== null}
+        type={anti.violationDialog ?? 'tab-switch'}
+        onAcknowledge={anti.acknowledgeViolation}
+        count={anti.violationDialog === 'tab-switch' ? anti.tabSwitchCount : anti.violationCount}
+        maxCount={anti.violationDialog === 'tab-switch' ? anti.maxTabSwitches : anti.maxViolations}
+      />
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-muted-foreground">
