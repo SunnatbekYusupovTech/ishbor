@@ -36,6 +36,10 @@ const PRESETS: { stack: Stack; level: Level }[] = [
 /** Role filter — 'all' shows employers + seekers side by side. */
 type RoleFilter = 'all' | ListingType;
 
+/** Server-side sort options (mirrors the backend `sort` query param). */
+type SortOption = 'newest' | 'oldest' | 'salary_asc' | 'salary_desc';
+const SORT_OPTIONS: SortOption[] = ['newest', 'oldest', 'salary_asc', 'salary_desc'];
+
 export default function JobsPage() {
   const t = useTranslations('jobs');
   const tl = useTranslations('levels');
@@ -45,6 +49,10 @@ export default function JobsPage() {
   const [level, setLevel] = useState<Level | null>(null);
   const [stack, setStack] = useState<Stack | null>(null);
   const [query, setQuery] = useState('');
+  const [location, setLocation] = useState('');
+  const [salaryMin, setSalaryMin] = useState('');
+  const [salaryMax, setSalaryMax] = useState('');
+  const [sort, setSort] = useState<SortOption>('newest');
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +86,10 @@ export default function JobsPage() {
         type: role === 'all' ? undefined : role,
         level: level ?? undefined,
         stack: stack ?? undefined,
+        location: location.trim() || undefined,
+        salaryMin: salaryMin.trim() ? Number(salaryMin) : undefined,
+        salaryMax: salaryMax.trim() ? Number(salaryMax) : undefined,
+        sort,
       })
       .then((data) => !cancelled && setJobs(data))
       .catch((err) => !cancelled && setError(err instanceof ApiError ? err.message : t('loadError')))
@@ -85,7 +97,7 @@ export default function JobsPage() {
     return () => {
       cancelled = true;
     };
-  }, [role, level, stack, t]);
+  }, [role, level, stack, location, salaryMin, salaryMax, sort, t]);
 
   // Client-side pipeline: drop hidden → saved-only → text search.
   const filtered = useMemo(() => {
@@ -101,11 +113,22 @@ export default function JobsPage() {
     });
   }, [jobs, query, hidden, savedOnly, favIds]);
 
-  const hasFilters = level !== null || stack !== null || query.trim() !== '';
+  const hasFilters =
+    level !== null ||
+    stack !== null ||
+    query.trim() !== '' ||
+    location.trim() !== '' ||
+    salaryMin.trim() !== '' ||
+    salaryMax.trim() !== '' ||
+    sort !== 'newest';
   const resetFilters = () => {
     setLevel(null);
     setStack(null);
     setQuery('');
+    setLocation('');
+    setSalaryMin('');
+    setSalaryMax('');
+    setSort('newest');
   };
   const hideJob = (id: string) => setHidden((prev) => new Set(prev).add(id));
 
@@ -217,6 +240,65 @@ export default function JobsPage() {
               render={(v) => tl(v)}
               allLabel={t('all')}
             />
+
+            {/* Location */}
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t('filterLocation')}
+              </span>
+              <input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={t('locationPlaceholder')}
+                className="mt-2 h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+              />
+            </div>
+
+            {/* Salary range */}
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t('filterSalary')}
+              </span>
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={salaryMin}
+                  onChange={(e) => setSalaryMin(e.target.value)}
+                  placeholder={t('salaryMinPlaceholder')}
+                  className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+                />
+                <span className="text-muted-foreground">–</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={salaryMax}
+                  onChange={(e) => setSalaryMax(e.target.value)}
+                  placeholder={t('salaryMaxPlaceholder')}
+                  className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+                />
+              </div>
+            </div>
+
+            {/* Sort */}
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t('sortBy')}
+              </span>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortOption)}
+                className="mt-2 h-9 w-full rounded-lg border bg-background px-2 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {t(`sort_${o}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Saved searches (presets) */}
