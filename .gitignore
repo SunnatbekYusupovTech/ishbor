@@ -29,3 +29,5 @@ coverage/
 
 # Claude
 .claude/
+
+.vercel

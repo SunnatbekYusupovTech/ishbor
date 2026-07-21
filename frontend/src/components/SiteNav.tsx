@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Shield, MapPin, Heart, Bell } from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { api, tokenStore } from '@/lib/api';
+import { useFavorites } from '@/lib/favorites';
 import { LocaleSwitcher } from '@/components/locale-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
@@ -16,13 +18,24 @@ const links = [
 
 export function SiteNav() {
   const t = useTranslations('nav');
+  const th = useTranslations('header');
   const pathname = usePathname();
   const router = useRouter();
+  const favorites = useFavorites();
   const [authed, setAuthed] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Read auth state on mount + whenever the route changes (login/logout).
   useEffect(() => {
     setAuthed(!!tokenStore.get());
+    if (tokenStore.get()) {
+      api
+        .me()
+        .then((p) => setIsAdmin(p?.role === 'admin'))
+        .catch(() => setIsAdmin(false));
+    } else {
+      setIsAdmin(false);
+    }
   }, [pathname]);
 
   const logout = () => {
@@ -43,36 +56,89 @@ export function SiteNav() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-            I
-          </div>
-          <span className="hidden font-semibold tracking-tight sm:inline">Ishbor</span>
+    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="container flex h-16 items-center gap-3 sm:gap-5">
+        {/* Brand mark — red, hh-style */}
+        <Link href="/" className="flex shrink-0 items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-base font-black leading-none text-brand-foreground shadow-sm">
+            ish
+          </span>
+          <span className="hidden text-lg font-extrabold tracking-tight sm:inline">Ishbor</span>
         </Link>
 
-        <nav className="flex flex-1 items-center gap-1 text-sm">
-          {links.map((l) => (
+        {/* City selector — single-market label */}
+        <button
+          type="button"
+          className="hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:inline-flex"
+        >
+          <MapPin className="h-4 w-4 text-primary" />
+          {th('city')}
+        </button>
+
+        <nav className="ml-auto flex items-center gap-1 text-sm md:ml-2 md:mr-auto">
+          {links.map((l) => {
+            const active = pathname === l.href;
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={cn(
+                  'relative rounded-md px-2.5 py-1.5 font-medium transition-colors sm:px-3',
+                  active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t(l.key)}
+                {active && (
+                  <span className="absolute inset-x-2.5 -bottom-[9px] h-0.5 rounded-full bg-primary" />
+                )}
+              </Link>
+            );
+          })}
+          {/* Admin-only link — role checked via api.me() */}
+          {isAdmin && (
             <Link
-              key={l.href}
-              href={l.href}
+              href="/admin"
               className={cn(
-                'rounded-md px-3 py-1.5 font-medium transition-colors hover:bg-accent',
-                pathname === l.href ? 'text-foreground' : 'text-muted-foreground',
+                'relative flex items-center gap-1 rounded-md px-2.5 py-1.5 font-medium transition-colors sm:px-3',
+                pathname.startsWith('/admin')
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {t(l.key)}
+              <Shield className="h-3.5 w-3.5" />
+              {t('admin')}
+              {pathname.startsWith('/admin') && (
+                <span className="absolute inset-x-2.5 -bottom-[9px] h-0.5 rounded-full bg-primary" />
+              )}
             </Link>
-          ))}
+          )}
         </nav>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
+          {/* Saved listings */}
+          <Link
+            href="/?saved=1"
+            aria-label={th('favorites')}
+            className="relative rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
+          >
+            <Heart className="h-5 w-5" />
+            {favorites.length > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {favorites.length}
+              </span>
+            )}
+          </Link>
+
+          <NotificationsBell label={th('notifications')} />
+
+          <LocaleSwitcher />
+          <ThemeToggle />
+
           {authed ? (
             <>
               <button
                 onClick={logout}
-                className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
+                className="ml-1 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
               >
                 {t('logout')}
               </button>
@@ -89,15 +155,57 @@ export function SiteNav() {
           ) : (
             <Link
               href="/login"
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
+              className="ml-1 rounded-md bg-primary px-3.5 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
             >
               {t('login')}
             </Link>
           )}
-          <LocaleSwitcher />
-          <ThemeToggle />
         </div>
       </div>
     </header>
+  );
+}
+
+/** Notifications bell with a small empty-state popover (no backend yet). */
+function NotificationsBell({ label }: { label: string }) {
+  const t = useTranslations('header');
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={label}
+        aria-expanded={open}
+        className={cn(
+          'rounded-full p-2 transition-colors hover:bg-accent hover:text-primary',
+          open ? 'bg-accent text-primary' : 'text-muted-foreground',
+        )}
+      >
+        <Bell className="h-5 w-5" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg">
+          <p className="text-sm font-semibold">{label}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{t('noNotifications')}</p>
+        </div>
+      )}
+    </div>
   );
 }

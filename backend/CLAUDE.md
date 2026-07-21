@@ -89,7 +89,8 @@ npm run typecheck -w backend  # tsc --noEmit
 - **User** — `role` (employer|seeker|admin — `admin` faqat DB orqali beriladi),
   `verificationLevel` (none|junior|middle|senior),
   `bestPercentage`, `bestScore`, `attempts`. Reyting shu yerdan.
-- **Job** — `type` (vacancy|resume), `level`, `stack`, `postedBy` (→User), denormallashtirilgan `postedByName`.
+- **Job** — `type` (vacancy|resume), `level`, `stack`, `postedBy` (→User), denormallashtirilgan `postedByName`,
+  `location`, `salaryMin`, `salaryMax`.
 - **Question** — test savoli (`technology`, `category`, daraja, variantlar).
 - **Session** — test sessiyasi, tab-switch/heartbeat nazorati.
 - **RefreshToken** — `userId`, `tokenHash` (SHA-256, xom token hech qachon saqlanmaydi),
@@ -105,11 +106,14 @@ npm run typecheck -w backend  # tsc --noEmit
 
 ## Endpointlar (`/api`)
 
-`/health` · `/auth` (register, login, refresh, logout, logout-all, me) · `/test` (catalog, start, submit,
-tab-switch, violation) · `/jobs` (GET list `?type=&level=&stack=`, POST create) · `/users`
-(leaderboard) · `/admin` (GET `violations` — admin-only).
+`/health` · `/auth` (register, login, refresh, logout, logout-all, me) · `/test`
+(catalog, start, submit, tab-switch, violation) · `/jobs`
+(GET list `?type=&level=&stack=&keyword=&location=&salaryMin=&salaryMax=&sort=`, POST create) ·
+`/users` (leaderboard) · `/admin` (GET `violations`, stats, users CRUD, jobs CRUD,
+sessions/list, questions/list — admin-only).
 
 > `GET /jobs` e'lon egasining reytingini `populate` qilib qaytaradi (`rating` maydoni).
+> Barcha admin endpointlar `authenticate` + `adminOnly` middleware bilan himoyalangan.
 
 ## Konvensiyalar
 

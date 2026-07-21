@@ -32,15 +32,27 @@ Ish e'lonlari tizimi, kengaytirilgan filtrlar, yangi admin panel, narx/tariflar 
 
 ## 🚀 Yangi vazifalar (doimiy ish)
 
-- [ ] **Admin panel (yangi katta modul):**
-  - E'lonlar / foydalanuvchilarni boshqarish (CRUD)
-  - Moderatsiya (nomaqbul e'lonlarni o'chirish/tasdiqlash)
-  - Fazilov yozgan savollarni tasdiqlash
-  - Statistika dashboard
-  - Anti-cheat hodisalarini ko'rish (Sardordan ma'lumot keladi)
-- [ ] **Kengaytirilgan filtrlar:** maosh oralig'i, joylashuv, sana bo'yicha saralash, kalit so'z
+- [x] **Kengaytirilgan filtrlar:**
+  - `location` maydoni (model, controller, frontend)
+  - `salaryMin`/`salaryMax` — maosh oralig'i bo'yicha filterlash
+  - `keyword` — server-side to'liq matnli qidiruv (title, company, description, postedByName)
+  - `sort` — `newest`, `oldest`, `salary_asc`, `salary_desc`
+  - Frontendda: joylashuv inputi, maosh diapazoni, sort select, kengaytirilgan filtrlar toggle
+- [x] **Admin panel (yangi katta modul):**
+  - **Backend:**
+    - `User` modeliga `admin` roli qo'shildi
+    - `adminOnly` middleware yozildi
+    - `adminController` — statistika (`/stats`), foydalanuvchilarni CRUD (`/users`), e'lonlarni boshqarish (`/jobs`), anti-cheat sessiyalar (`/sessions`), savollar bazasi (`/questions`)
+    - `adminRoutes` ni `routes/index.ts` ga ulash
+  - **Frontend:**
+    - Dashboard (`/admin`) — statistik kartalar, bo'limlar bo'yicha tahlil
+    - Users (`/admin/users`) — qidiruv, pagination, o'chirish
+    - Jobs (`/admin/jobs`) — qidiruv, pagination, o'chirish
+    - Sessions (`/admin/sessions`) — status filter, anti-cheat loglari
+    - Questions (`/admin/questions`) — texnologiya va qiyinchilik bo'yicha filter
+    - `SiteNav` ga admin linki (faqat admin roliga)
 - [ ] **Narxlar / tariflar:** e'lon joylash uchun to'lov / premium e'lonlar
-- [ ] **Bug tracking:** GitHub Issues'ni yuritish va xatolarni tuzatish (butun loyiha bo'ylab)
+- [ ] **Bug tracking / fixes (navbatdagi):**
 
 ---
 

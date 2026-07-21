@@ -99,6 +99,7 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
     level: 'junior',
     stack: 'frontend',
     salary: '',
+    location: '',
     contactPhone: '',
     contactTelegram: '',
   });
@@ -126,6 +127,7 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
         description: form.description,
         stack: form.stack,
         salary: form.salary || undefined,
+        location: form.location || undefined,
         contactPhone: form.contactPhone || undefined,
         contactTelegram: form.contactTelegram || undefined,
         ...(isEmployer ? { company: form.company, level: form.level } : {}),
@@ -212,6 +214,15 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
                 />
               </Field>
             </div>
+
+            <Field label={t('location')}>
+              <input
+                value={form.location}
+                onChange={(e) => set('location', e.target.value)}
+                placeholder="Toshkent, Remote…"
+                className={inputCls}
+              />
+            </Field>
 
             <Field label={t('salary')}>
               <input

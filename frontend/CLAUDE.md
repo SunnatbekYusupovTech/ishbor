@@ -20,7 +20,13 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 ## Marshrutlar (`app/[locale]/`)
 
 - `page.tsx` — **e'lonlar sahifasi** (asosiy): rol segmenti, filtrlar, qidiruv, card grid.
-- `jobs/new/page.tsx` — e'lon berish.
+  Kengaytirilgan filtrlar: joylashuv, maosh oralig'i, sort (newest/oldest/salary_asc/salary_desc).
+- `jobs/new/page.tsx` — e'lon berish (location maydoni qo'shilgan).
+- `admin/page.tsx` — Admin dashboard (statistika, bo'limlar bo'yicha tahlil).
+- `admin/users/page.tsx` — Foydalanuvchilarni boshqarish (qidiruv, pagination, o'chirish).
+- `admin/jobs/page.tsx` — E'lonlarni boshqarish (qidiruv, pagination, o'chirish).
+- `admin/sessions/page.tsx` — Anti-cheat sessiyalar (status filter, loglarni ko'rish).
+- `admin/questions/page.tsx` — Savollar bazasi (texnologiya va qiyinchilik bo'yicha filter).
 - `test/page.tsx` — malaka testi (anti-cheat, taymer).
 - `leaderboard/page.tsx` — reyting.
 - `login/page.tsx` — kirish/ro'yxatdan o'tish.
@@ -80,11 +86,39 @@ Yangi buzilish turi qo'shsang: `types/test.ts`dagi `ViolationType`,
 > shu sabab "ko'p oyna" himoyasi to'liq oldini olish emas, fullscreen'dan
 > chiqishni aniqlash orqali amalga oshirilgan.
 
-## Dizayn tili
+## Dizayn tili (hh.uz-uslubidagi job-board)
 
-- shadcn slate bazasi (CSS o'zgaruvchilari `globals.css`), light/dark.
-- Aksent ranglar: **ish beruvchi = indigo**, **ish qidiruvchi = emerald**, maosh/muvaffaqiyat = emerald, reyting = amber.
-- Card grid `sm:grid-cols-2 lg:grid-cols-3`, hover'da ko'tarilish + soya.
+- **Token'lar** `globals.css` da (light/dark), Tailwind orqali ishlatiladi.
+  - **Bitta harakat aksenti = ko'k** `primary` (`#0069f5`; dark'da yorqinroq). Barcha
+    harakatlar: tugmalar, havolalar, aktiv filtr, verifikatsiya belgisi. Aksent faqat
+    harakat/holat uchun.
+  - **Brend qizil** `brand` (`#d6001c`; token: `hsl(var(--brand))`) — faqat logo va
+    xato uchun, **hech qachon** oddiy harakat tugmasi uchun ishlatilmaydi.
+  - Light: canvas och-kulrang (`#f4f6f9`), kartalar oq "orol"; Dark: deep-slate canvas,
+    kartalar bir pog'ona ochroq.
+  - **Semantik token'lar:** `success` (maosh/ijobiy — yashil), `warning`, `destructive`.
+    Yangi kodda ad-hoc `emerald-*`/`indigo-*`/`sky-*` o'rniga token ishlating.
+  - Radius: `--radius: 0.75rem` (xl/lg/md/sm hosilalari Tailwind configda).
+- **Shriftlar** (`next/font`, `layout.tsx`): sans = **Onest** (uz/ru/en — latin-ext +
+  cyrillic), mono = **JetBrains Mono** (taymer, ball, kod). Tailwind: `font-sans`/`font-mono`.
+- Rol aksenti: **ish beruvchi = ko'k (primary)**, **ish qidiruvchi = yashil (success)**.
+  Reyting yulduzlari = amber.
+- **Layout (e'lonlar sahifasi):** yuqorida keng qidiruv + rol segmenti; pastda ikki ustun
+  `lg:grid-cols-[300px_minmax(0,1fr)]` — chapda `<aside>` sticky vidjetlar (Faoliyatingiz/
+  Saqlanganlar, Filtrlar, Saqlangan qidiruvlar preset'lari, malaka-promo, mehmon uchun
+  kirish), o'ngda **bitta ustunli** keng karta lentasi.
+- **Header (`SiteNav`):** qizil `ish` logo mark + wordmark, `Toshkent` city pill (`MapPin`),
+  aktiv link ostida ko'k chiziq, o'ngda saqlanganlar (yurak + counter), bildirishnoma
+  qo'ng'irog'i (empty-state popover), locale/theme, ko'k `Kirish`.
+- **JobCard:** keng "orol" karta — avatar + ko'k `BadgeCheck` (verifikatsiya =
+  `rating.verificationLevel !== 'none'`), rol bejlik, sarlavha (dialog ochadi), teglar,
+  yashil maosh, tavsif; o'ng-yuqorida `EyeOff` (yashirish) + `Heart` (saqlash); pastda
+  vaqt + ko'k `Bog'lanish`.
+- **Saqlanganlar (favorites):** `lib/favorites.ts` — localStorage (`ishbor_favorites`) +
+  `useSyncExternalStore` (snapshot memoizatsiya qilinadi, aks holda infinite-loop). Header
+  yuragi, karta yuragi va sidebar counteri shu store orqali sinxron.
+- `container` padding adaptiv: `1rem` (mobil) → `1.5rem` (sm) → `2rem` (lg).
+- Metadata `generateMetadata` orqali lokalizatsiya qilinadi (`meta` namespace, uch tilda).
 
 ## 📝 Hujjatni yangilab borish (MAJBURIY)
 
@@ -95,5 +129,6 @@ uchtala tilga qo'shing. Batafsil qoida: ildiz `/CLAUDE.md` → "Hujjatlarni yang
 ## Domen egalari (`docs/team/`)
 
 - **Fazilov** — `components/ui/*`, `rating`, `badges`, `theme`, `layout`, `globals.css`, test UI, i18n.
-- **Hidoyatov** — `page.tsx` (e'lonlar), `jobs/new`, `JobCard`, `JobDetailDialog` + admin (yangi).
+- **Hidoyatov** — `page.tsx` (e'lonlar), `jobs/new`, `JobCard`, `JobDetailDialog`,
+  `admin/*` (dashboard, users, jobs, sessions, questions), `SiteNav` (admin link).
 - **Sardor** — `hooks/*` (anti-cheat), `lib/socket.ts`, `AntiCheatBanner`, `ViolationDialog`, login.

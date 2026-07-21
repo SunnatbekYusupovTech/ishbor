@@ -12,6 +12,7 @@ Butun ilovaning ko'rinishi (UI/UX) va test savollari bazasi. Sayt zamonaviy, qul
 
 ## 📂 Mavjud kod (egalik qilasan)
 
+
 ### Frontend UI
 | Fayl | Vazifasi |
 |---|---|
@@ -26,6 +27,7 @@ Butun ilovaning ko'rinishi (UI/UX) va test savollari bazasi. Sayt zamonaviy, qul
 | `frontend/src/components/Timer.tsx` | Taymer UI |
 | `frontend/src/components/ResultCard.tsx` | Natija kartasi |
 | `frontend/messages/{uz,ru,en}.json` | Tarjimalar (i18n) |
+
 
 ### Test kontenti
 | Fayl | Vazifasi |
@@ -44,7 +46,25 @@ Butun ilovaning ko'rinishi (UI/UX) va test savollari bazasi. Sayt zamonaviy, qul
   - > Bu tugamaydigan kontent ishi — doim savol qo'shib borasan
 - [ ] Butun UI izchilligi: responsive, dark mode, animatsiyalar, bo'sh/loading holatlar
 - [ ] Yangi sahifalar dizayni
-- [ ] Dizayn-tizim: ranglar, shriftlar, spacing standartlari
+- [x] Dizayn-tizim: ranglar, shriftlar, spacing standartlari
+
+---
+
+## ✅ Bajarilgan — hh.uz-uslubidagi redizayn
+
+- [x] **Dizayn-token'lar hh palitrasiga o'tkazildi** (`globals.css`, `tailwind.config.ts`):
+  ko'k `primary` = yagona harakat aksenti, qizil `brand` = faqat logo/xato, `success` yashil
+  = maosh. Light: och-kulrang canvas + oq "orol" kartalar; dark ham moslandi.
+- [x] **E'lonlar sahifasi ikki ustunli** (`app/[locale]/page.tsx`): keng qidiruv + rol
+  segmenti; chapda sticky sidebar vidjetlar (Saqlanganlar, Filtrlar, Saqlangan qidiruvlar
+  preset'lari, malaka-promo, mehmon-kirish), o'ngda bitta ustunli keng karta lentasi +
+  skeleton/empty/error holatlar.
+- [x] **`SiteNav` header** hh ko'rinishida: qizil `ish` logo, `Toshkent` city pill, aktiv
+  link ostida ko'k chiziq, saqlanganlar (yurak+counter), bildirishnoma popover'i.
+- [x] **`JobCard` keng "orol" karta**: ko'k `BadgeCheck` verifikatsiya, `EyeOff`/`Heart`
+  amallar, ko'k `Bog'lanish`; `JobDetailDialog` ranglari primary/success'ga moslandi.
+- [x] **Saqlanganlar store** (`lib/favorites.ts`): localStorage + `useSyncExternalStore`.
+- [x] i18n: `jobs`ga yangi kalitlar + yangi `header` namespace — uz/ru/en uchtala tilga.
 
 ---
 
