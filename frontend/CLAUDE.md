@@ -43,6 +43,9 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 - `rating.tsx` — `RatingStars` (test %idan yulduz) + `Avatar` (ismdan gradient).
 - `badges.tsx` — `LevelBadge`, `StackBadge`, `VerifiedBadge`.
 - `QuestionCard`, `Timer`, `ResultCard`, `AntiCheatBanner`, `ViolationDialog` — test oqimi.
+- `language-selector.tsx` — premium til tanlagich (bayroq + kod, animatsion dropdown,
+  klaviatura bilan boshqarish, `lib/locale-preference.ts` orqali localStorage'da saqlash).
+  Bayroqlar `flags.tsx` (SVG — emoji bayroqlar Windows'da harf ko'rinadi). `SiteNav`da ishlatiladi.
 
 ## Dizayn tili (hh.uz-uslubidagi job-board)
 

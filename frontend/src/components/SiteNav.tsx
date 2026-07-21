@@ -6,7 +6,7 @@ import { MapPin, Heart, Bell } from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { tokenStore } from '@/lib/api';
 import { useFavorites } from '@/lib/favorites';
-import { LocaleSwitcher } from '@/components/locale-switcher';
+import { LanguageSelector } from '@/components/language-selector';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
 
@@ -93,7 +93,7 @@ export function SiteNav() {
 
           <NotificationsBell label={th('notifications')} />
 
-          <LocaleSwitcher />
+          <LanguageSelector />
           <ThemeToggle />
 
           {authed ? (
