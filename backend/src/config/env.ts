@@ -54,15 +54,45 @@ export const env = {
    * could — this is the primary defense against that.
    */
   testAttemptCooldownMinutes: numberFromEnv('TEST_ATTEMPT_COOLDOWN_MINUTES', 10),
+  /**
+   * If a candidate's last scored attempt was below this percentage, the next
+   * attempt's cooldown (above) is multiplied by `testLowScoreCooldownMultiplier`
+   * instead of applying the standard duration — discourages rapid low-effort
+   * re-attempts (guessing/farming) more than a single flat cooldown would.
+   */
+  testLowScoreThreshold: numberFromEnv('TEST_LOW_SCORE_THRESHOLD', 50),
+  testLowScoreCooldownMultiplier: numberFromEnv('TEST_LOW_SCORE_COOLDOWN_MULTIPLIER', 3),
 
   /**
-   * Shared secret for the Make.com question-import webhook
-   * (`POST /api/webhooks/questions`). Not a user JWT — the automation has no
-   * login flow, so it authenticates with this header instead. Optional: if
-   * unset, the webhook route is disabled (returns 503) rather than falling
-   * back to an open endpoint.
+   * Shared secret for the question-import webhook (`POST /api/webhooks/questions`).
+   * Not a user JWT — external automations have no login flow, so they
+   * authenticate with this header instead. Optional: if unset, the webhook
+   * route is disabled (returns 503) rather than falling back to an open endpoint.
    */
   questionImportSecret: process.env.QUESTION_IMPORT_SECRET,
+
+  /**
+   * Optional: enables `services/autoRefillService.ts` (in-process Groq calls
+   * triggered from `testController.startTest` when a technology's question
+   * pool runs low). Unset = auto-refill silently no-ops; the standalone
+   * `scripts/generateQuestions.ts` process remains the primary way to grow
+   * the bank either way.
+   */
+  groqApiKey: process.env.GROQ_API_KEY,
+  /** Below this many total questions for a technology, trigger a background refill. */
+  autoRefillThreshold: numberFromEnv('AUTO_REFILL_THRESHOLD', 15),
+  /** Minimum minutes between auto-refill batches for the same technology (debounce). */
+  autoRefillCooldownMinutes: numberFromEnv('AUTO_REFILL_COOLDOWN_MINUTES', 30),
+
+  /**
+   * Registration abuse guard: max accounts allowed to register from the same
+   * IP address before further registrations from it are rejected (not a
+   * ban — existing accounts keep working, only new signups from that IP are
+   * blocked). Deliberately loose (default 2) since shared IPs (offices,
+   * campuses, NAT/CGNAT, mobile carriers) are common and a low limit risks
+   * locking out legitimate users.
+   */
+  maxAccountsPerIp: numberFromEnv('MAX_ACCOUNTS_PER_IP', 2),
 } as const;
 
 export type Env = typeof env;

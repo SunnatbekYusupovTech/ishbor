@@ -74,11 +74,22 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   const exists = await User.findOne({ email });
   if (exists) throw ApiError.conflict('Email already registered.');
 
+  // Registration abuse guard: shared IPs (offices, campuses, NAT) are common,
+  // so this rejects only the (N+1)th signup from an IP — it never touches
+  // accounts that already exist, and login/test-taking are unaffected.
+  if (req.ip) {
+    const accountsFromIp = await User.countDocuments({ registrationIp: req.ip });
+    if (accountsFromIp >= env.maxAccountsPerIp) {
+      throw ApiError.forbidden('Too many accounts have already been created from this network.');
+    }
+  }
+
   const user = await User.create({
     name: name ?? email.split('@')[0],
     email,
     passwordHash: hashPassword(password),
     role: role ?? 'seeker',
+    registrationIp: req.ip,
   });
 
   const token = signAuthToken({ userId: user._id.toString(), email: user.email });

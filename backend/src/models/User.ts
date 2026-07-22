@@ -23,6 +23,8 @@ export interface IUser extends Document {
   bestPercentage: number;
   bestScore: number;
   attempts: number;
+  /** IP the account registered from — powers the per-IP signup limit (see `authController.register`). */
+  registrationIp?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +56,7 @@ const userSchema = new Schema<IUser>(
     bestPercentage: { type: Number, default: 0, min: 0, max: 100, index: true },
     bestScore: { type: Number, default: 0, min: 0 },
     attempts: { type: Number, default: 0, min: 0 },
+    registrationIp: { type: String, index: true },
   },
   { timestamps: true },
 );

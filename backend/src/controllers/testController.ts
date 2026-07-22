@@ -9,6 +9,7 @@ import { asyncHandler } from '@/utils/asyncHandler';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 import { shuffledIndices, applyOrder } from '@/utils/shuffle';
+import { maybeRefill } from '@/services/autoRefillService';
 import {
   DIRECTIONS,
   DIRECTION_TECHNOLOGIES,
@@ -111,12 +112,19 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
   // account-keyed complement to `testRateLimiter` (IP-keyed) — it closes the
   // gap where a script starts+submits from many IPs to probe the scored
   // `percentage` as an oracle for the hidden answer key, or otherwise farms
-  // attempts faster than a human ever would.
+  // attempts faster than a human ever would. A low-scoring last attempt gets
+  // a longer cooldown (`testLowScoreCooldownMultiplier`×) than a normal one —
+  // discourages rapid low-effort re-guessing more than a single flat duration.
   const lastFinished = await Session.findOne({ userId, endTime: { $exists: true } })
     .sort({ endTime: -1 })
-    .select('endTime');
+    .select('endTime percentage');
   if (lastFinished?.endTime) {
-    const cooldownMs = env.testAttemptCooldownMinutes * 60 * 1000;
+    const wasLowScore =
+      lastFinished.percentage != null && lastFinished.percentage < env.testLowScoreThreshold;
+    const cooldownMinutes = wasLowScore
+      ? env.testAttemptCooldownMinutes * env.testLowScoreCooldownMultiplier
+      : env.testAttemptCooldownMinutes;
+    const cooldownMs = cooldownMinutes * 60 * 1000;
     const elapsedMs = Date.now() - lastFinished.endTime.getTime();
     if (elapsedMs < cooldownMs) {
       const waitMinutes = Math.ceil((cooldownMs - elapsedMs) / 60_000);
@@ -126,17 +134,39 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  // Serve up to QUESTIONS_PER_TECH random questions from EACH selected pool.
-  // `$sample` never includes `correctAnswer` (it is `select:false`), so the key
-  // never even enters this result set.
+  // Questions this candidate has already been served in any past session —
+  // excluded below so repeat attempts see fresh material instead of
+  // memorisable repeats. `$sample` never includes `correctAnswer` (it is
+  // `select:false`), so the key never even enters this result set.
+  const seenQuestionIds = await Session.find({ userId }).distinct('questionIds');
+
   const perTech = await Promise.all(
-    selected.map((tech) =>
-      Question.aggregate<IQuestion>([
-        { $match: { technology: tech } },
+    selected.map(async (tech) => {
+      const unseen = await Question.aggregate<IQuestion>([
+        { $match: { technology: tech, _id: { $nin: seenQuestionIds } } },
         { $sample: { size: QUESTIONS_PER_TECH } },
         { $project: { correctAnswer: 0 } },
-      ]),
-    ),
+      ]);
+
+      // The technology's pool is running low on this trigger regardless of
+      // whether we had to top up below — check the total, not just unseen.
+      maybeRefill(tech);
+
+      if (unseen.length >= QUESTIONS_PER_TECH) return unseen;
+
+      // Not enough unseen questions left (candidate has exhausted the pool for
+      // this technology) — top up with previously-seen ones rather than
+      // serving a short test. Better than nothing; the auto-refill triggered
+      // above grows the pool for next time.
+      const shortBy = QUESTIONS_PER_TECH - unseen.length;
+      const alreadyPicked = unseen.map((q) => q._id);
+      const topUp = await Question.aggregate<IQuestion>([
+        { $match: { technology: tech, _id: { $nin: alreadyPicked } } },
+        { $sample: { size: shortBy } },
+        { $project: { correctAnswer: 0 } },
+      ]);
+      return [...unseen, ...topUp];
+    }),
   );
   const questions = perTech.flat();
 

@@ -107,17 +107,49 @@ npm run typecheck -w backend  # tsc --noEmit
   urinishidan keyin `TEST_ATTEMPT_COOLDOWN_MINUTES` (default 10) o'tmaguncha
   yangi sessiya ochilishiga yo'l qo'ymaydi — skript orqali qayta-qayta
   start→submit qilib, qaytarilgan `percentage`ni to'g'ri javoblarni topish
-  uchun oracle sifatida ishlatishning oldini oladi. `testRateLimiter`
-  (`middleware/rateLimiter.ts`) — IP bo'yicha qo'shimcha himoya qatlami.
-- **AI orqali savol generatsiyasi (`scripts/generateQuestions.ts`):**
-  `npm run generate-questions` — Groq (bepul, `console.groq.com`) chaqirib,
-  har texnologiya/qiyinchilik juftligi uchun savol generatsiya qiladi va
-  o'zining `POST /api/webhooks/questions`iga yuboradi. `node-cron` bilan
-  o'z-o'zini rejalashtiradi (`GENERATE_CRON`, default kuniga bir marta soat
-  03:00) — alohida uzoq muddatli process sifatida ishga tushirilishi kerak
-  (API server bilan bir jarayonda emas). `RUN_ONCE=true` — bir martalik test
-  uchun. Kerakli env: `GROQ_API_KEY`, `WEBHOOK_URL`, `QUESTION_IMPORT_SECRET`
-  (pastga qarang).
+  uchun oracle sifatida ishlatishning oldini oladi. Agar oxirgi urinish
+  `TEST_LOW_SCORE_THRESHOLD`dan (default 50%) past bo'lsa, cooldown
+  `TEST_LOW_SCORE_COOLDOWN_MULTIPLIER`ga (default 3, ya'ni 30 daqiqa)
+  ko'paytiriladi — tez-tez past-sifatli qayta urinishni yanada
+  qiyinlashtiradi. `testRateLimiter` (`middleware/rateLimiter.ts`) — IP
+  bo'yicha qo'shimcha himoya qatlami.
+- **Ko'rilgan savollarni istisno qilish:** `startTest` foydalanuvchining
+  barcha oldingi sessiyalaridagi `questionIds`ni (`Session.find({userId}).distinct(...)`)
+  yig'ib, shu ro'yxatdan tashqaridagi savollarni birinchi navbatda taklif
+  qiladi (`$nin` bilan `$sample`) — takroriy urinishlarda xotirlab
+  olingan savollar emas, yangi savollar chiqadi. Agar texnologiya uchun
+  ko'rilmagan savollar yetarli bo'lmasa, qolganini ko'rilganlardan
+  to'ldiradi (test qisqarib qolmasin deb).
+- **Registratsiya IP-limiti:** `authController.register` bitta IP'dan
+  `MAX_ACCOUNTS_PER_IP` (default 2) dan ortiq akkaunt ro'yxatdan o'tishiga
+  yo'l qo'ymaydi (`User.registrationIp`, `403`) — mavjud akkauntlarga
+  tegmaydi, faqat yangi ro'yxatdan o'tishni cheklaydi. Ataylab yumshoq
+  (default 2) — umumiy IP'lar (ofis, universitet, NAT) keng tarqalgan,
+  qattiqroq limit haqiqiy foydalanuvchilarni bloklab qo'yishi mumkin.
+- **AI orqali savol generatsiyasi:**
+  - `services/groqQuestionGenerator.ts` — sof Groq chaqiruvchi (DB'siz),
+    ikkala quyidagi joy tomonidan ishlatiladi.
+  - `services/questionImportService.ts` — savollarni bazaga yozadi,
+    matn bo'yicha (katta-kichik harf/probel farqisiz) **dublikatlarni
+    o'tkazib yuboradi**, `category`ni `technology`ga tenglashtirib
+    to'ldiradi (`seed.ts` konvensiyasi bilan bir xil).
+  - `scripts/generateQuestions.ts` (`npm run generate-questions`) — alohida,
+    uzoq muddatli process (API server bilan bir jarayonda emas). Groq
+    chaqirib, natijani o'zining `POST /api/webhooks/questions`iga yuboradi
+    (DB bilan to'g'ridan-to'g'ri ishlamaydi — butunlay boshqa joyda deploy
+    qilinishi mumkin). `node-cron` bilan o'z-o'zini rejalashtiradi
+    (`GENERATE_CRON`, default kuniga bir marta soat 03:00). `RUN_ONCE=true`
+    — bir martalik test uchun. Kerakli env: `GROQ_API_KEY`, `WEBHOOK_URL`,
+    `QUESTION_IMPORT_SECRET`.
+  - `services/autoRefillService.ts` (`maybeRefill`) — **in-process**,
+    `startTest`dan chaqiriladi: agar texnologiyaning umumiy savol soni
+    `AUTO_REFILL_THRESHOLD`dan (default 15) kam bo'lsa, fon rejimida
+    (await qilinmasdan — foydalanuvchi so'rovini bloklamaydi) Groq'dan
+    yangi partiya so'rab, to'g'ridan-to'g'ri `questionImportService` orqali
+    bazaga yozadi. Bitta texnologiya uchun `AUTO_REFILL_COOLDOWN_MINUTES`
+    (default 30) ichida faqat bir marta ishga tushadi (xotiradagi debounce
+    — process qayta ishga tushsa tozalanadi). `GROQ_API_KEY` sozlanmagan
+    bo'lsa jimgina hech narsa qilmaydi.
 - **Savol import webhook (`POST /api/webhooks/questions`):** tashqi
   avtomatlashtirish (yuqoridagi skript, yoki Make.com) uchun — JWT o'rniga
   `X-Webhook-Secret` header (`QUESTION_IMPORT_SECRET`) bilan himoyalangan
@@ -125,9 +157,8 @@ npm run typecheck -w backend  # tsc --noEmit
   `503` qaytaradi (ochiq qolib ketmaydi). Body: `{ questions: [{ technology,
   difficulty, text, options, correctAnswer }] }` — `validation/webhookSchemas.ts`
   qattiq tekshiradi (`technology` faqat `ALL_TECHNOLOGIES`dan,
-  `correctAnswer` `options` chegarasidan oshmasligi kerak). `category`
-  maydoni `technology`ga tenglashtirib avtomatik to'ldiriladi (`seed.ts`dagi
-  konvensiya bilan bir xil).
+  `correctAnswer` `options` chegarasidan oshmasligi kerak). Import mantig'i
+  (dublikat tekshiruvi, `category` to'ldirish) `questionImportService`da.
 
 ## Endpointlar (`/api`)
 
