@@ -231,6 +231,9 @@
     "noUsers": "No users found.",
     "noJobs": "No listings found.",
     "noSessions": "No sessions found.",
+    "flagged": "Flagged",
+    "flagIpMismatch": "IP address differed between start and finish",
+    "flagSuspiciouslyFast": "Test finished implausibly fast for a human",
     "noQuestions": "No questions found.",
     "pageOf": "Page {page} of {total}",
     "prev": "Previous",
@@ -262,6 +265,7 @@
     "violationBodyRightClick": "Right-click menu detected. This has been recorded as a violation — if you exceed the limit, the test will be terminated automatically.",
     "violationBodyScreenshot": "Screenshot attempt (PrintScreen) detected. This has been recorded as a violation — if you exceed the limit, the test will be terminated automatically.",
     "violationBodyDevtools": "Browser Developer Tools (DevTools) opening detected. This has been recorded as a violation — if you exceed the limit, the test will be terminated automatically.",
+    "violationBodyBot": "Automated browser (bot/script) detected. This has been recorded as a violation — if you exceed the limit, the test will be terminated automatically.",
     "violationRemaining": "{remaining} more such actions will terminate the test.",
     "acknowledge": "I understand"
   },

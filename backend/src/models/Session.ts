@@ -42,6 +42,21 @@ export interface ISession extends Document {
   /** Non-tab-switch integrity violations: copy/paste, right-click, devtools, etc. */
   violationCount: number;
   terminationReason?: string;
+  /** Client IP captured at `POST /test/start` — never shown to the candidate. */
+  startIp?: string;
+  /**
+   * `POST /test/submit` came from a different IP than `startIp`. Informational
+   * only (mobile networks legitimately rotate IPs) — surfaced to admins for
+   * manual review, never blocks scoring.
+   */
+  ipMismatch?: boolean;
+  /**
+   * The full attempt finished faster than a human plausibly could
+   * (`totalTime < questions.length * MIN_SECONDS_PER_QUESTION`). Informational
+   * only, same as `ipMismatch` — flags a likely scripted/automated submission
+   * for admin review without blocking the candidate's result.
+   */
+  suspiciouslyFast?: boolean;
 
   // Result (populated only after scoring)
   score?: number; // raw weighted points earned
@@ -92,6 +107,9 @@ const sessionSchema = new Schema<ISession>(
     tabSwitchCount: { type: Number, default: 0, min: 0 },
     violationCount: { type: Number, default: 0, min: 0 },
     terminationReason: { type: String },
+    startIp: { type: String },
+    ipMismatch: { type: Boolean },
+    suspiciouslyFast: { type: Boolean },
 
     score: { type: Number, min: 0 },
     maxScore: { type: Number, min: 0 },

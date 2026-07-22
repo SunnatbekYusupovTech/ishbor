@@ -331,6 +331,8 @@ export const listSessions = asyncHandler(async (req: Request, res: Response) => 
         status: s.status,
         tabSwitchCount: s.tabSwitchCount,
         terminationReason: s.terminationReason ?? null,
+        ipMismatch: s.ipMismatch ?? false,
+        suspiciouslyFast: s.suspiciouslyFast ?? false,
         score: s.score,
         percentage: s.percentage,
         awardedLevel: s.awardedLevel ?? null,

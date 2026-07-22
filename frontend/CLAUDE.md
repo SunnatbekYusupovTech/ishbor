@@ -62,7 +62,12 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 
 `useHeartbeat` (socket ochadi + heartbeat yuboradi) → socket'ni `useAntiCheat`ga
 beriladi (tab-switch, copy/paste/cut, right-click, PrintScreen, DevTools kuzatadi,
-`POST /test/tab-switch` va `POST /test/violation` chaqiradi) → `AntiCheatBanner`
+`POST /test/tab-switch` va `POST /test/violation` chaqiradi) — DevTools ikki mustaqil
+signal bilan aniqlanadi: oyna o'lchami farqi (faqat docked panel) + `debugger;`
+timing trap (docked **va** undocked/ikkinchi monitordagi panelni ham ushlaydi —
+DevTools ochiq bo'lsa `debugger;` ijroni to'xtatadi, o'lchangan vaqt me'yordan
+keskin oshadi; yopiq bo'lsa ~0ms) — ikkalasi ham bitta `'devtools'` violation
+sifatida hisoblanadi. → `AntiCheatBanner`
 holatni ko'rsatadi (tab-switch + umumiy violation soni), `ViolationDialog` har
 buzilishda ochiladi (`anti.violationDialog`, tur bo'yicha matn: `violationBody` /
 `violationBodyCopyPaste` / `violationBodyRightClick` / `violationBodyScreenshot` /

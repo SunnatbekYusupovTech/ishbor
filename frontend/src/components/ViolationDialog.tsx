@@ -29,6 +29,7 @@ const bodyKeyByType: Record<ViolationKind, string> = {
   'right-click': 'violationBodyRightClick',
   'screenshot-key': 'violationBodyScreenshot',
   devtools: 'violationBodyDevtools',
+  'bot-detected': 'violationBodyBot',
 };
 
 /**

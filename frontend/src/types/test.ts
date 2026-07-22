@@ -49,7 +49,7 @@ export interface TabSwitchResponse {
   status: string;
 }
 
-export type ViolationType = 'copy-paste' | 'right-click' | 'screenshot-key' | 'devtools';
+export type ViolationType = 'copy-paste' | 'right-click' | 'screenshot-key' | 'devtools' | 'bot-detected';
 
 export interface ViolationResponse {
   violationCount: number;

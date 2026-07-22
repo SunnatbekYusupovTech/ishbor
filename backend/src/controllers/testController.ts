@@ -21,6 +21,14 @@ import {
  *  server-side deadline (with a buffer) so long selections never expire early. */
 const PER_QUESTION_SECONDS = 20;
 const DEADLINE_BUFFER_MS = 120_000;
+/**
+ * Absolute floor on how fast a human could plausibly read + answer one
+ * question. Well under the real `PER_QUESTION_SECONDS` budget (20s) — this
+ * isn't meant to catch a fast test-taker, only a scripted submission that
+ * answers everything in a couple of seconds flat. Informational only, see
+ * `ISession.suspiciouslyFast`.
+ */
+const MIN_SECONDS_PER_QUESTION = 3;
 
 /**
  * Shape of a question as sent to the client — deliberately WITHOUT
@@ -99,6 +107,25 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.conflict('You already have an assessment in progress.');
   }
 
+  // Guard: per-account cooldown since the last finished attempt. This is the
+  // account-keyed complement to `testRateLimiter` (IP-keyed) — it closes the
+  // gap where a script starts+submits from many IPs to probe the scored
+  // `percentage` as an oracle for the hidden answer key, or otherwise farms
+  // attempts faster than a human ever would.
+  const lastFinished = await Session.findOne({ userId, endTime: { $exists: true } })
+    .sort({ endTime: -1 })
+    .select('endTime');
+  if (lastFinished?.endTime) {
+    const cooldownMs = env.testAttemptCooldownMinutes * 60 * 1000;
+    const elapsedMs = Date.now() - lastFinished.endTime.getTime();
+    if (elapsedMs < cooldownMs) {
+      const waitMinutes = Math.ceil((cooldownMs - elapsedMs) / 60_000);
+      throw ApiError.tooManyRequests(
+        `Please wait ${waitMinutes} more minute(s) before starting another attempt.`,
+      );
+    }
+  }
+
   // Serve up to QUESTIONS_PER_TECH random questions from EACH selected pool.
   // `$sample` never includes `correctAnswer` (it is `select:false`), so the key
   // never even enters this result set.
@@ -141,6 +168,7 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
     deadline,
     answers: [],
     tabSwitchCount: 0,
+    startIp: req.ip,
   });
 
   logger.info(
@@ -221,6 +249,12 @@ export const submitTest = asyncHandler(async (req: Request, res: Response) => {
   );
 
   const result = calculateScore(questions, sanitizedAnswers);
+
+  // Informational-only integrity signals for admin review — neither one
+  // blocks scoring or the candidate's result (see field docs on `ISession`).
+  session.ipMismatch = !!session.startIp && req.ip !== session.startIp;
+  const elapsedSeconds = (now.getTime() - session.startTime.getTime()) / 1000;
+  session.suspiciouslyFast = elapsedSeconds < session.questionIds.length * MIN_SECONDS_PER_QUESTION;
 
   session.answers = sanitizedAnswers;
   session.score = result.score;

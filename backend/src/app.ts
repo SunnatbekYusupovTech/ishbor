@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import routes from '@/routes';
 import { notFoundHandler, errorHandler } from '@/middleware/errorHandler';
 import { sanitizeInput } from '@/middleware/sanitize';
+import { globalRateLimiter } from '@/middleware/rateLimiter';
 import { env } from '@/config/env';
 
 /** Builds the configured Express application (no side effects / no listen). */
@@ -60,7 +61,7 @@ export function createApp(): Application {
   app.use(express.urlencoded({ extended: true }));
   app.use(sanitizeInput);
 
-  app.use('/api', routes);
+  app.use('/api', globalRateLimiter, routes);
 
   // 404 + centralised error handling (must be last).
   app.use(notFoundHandler);

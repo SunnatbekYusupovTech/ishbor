@@ -18,6 +18,8 @@ interface SessionEntry {
   status: string;
   tabSwitchCount: number;
   terminationReason: string | null;
+  ipMismatch: boolean;
+  suspiciouslyFast: boolean;
   score: number | null;
   percentage: number | null;
   awardedLevel: string | null;
@@ -145,6 +147,18 @@ export default function AdminSessionsPage() {
                           <p className="mt-1 text-[10px] text-muted-foreground max-w-[200px] truncate" title={s.terminationReason}>
                             {s.terminationReason}
                           </p>
+                        )}
+                        {(s.ipMismatch || s.suspiciouslyFast) && (
+                          <span
+                            className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+                            title={[
+                              s.ipMismatch && t('flagIpMismatch'),
+                              s.suspiciouslyFast && t('flagSuspiciouslyFast'),
+                            ].filter(Boolean).join(' · ')}
+                          >
+                            <AlertTriangle className="h-3 w-3" />
+                            {t('flagged')}
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center font-medium">{s.tabSwitchCount}</td>

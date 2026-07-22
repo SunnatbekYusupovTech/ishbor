@@ -36,12 +36,22 @@ interface AntiCheatState extends AntiCheatCounts {
 const DEVTOOLS_SIZE_THRESHOLD_PX = 160;
 /** How often we re-check the window/viewport size gap. */
 const DEVTOOLS_POLL_MS = 1000;
+/**
+ * When DevTools is open, a `debugger;` statement pauses execution until the
+ * panel is dismissed/stepped past; when closed it's a no-op (~0ms). Anything
+ * past this is treated as "DevTools is open" — independent of the size-gap
+ * check above, so it also catches an UNDOCKED panel (separate window / second
+ * monitor), which never shrinks the viewport and is invisible to that check.
+ */
+const DEBUGGER_TRAP_THRESHOLD_MS = 100;
+const DEBUGGER_TRAP_POLL_MS = 1000;
 
 /**
  * Detects the candidate leaving the secure environment (Page Visibility API +
  * window `blur`), clipboard misuse (copy/paste/cut), right-clicking (context
- * menu — save-image / inspect shortcuts), a PrintScreen key press, and an open
- * DevTools panel.
+ * menu — save-image / inspect shortcuts), a PrintScreen key press, an open
+ * DevTools panel, and a headless/automation browser (`navigator.webdriver`)
+ * driving the page instead of a human.
  *
  * PrintScreen detection is best-effort only: the OS captures the screenshot
  * before the page ever sees the keydown, so this can flag the attempt but
@@ -49,11 +59,21 @@ const DEVTOOLS_POLL_MS = 1000;
  * Cmd+Shift+4, Windows Snipping Tool via Win+Shift+S) are invisible to any
  * web page — there is no browser API that observes them.
  *
- * DevTools detection is also best-effort: it only catches a *docked* panel,
- * which shrinks `window.innerWidth/innerHeight` relative to `outerWidth/
- * outerHeight`. An *undocked* (separate-window) DevTools instance, or one on
- * a second monitor, leaves the viewport untouched and is invisible to this
- * check — there is no reliable cross-browser API to detect DevTools directly.
+ * DevTools detection uses two independent signals, both best-effort (there is
+ * no reliable cross-browser API to detect DevTools directly): a viewport
+ * size-gap check, which only catches a *docked* panel (shrinks
+ * `window.innerWidth/innerHeight` relative to `outerWidth/outerHeight`); and
+ * a `debugger;` timing trap, which catches a docked OR *undocked*
+ * (separate-window / second-monitor) panel — execution pauses at the
+ * statement while DevTools is open, so the measured elapsed time balloons
+ * far past normal (closed: ~0ms). Either signal reports the same
+ * `'devtools'` violation.
+ *
+ * The `navigator.webdriver` check is a one-shot signal on mount, not a poll —
+ * it's set once at page load by the driving automation framework and doesn't
+ * change mid-session. It's also easily spoofed by a sufficiently determined
+ * script (the flag can be patched out before the page reads it), so treat it
+ * as a bar-raiser against casual scripted submissions, not a hard guarantee.
  *
  * Every violation is reported to the backend (source of truth), which decides
  * whether to terminate the session; the client only mirrors that decision.
@@ -79,6 +99,11 @@ export function useAntiCheat({
   // Edge-triggered: only report once per open (not on every poll tick while
   // it stays open), and re-arms once the size gap closes again.
   const devToolsOpenRef = useRef(false);
+  // Separate edge-trigger for the debugger-trap signal (see constant above) —
+  // kept independent of `devToolsOpenRef` since the two checks can flip at
+  // different times and both report through the same debounced
+  // `reportViolation`, so there's no risk of double-counting one open/close.
+  const debuggerTrapOpenRef = useRef(false);
 
   const reportTabSwitch = useCallback(async () => {
     if (tabSwitchLockRef.current) return;
@@ -132,6 +157,16 @@ export function useAntiCheat({
   useEffect(() => {
     if (!enabled) return;
 
+    // Headless/automation browsers (Puppeteer, Selenium, Playwright driving a
+    // scripted client that hits the API directly instead of a human using the
+    // real UI) set `navigator.webdriver = true`. Every other signal in this
+    // hook assumes a human is actually looking at the page — a bot skips all
+    // of them, so this is the one check that can catch a scripted submission
+    // even when nothing else fires. One-shot: report at most once per mount.
+    if (navigator.webdriver) {
+      void reportViolation('bot-detected');
+    }
+
     const handleVisibility = () => {
       if (document.hidden) void reportTabSwitch();
     };
@@ -166,6 +201,21 @@ export function useAntiCheat({
       }
     };
 
+    const checkDebuggerTrap = () => {
+      const start = performance.now();
+      // eslint-disable-next-line no-debugger -- intentional detection trap, see constant doc above
+      debugger;
+      const elapsed = performance.now() - start;
+      const open = elapsed > DEBUGGER_TRAP_THRESHOLD_MS;
+
+      if (open && !debuggerTrapOpenRef.current) {
+        debuggerTrapOpenRef.current = true;
+        void reportViolation('devtools');
+      } else if (!open && debuggerTrapOpenRef.current) {
+        debuggerTrapOpenRef.current = false; // re-arm
+      }
+    };
+
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
     document.addEventListener('copy', handleClipboard);
@@ -174,6 +224,7 @@ export function useAntiCheat({
     document.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('keydown', handleKeyDown);
     const devToolsInterval = setInterval(checkDevTools, DEVTOOLS_POLL_MS);
+    const debuggerTrapInterval = setInterval(checkDebuggerTrap, DEBUGGER_TRAP_POLL_MS);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
@@ -184,6 +235,7 @@ export function useAntiCheat({
       document.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown);
       clearInterval(devToolsInterval);
+      clearInterval(debuggerTrapInterval);
     };
   }, [enabled, reportTabSwitch, reportViolation]);
 

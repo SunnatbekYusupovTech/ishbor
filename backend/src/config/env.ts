@@ -46,6 +46,23 @@ export const env = {
   maxTabSwitches: numberFromEnv('MAX_TAB_SWITCHES', 3),
   /** Non-tab-switch violations (copy/paste, right-click, devtools...) before termination. */
   maxViolations: numberFromEnv('MAX_VIOLATIONS', 5),
+  /**
+   * Minimum minutes a candidate must wait after finishing an attempt before
+   * starting another. Without this, a script can loop start→submit rapidly
+   * and use the returned `percentage` as an oracle to infer correct answers
+   * (or otherwise farm `verificationLevel`) far faster than a human ever
+   * could — this is the primary defense against that.
+   */
+  testAttemptCooldownMinutes: numberFromEnv('TEST_ATTEMPT_COOLDOWN_MINUTES', 10),
+
+  /**
+   * Shared secret for the Make.com question-import webhook
+   * (`POST /api/webhooks/questions`). Not a user JWT — the automation has no
+   * login flow, so it authenticates with this header instead. Optional: if
+   * unset, the webhook route is disabled (returns 503) rather than falling
+   * back to an open endpoint.
+   */
+  questionImportSecret: process.env.QUESTION_IMPORT_SECRET,
 } as const;
 
 export type Env = typeof env;

@@ -231,6 +231,9 @@
     "noUsers": "Foydalanuvchilar topilmadi.",
     "noJobs": "E'lonlar topilmadi.",
     "noSessions": "Sessiyalar topilmadi.",
+    "flagged": "Shubhali",
+    "flagIpMismatch": "IP manzil boshlanish va yakunlanishda farq qildi",
+    "flagSuspiciouslyFast": "Test inson uchun juda tez yakunlandi",
     "noQuestions": "Savollar topilmadi.",
     "pageOf": "Sahifa {page} / {total}",
     "prev": "Oldingi",
@@ -262,6 +265,7 @@
     "violationBodyRightClick": "O'ng tugma menyusi aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
     "violationBodyScreenshot": "Skrinshot olishga urinish (PrintScreen) aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
     "violationBodyDevtools": "Brauzer Dasturchi paneli (DevTools) ochilgani aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
+    "violationBodyBot": "Avtomatlashtirilgan brauzer (bot/skript) aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
     "violationRemaining": "Yana {remaining} marta shunday qilsangiz test tugatiladi.",
     "acknowledge": "Tushundim"
   },
@@ -291,6 +295,7 @@
     "violationBodyRightClick": "O'ng tugma menyusi aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
     "violationBodyScreenshot": "Skrinshot olishga urinish (PrintScreen) aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
     "violationBodyDevtools": "Brauzer Dasturchi paneli (DevTools) ochilgani aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
+    "violationBodyBot": "Avtomatlashtirilgan brauzer (bot/skript) aniqlandi. Bu qoidabuzarlik sifatida qayd etildi — limitdan oshsangiz test avtomatik tugatiladi.",
     "violationRemaining": "Yana {remaining} marta shunday qilsangiz test tugatiladi.",
     "acknowledge": "Tushundim"
   }

@@ -34,7 +34,13 @@ export const tabSwitchSchema = z.object({
 });
 
 /** Non-tab-switch integrity violation types the client can report. */
-export const VIOLATION_TYPES = ['copy-paste', 'right-click', 'screenshot-key', 'devtools'] as const;
+export const VIOLATION_TYPES = [
+  'copy-paste',
+  'right-click',
+  'screenshot-key',
+  'devtools',
+  'bot-detected',
+] as const;
 
 export const violationSchema = z.object({
   body: z.object({
