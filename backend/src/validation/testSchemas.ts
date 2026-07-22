@@ -10,6 +10,7 @@ export const startTestSchema = z.object({
   body: z.object({
     direction: z.enum(DIRECTIONS as [string, ...string[]]),
     technologies: z.array(z.string().trim().min(1)).min(1).max(30),
+    locale: z.enum(['en', 'ru', 'uz']).optional(),
   }),
 });
 

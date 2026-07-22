@@ -29,10 +29,20 @@
     "roleEmployer": "Ish beruvchi",
     "roleSeekerHint": "Testdan o'tib, o'z rezyumengizni joylaysiz.",
     "roleEmployerHint": "Vakansiya joylaysiz (test talab qilinmaydi).",
+    "confirmPassword": "Parolni tasdiqlang",
+    "showPassword": "Parolni ko'rsatish",
+    "hidePassword": "Parolni yashirish",
     "createAccount": "Hisob yaratish va davom etish",
     "logIn": "Kirish",
     "pleaseWait": "Iltimos, kuting…",
-    "genericError": "Nimadir xato ketdi."
+    "genericError": "Nimadir xato ketdi.",
+    "errNameRequired": "Ismni kiriting",
+    "errEmailRequired": "Email kiriting",
+    "errEmailInvalid": "Email noto'g'ri kiritilgan",
+    "errPasswordRequired": "Parol kiriting",
+    "errPasswordShort": "Parol juda qisqa (kamida 8 belgi)",
+    "errConfirmRequired": "Parolni tasdiqlang",
+    "errPasswordMismatch": "Parollar mos kelmadi"
   },
   "jobs": {
     "title": "Ish e'lonlari",
@@ -70,6 +80,7 @@
     "favorite": "Saqlash",
     "favorited": "Saqlangan",
     "hide": "Yashirish",
+    "restoreHidden": "Yashirilganlarni ko'rsatish ({count})",
     "verifiedTitle": "Malakasi tasdiqlangan",
     "sidebarTitle": "Faoliyatingiz",
     "sidebarFavorites": "Saqlanganlar",
@@ -88,7 +99,8 @@
     "notifications": "Bildirishnomalar",
     "noNotifications": "Hozircha bildirishnoma yo'q.",
     "messages": "Xabarlar",
-    "profile": "Profil"
+    "profile": "Profil",
+    "menu": "Menyu"
   },
   "levels": {
     "junior": "Junior",
@@ -162,7 +174,11 @@
     "phone": "Telefon",
     "posting": "Joylanmoqda…",
     "publish": "E'lonni joylash",
-    "error": "E'lonni joylab bo'lmadi."
+    "error": "E'lonni joylab bo'lmadi.",
+    "errTitleRequired": "Sarlavhani kiriting",
+    "errCompanyRequired": "Kompaniya nomini kiriting",
+    "errDescriptionShort": "Tavsif juda qisqa (kamida 10 belgi)",
+    "errSalaryRange": "Maoshning quyi chegarasi yuqori chegaradan oshmasligi kerak"
   },
   "test": {
     "title": "Malaka testi",
@@ -170,7 +186,8 @@
     "chooseDirection": "Yo'nalishni tanlang",
     "chooseTech": "Texnologiyalarni belgilang",
     "techHint": "Har bir texnologiya bo'yicha {count} ta savol. Har savolga 30 soniya.",
-    "selectedSummary": "{techs} texnologiya · {questions} savol",
+    "selectedSummary": "{techs} ta texnologiya · {questions} ta savol",
+    "selectAtLeastOne": "Kamida bitta texnologiyani tanlang",
     "startTest": "Testni boshlash",
     "progress": "Savol {current} / {total}",
     "timeLeft": "Qolgan vaqt",
@@ -180,7 +197,18 @@
     "finish": "Yakunlash",
     "submitting": "Yuborilmoqda…",
     "submitFailed": "Testni yuborib bo'lmadi.",
-    "couldNotStart": "Testni boshlab bo'lmadi."
+    "couldNotStart": "Testni boshlab bo'lmadi.",
+    "terminated": "Test oynadan juda ko'p chiqib ketganingiz uchun tugatildi."
+  },
+  "proctor": {
+    "active": "Himoyalangan rejim faol",
+    "reconnecting": "Qayta ulanmoqda…",
+    "tabSwitches": "Oyna almashtirishlar: {count} / {max}",
+    "warningsLeft": "{remaining} ta ogohlantirish qoldi",
+    "violationTitle": "Oyna almashtirish aniqlandi",
+    "violationBody": "Test oynasidan chiqish qoidabuzarlik sifatida qayd etiladi.",
+    "violationRemaining": "Tugatilishigacha {remaining} ta ogohlantirish qoldi.",
+    "acknowledge": "Tushundim, davom etish"
   },
   "result": {
     "terminated": "Test Tugatildi",

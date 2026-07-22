@@ -41,7 +41,12 @@ npm run typecheck -w backend  # tsc --noEmit
 ## Test (assessment) engine
 
 - `config/catalog.ts` — yo'nalish → texnologiyalar, har texnologiyaga savol soni.
-- `data/questions.ts` — savollar bazasi (Fazilov kengaytiradi).
+- `data/questions.ts` — savollar bazasi (ingliz, kanonik — ballash indeks bo'yicha).
+- `data/questionTranslations.ts` — RU/UZ savol tarjimalari (texnologiya + tartib bo'yicha).
+  `seed.ts` `<tech>-<n>` `key` va `translations` ni `Question` hujjatiga biriktiradi.
+  `startTest` `locale` (body yoki `Accept-Language`) bo'yicha lokalizatsiya qiladi;
+  variantlar **kanonik tartibda** bir xil `order` bilan aralashadi — ballash o'zgarmaydi.
+  **Tarjimalar faqat qayta seed'dan keyin ko'rinadi** (`npm run seed -w backend`).
 - `services/scoringService.ts` — ballash mantiqi (unit test bilan).
 - `sockets/antiCheat.ts` — real-time qoidabuzarlik kuzatuvi.
 - Tuning `.env` orqali: `TEST_DURATION_MINUTES`, `HEARTBEAT_TIMEOUT_MS`, `MAX_TAB_SWITCHES`.

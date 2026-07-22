@@ -29,10 +29,20 @@
     "roleEmployer": "Работодатель",
     "roleSeekerHint": "Пройдите тест и разместите своё резюме.",
     "roleEmployerHint": "Размещаете вакансии (тест не требуется).",
+    "confirmPassword": "Подтвердите пароль",
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль",
     "createAccount": "Создать аккаунт и продолжить",
     "logIn": "Войти",
     "pleaseWait": "Пожалуйста, подождите…",
-    "genericError": "Что-то пошло не так."
+    "genericError": "Что-то пошло не так.",
+    "errNameRequired": "Заполните имя",
+    "errEmailRequired": "Введите Email",
+    "errEmailInvalid": "Email введён неверно",
+    "errPasswordRequired": "Введите пароль",
+    "errPasswordShort": "Пароль слишком короткий (мин. 8 символов)",
+    "errConfirmRequired": "Подтвердите пароль",
+    "errPasswordMismatch": "Пароли не совпадают"
   },
   "jobs": {
     "title": "Вакансии",
@@ -70,6 +80,7 @@
     "favorite": "В избранное",
     "favorited": "В избранном",
     "hide": "Скрыть",
+    "restoreHidden": "Показать скрытые ({count})",
     "verifiedTitle": "Навыки подтверждены",
     "sidebarTitle": "Ваша активность",
     "sidebarFavorites": "Избранное",
@@ -88,7 +99,8 @@
     "notifications": "Уведомления",
     "noNotifications": "Пока нет уведомлений.",
     "messages": "Сообщения",
-    "profile": "Профиль"
+    "profile": "Профиль",
+    "menu": "Меню"
   },
   "levels": {
     "junior": "Junior",
@@ -162,15 +174,20 @@
     "phone": "Телефон",
     "posting": "Публикация…",
     "publish": "Опубликовать",
-    "error": "Не удалось опубликовать вакансию."
+    "error": "Не удалось опубликовать вакансию.",
+    "errTitleRequired": "Введите заголовок",
+    "errCompanyRequired": "Введите название компании",
+    "errDescriptionShort": "Описание слишком короткое (мин. 10 символов)",
+    "errSalaryRange": "Нижняя граница зарплаты не должна превышать верхнюю"
   },
   "test": {
     "title": "Тест навыков",
     "selectIntro": "Выберите направление и отметьте знакомые технологии. По каждой дадут самые сложные вопросы.",
     "chooseDirection": "Выберите направление",
     "chooseTech": "Отметьте технологии",
-    "techHint": "По {count} вопросов на технологию. На каждый вопрос 30 секунд.",
-    "selectedSummary": "{techs} технологий · {questions} вопросов",
+    "techHint": "По {count, plural, one {# вопросу} few {# вопроса} many {# вопросов} other {# вопроса}} на технологию. На каждый вопрос 30 секунд.",
+    "selectedSummary": "{techs, plural, =0 {Нет технологий} one {# технология} few {# технологии} many {# технологий} other {# технологии}} · {questions, plural, one {# вопрос} few {# вопроса} many {# вопросов} other {# вопроса}}",
+    "selectAtLeastOne": "Выберите хотя бы одну технологию",
     "startTest": "Начать тест",
     "progress": "Вопрос {current} / {total}",
     "timeLeft": "Осталось времени",
@@ -180,7 +197,18 @@
     "finish": "Завершить",
     "submitting": "Отправка…",
     "submitFailed": "Не удалось отправить тест.",
-    "couldNotStart": "Не удалось начать тест."
+    "couldNotStart": "Не удалось начать тест.",
+    "terminated": "Тест завершён из-за слишком частого переключения вкладок."
+  },
+  "proctor": {
+    "active": "Защищённый режим активен",
+    "reconnecting": "Переподключение…",
+    "tabSwitches": "Переключений вкладки: {count} / {max}",
+    "warningsLeft": "{remaining, plural, one {осталось # предупреждение} few {осталось # предупреждения} many {осталось # предупреждений} other {осталось # предупреждения}}",
+    "violationTitle": "Обнаружено переключение вкладки",
+    "violationBody": "Выход из окна теста фиксируется как нарушение.",
+    "violationRemaining": "{remaining, plural, one {осталось # предупреждение до завершения.} few {осталось # предупреждения до завершения.} many {осталось # предупреждений до завершения.} other {осталось # предупреждения до завершения.}}",
+    "acknowledge": "Понятно, продолжить"
   },
   "result": {
     "terminated": "Тест завершён",

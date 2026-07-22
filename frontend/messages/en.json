@@ -29,10 +29,20 @@
     "roleEmployer": "Employer",
     "roleSeekerHint": "Pass the test and post your resume.",
     "roleEmployerHint": "Post vacancies (no test required).",
+    "confirmPassword": "Confirm password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "createAccount": "Create account and continue",
     "logIn": "Log in",
     "pleaseWait": "Please wait…",
-    "genericError": "Something went wrong."
+    "genericError": "Something went wrong.",
+    "errNameRequired": "Please enter your name",
+    "errEmailRequired": "Enter your email",
+    "errEmailInvalid": "Invalid email address",
+    "errPasswordRequired": "Enter a password",
+    "errPasswordShort": "Password is too short (min. 8 characters)",
+    "errConfirmRequired": "Confirm your password",
+    "errPasswordMismatch": "Passwords do not match"
   },
   "jobs": {
     "title": "Job listings",
@@ -70,6 +80,7 @@
     "favorite": "Save",
     "favorited": "Saved",
     "hide": "Hide",
+    "restoreHidden": "Show hidden ({count})",
     "verifiedTitle": "Skills verified",
     "sidebarTitle": "Your activity",
     "sidebarFavorites": "Saved",
@@ -88,7 +99,8 @@
     "notifications": "Notifications",
     "noNotifications": "No notifications yet.",
     "messages": "Messages",
-    "profile": "Profile"
+    "profile": "Profile",
+    "menu": "Menu"
   },
   "levels": {
     "junior": "Junior",
@@ -162,15 +174,20 @@
     "phone": "Phone",
     "posting": "Posting…",
     "publish": "Publish listing",
-    "error": "Could not publish the listing."
+    "error": "Could not publish the listing.",
+    "errTitleRequired": "Enter a title",
+    "errCompanyRequired": "Enter the company name",
+    "errDescriptionShort": "Description is too short (min. 10 characters)",
+    "errSalaryRange": "The lower salary bound must not exceed the upper one"
   },
   "test": {
     "title": "Skill test",
     "selectIntro": "Choose your direction and mark the technologies you know. You'll get the hardest questions for each.",
     "chooseDirection": "Choose a direction",
     "chooseTech": "Mark your technologies",
-    "techHint": "{count} questions per technology. 30 seconds each.",
-    "selectedSummary": "{techs} technologies · {questions} questions",
+    "techHint": "{count, plural, one {# question} other {# questions}} per technology. 30 seconds each.",
+    "selectedSummary": "{techs, plural, =0 {No technologies} one {# technology} other {# technologies}} · {questions, plural, one {# question} other {# questions}}",
+    "selectAtLeastOne": "Select at least one technology",
     "startTest": "Start the test",
     "progress": "Question {current} / {total}",
     "timeLeft": "Time left",
@@ -180,7 +197,18 @@
     "finish": "Finish",
     "submitting": "Submitting…",
     "submitFailed": "Could not submit the test.",
-    "couldNotStart": "Could not start the test."
+    "couldNotStart": "Could not start the test.",
+    "terminated": "The assessment was terminated for too many tab switches."
+  },
+  "proctor": {
+    "active": "Secure mode active",
+    "reconnecting": "Reconnecting…",
+    "tabSwitches": "Tab switches: {count} / {max}",
+    "warningsLeft": "{remaining, plural, one {# warning left} other {# warnings left}}",
+    "violationTitle": "Tab switch detected",
+    "violationBody": "Leaving the test window is recorded as a violation.",
+    "violationRemaining": "{remaining, plural, one {# warning left before termination.} other {# warnings left before termination.}}",
+    "acknowledge": "I understand, continue"
   },
   "result": {
     "terminated": "Test Terminated",

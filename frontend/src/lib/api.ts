@@ -65,7 +65,7 @@ export const api = {
   // --- Assessment ---
   getCatalog: () => request<Catalog>('/test/catalog'),
 
-  startTest: (body: { direction: string; technologies: string[] }) =>
+  startTest: (body: { direction: string; technologies: string[]; locale?: string }) =>
     request<StartTestResponse>('/test/start', {
       method: 'POST',
       body: JSON.stringify(body),

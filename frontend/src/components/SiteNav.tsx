@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { MapPin, Heart, Bell } from 'lucide-react';
+import { MapPin, Heart, Bell, Menu, X } from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { tokenStore } from '@/lib/api';
 import { useFavorites } from '@/lib/favorites';
@@ -23,10 +23,12 @@ export function SiteNav() {
   const router = useRouter();
   const favorites = useFavorites();
   const [authed, setAuthed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Read auth state on mount + whenever the route changes (login/logout).
   useEffect(() => {
     setAuthed(!!tokenStore.get());
+    setMenuOpen(false);
   }, [pathname]);
 
   const logout = () => {
@@ -37,7 +39,18 @@ export function SiteNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="container flex h-16 items-center gap-3 sm:gap-5">
+      <div className="container flex h-16 items-center gap-2 sm:gap-5">
+        {/* Mobile menu toggle */}
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label={th('menu')}
+          aria-expanded={menuOpen}
+          className="-ml-1 shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+        >
+          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+
         {/* Brand mark — red, hh-style */}
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-base font-black leading-none text-brand-foreground shadow-sm">
@@ -55,7 +68,7 @@ export function SiteNav() {
           {th('city')}
         </button>
 
-        <nav className="ml-auto flex items-center gap-1 text-sm md:ml-2 md:mr-auto">
+        <nav className="ml-2 mr-auto hidden items-center gap-1 text-sm md:flex">
           {links.map((l) => {
             const active = pathname === l.href;
             return (
@@ -76,7 +89,7 @@ export function SiteNav() {
           })}
         </nav>
 
-        <div className="flex items-center gap-0.5">
+        <div className="ml-auto flex items-center gap-0.5 md:ml-0">
           {/* Saved listings */}
           <Link
             href="/?saved=1"
@@ -113,6 +126,37 @@ export function SiteNav() {
           )}
         </div>
       </div>
+
+      {/* Mobile nav panel */}
+      {menuOpen && (
+        <nav className="border-t bg-background md:hidden">
+          <div className="container flex flex-col py-2">
+            <button
+              type="button"
+              className="flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground"
+            >
+              <MapPin className="h-4 w-4 text-primary" />
+              {th('city')}
+            </button>
+            {links.map((l) => {
+              const active = pathname === l.href;
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    'rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                    active ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent',
+                  )}
+                >
+                  {t(l.key)}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
     </header>
   );
 }
