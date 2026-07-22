@@ -130,7 +130,7 @@ export function LanguageSelector({ className, align = 'end' }: LanguageSelectorP
         aria-expanded={open}
         aria-label={t('language')}
         className={cn(
-          'group inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-2.5 py-1.5',
+          'group inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2 py-1.5 sm:gap-2 sm:px-2.5',
           'text-sm font-medium text-foreground shadow-sm backdrop-blur-sm',
           'transition-all duration-200 ease-out hover:border-border hover:bg-muted hover:shadow',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -141,7 +141,7 @@ export function LanguageSelector({ className, align = 'end' }: LanguageSelectorP
         <span className="flex h-3.5 w-5 overflow-hidden rounded-[3px] shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
           <ActiveFlag className="h-full w-full" />
         </span>
-        <span className="tracking-wide">{LANGUAGES[activeLocale].code}</span>
+        <span className="hidden tracking-wide sm:inline">{LANGUAGES[activeLocale].code}</span>
         <ChevronDown
           className={cn(
             'h-4 w-4 text-muted-foreground transition-transform duration-200 ease-out',

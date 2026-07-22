@@ -39,7 +39,7 @@ export function SiteNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="container flex h-16 items-center gap-2 sm:gap-5">
+      <div className="container flex h-16 items-center gap-1.5 sm:gap-5">
         {/* Mobile menu toggle */}
         <button
           type="button"
@@ -104,7 +104,9 @@ export function SiteNav() {
             )}
           </Link>
 
-          <NotificationsBell label={th('notifications')} />
+          <div className="hidden sm:block">
+            <NotificationsBell label={th('notifications')} />
+          </div>
 
           <LanguageSelector />
           <ThemeToggle />
@@ -119,7 +121,7 @@ export function SiteNav() {
           ) : (
             <Link
               href="/login"
-              className="ml-1 rounded-md bg-primary px-3.5 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              className="ml-1 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 sm:px-3.5"
             >
               {t('login')}
             </Link>
