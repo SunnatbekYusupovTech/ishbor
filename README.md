@@ -88,7 +88,7 @@ npm run test:coverage -w backend   # with coverage
 - **backend** — typecheck → test → build (with a cached Mongo binary)
 - **frontend** — typecheck → lint → build
 
-## Docker
+## Docker 
 
 ```bash
 # Builds mongo + backend + frontend and wires them together

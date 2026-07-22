@@ -85,6 +85,15 @@ export default function NewJobPage() {
   return <JobForm role={role} verifiedLevel={verifiedLevel} />;
 }
 
+type JobFieldErrors = Partial<Record<'title' | 'company' | 'description' | 'salary', string>>;
+
+/** Parse the numeric bounds out of a free-text salary like "$500 - $900". */
+function salaryBounds(raw: string): number[] {
+  return (raw.match(/\d[\d\s]*/g) ?? [])
+    .map((n) => Number(n.replace(/\s/g, '')))
+    .filter((n) => Number.isFinite(n));
+}
+
 function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: VerificationLevel }) {
   const t = useTranslations('post');
   const tl = useTranslations('levels');
@@ -103,12 +112,27 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
     contactPhone: '',
     contactTelegram: '',
   });
+  const [errors, setErrors] = useState<JobFieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [phoneLocal, setPhoneLocal] = useState('');
 
-  const set = <K extends keyof CreateJobInput>(k: K, v: CreateJobInput[K]) =>
+  const set = <K extends keyof CreateJobInput>(k: K, v: CreateJobInput[K]) => {
     setForm((f) => ({ ...f, [k]: v }));
+    setErrors((prev) => (prev[k as keyof JobFieldErrors] ? { ...prev, [k]: undefined } : prev));
+  };
+
+  const validate = (): JobFieldErrors => {
+    const e: JobFieldErrors = {};
+    if (form.title.trim().length < 2) e.title = t('errTitleRequired');
+    if (isEmployer && (form.company ?? '').trim().length < 2) e.company = t('errCompanyRequired');
+    if (form.description.trim().length < 10) e.description = t('errDescriptionShort');
+    const bounds = salaryBounds(form.salary ?? '');
+    if (bounds.length >= 2 && bounds[0] > bounds[bounds.length - 1]) {
+      e.salary = t('errSalaryRange');
+    }
+    return e;
+  };
 
   const onPhoneChange = (raw: string) => {
     const formatted = formatUzPhoneLocal(raw);
@@ -119,6 +143,12 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const fieldErrors = validate();
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
+    setErrors({});
     setLoading(true);
     try {
       // Employers send company + level; seekers omit them (backend uses their badge).
@@ -159,38 +189,35 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
           </Alert>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="space-y-4">
-            <Field label={isEmployer ? t('jobTitle') : t('resumeTitle')}>
+          <form onSubmit={submit} noValidate className="space-y-4">
+            <Field label={isEmployer ? t('jobTitle') : t('resumeTitle')} error={errors.title}>
               <input
-                required
-                minLength={2}
                 value={form.title}
                 onChange={(e) => set('title', e.target.value)}
                 placeholder={isEmployer ? '' : t('resumeTitlePlaceholder')}
-                className={inputCls}
+                aria-invalid={!!errors.title}
+                className={cn(inputCls, errors.title && 'border-destructive')}
               />
             </Field>
 
             {isEmployer && (
-              <Field label={t('company')}>
+              <Field label={t('company')} error={errors.company}>
                 <input
-                  required
-                  minLength={2}
                   value={form.company}
                   onChange={(e) => set('company', e.target.value)}
-                  className={inputCls}
+                  aria-invalid={!!errors.company}
+                  className={cn(inputCls, errors.company && 'border-destructive')}
                 />
               </Field>
             )}
 
-            <Field label={t('description')}>
+            <Field label={t('description')} error={errors.description}>
               <textarea
-                required
-                minLength={10}
                 rows={4}
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
-                className={inputCls}
+                aria-invalid={!!errors.description}
+                className={cn(inputCls, errors.description && 'border-destructive')}
               />
             </Field>
 
@@ -224,15 +251,16 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
               />
             </Field>
 
-            <Field label={t('salary')}>
+            <Field label={t('salary')} error={errors.salary}>
               <input
                 value={form.salary}
                 onChange={(e) => set('salary', e.target.value)}
                 placeholder="$500 - $900"
-                className={inputCls}
+                aria-invalid={!!errors.salary}
+                className={cn(inputCls, errors.salary && 'border-destructive')}
               />
             </Field>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label={t('telegram')}>
                 <input
                   value={form.contactTelegram}
@@ -274,11 +302,20 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label className="mb-1 block text-sm font-medium">{label}</label>
       {children}
+      {error && <p className="mt-1 text-xs font-medium text-destructive">{error}</p>}
     </div>
   );
 }

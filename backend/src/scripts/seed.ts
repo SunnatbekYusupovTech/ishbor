@@ -4,6 +4,7 @@ import { Question } from '@/models/Question';
 import { User } from '@/models/User';
 import { Job } from '@/models/Job';
 import { seedQuestions } from '@/data/questions';
+import { questionTranslations } from '@/data/questionTranslations';
 import { logger } from '@/utils/logger';
 
 function hashPassword(password: string): string {
@@ -77,11 +78,26 @@ async function seed(): Promise<void> {
   await connectDatabase();
 
   await Question.deleteMany({});
+  // Assign a stable per-technology key (`react-1`, `react-2`, …) and attach the
+  // matching RU/UZ translations by that ordinal. English stays canonical.
+  const perTechCounter: Record<string, number> = {};
   const inserted = await Question.insertMany(
-    // `category` mirrors `technology` (kept for backward compatibility).
-    seedQuestions.map((q) => ({ ...q, category: q.technology })),
+    seedQuestions.map((q) => {
+      const ordinal = perTechCounter[q.technology] ?? 0;
+      perTechCounter[q.technology] = ordinal + 1;
+      const key = `${q.technology}-${ordinal + 1}`;
+      const localized = questionTranslations[q.technology]?.[ordinal];
+      const translations = localized ? { ru: localized.ru, uz: localized.uz } : undefined;
+      return {
+        ...q,
+        key,
+        translations,
+        // `category` mirrors `technology` (kept for backward compatibility).
+        category: q.technology,
+      };
+    }),
   );
-  logger.info(`Seeded ${inserted.length} questions.`);
+  logger.info(`Seeded ${inserted.length} questions (with RU/UZ translations).`);
 
   await Job.deleteMany({});
 

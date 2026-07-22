@@ -32,12 +32,22 @@
     "roleEmployer": "Employer",
     "roleSeekerHint": "Pass the test and post your resume.",
     "roleEmployerHint": "Post vacancies (no test required).",
+    "confirmPassword": "Confirm password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "createAccount": "Create account and continue",
     "logIn": "Log in",
     "pleaseWait": "Please wait…",
     "genericError": "Something went wrong.",
     "passwordPolicyHint": "At least 8 characters: uppercase, lowercase, a number, and a symbol (e.g. !@#$).",
-    "passwordPolicyError": "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol."
+    "passwordPolicyError": "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.",
+    "errNameRequired": "Please enter your name",
+    "errEmailRequired": "Enter your email",
+    "errEmailInvalid": "Invalid email address",
+    "errPasswordRequired": "Enter a password",
+    "errPasswordShort": "Password is too short (min. 8 characters)",
+    "errConfirmRequired": "Confirm your password",
+    "errPasswordMismatch": "Passwords do not match"
   },
   "jobs": {
     "title": "Job listings",
@@ -85,6 +95,7 @@
     "favorite": "Save",
     "favorited": "Saved",
     "hide": "Hide",
+    "restoreHidden": "Show hidden ({count})",
     "verifiedTitle": "Skills verified",
     "sidebarTitle": "Your activity",
     "sidebarFavorites": "Saved",
@@ -103,7 +114,8 @@
     "notifications": "Notifications",
     "noNotifications": "No notifications yet.",
     "messages": "Messages",
-    "profile": "Profile"
+    "profile": "Profile",
+    "menu": "Menu"
   },
   "levels": {
     "junior": "Junior",
@@ -178,15 +190,20 @@
     "phone": "Phone",
     "posting": "Posting…",
     "publish": "Publish listing",
-    "error": "Could not publish the listing."
+    "error": "Could not publish the listing.",
+    "errTitleRequired": "Enter a title",
+    "errCompanyRequired": "Enter the company name",
+    "errDescriptionShort": "Description is too short (min. 10 characters)",
+    "errSalaryRange": "The lower salary bound must not exceed the upper one"
   },
   "test": {
     "title": "Skill test",
     "selectIntro": "Choose your direction and mark the technologies you know. You'll get the hardest questions for each.",
     "chooseDirection": "Choose a direction",
     "chooseTech": "Mark your technologies",
-    "techHint": "{count} questions per technology. 20 seconds each.",
-    "selectedSummary": "{techs} technologies · {questions} questions",
+    "techHint": "{count, plural, one {# question} other {# questions}} per technology. 20 seconds each.",
+    "selectedSummary": "{techs, plural, =0 {No technologies} one {# technology} other {# technologies}} · {questions, plural, one {# question} other {# questions}}",
+    "selectAtLeastOne": "Select at least one technology",
     "startTest": "Start the test",
     "progress": "Question {current} / {total}",
     "timeLeft": "Time left",
@@ -196,7 +213,8 @@
     "finish": "Finish",
     "submitting": "Submitting…",
     "submitFailed": "Could not submit the test.",
-    "couldNotStart": "Could not start the test."
+    "couldNotStart": "Could not start the test.",
+    "terminated": "The assessment was terminated for too many tab switches."
   },
   "admin": {
     "dashboard": "Admin panel",
@@ -281,21 +299,5 @@
     "levelJunior": "Junior Verified",
     "levelMiddle": "Middle Verified",
     "levelSenior": "Senior Verified"
-  },
-  "proctor": {
-    "limitUnknown": "unknown",
-    "active": "Monitoring active",
-    "reconnecting": "Reconnecting…",
-    "tabSwitches": "{count} / {max} tab switches",
-    "violations": "{count} / {max} other violations",
-    "warningsLeft": "{remaining} warnings left",
-    "violationTitle": "Violation detected",
-    "violationBody": "You left the test window. This has been logged as a violation — exceeding the limit will end the test automatically.",
-    "violationBodyCopyPaste": "Copy or paste was detected. This has been logged as a violation — exceeding the limit will end the test automatically.",
-    "violationBodyRightClick": "Right-click / context menu was detected. This has been logged as a violation — exceeding the limit will end the test automatically.",
-    "violationBodyScreenshot": "A screenshot attempt (PrintScreen) was detected. This has been logged as a violation — exceeding the limit will end the test automatically.",
-    "violationBodyDevtools": "The browser DevTools panel was detected as open. This has been logged as a violation — exceeding the limit will end the test automatically.",
-    "violationRemaining": "{remaining} more and the test will be terminated.",
-    "acknowledge": "Got it"
   }
 }

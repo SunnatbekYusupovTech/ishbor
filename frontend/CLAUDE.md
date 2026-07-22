@@ -57,6 +57,19 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 - `rating.tsx` — `RatingStars` (test %idan yulduz) + `Avatar` (ismdan gradient).
 - `badges.tsx` — `LevelBadge`, `StackBadge`, `VerifiedBadge`.
 - `QuestionCard`, `Timer`, `ResultCard`, `AntiCheatBanner`, `ViolationDialog` — test oqimi.
+  `test/page.tsx` anti-cheat'ni ulaydi (`useAntiCheat` REST) va `proctor` namespace'dan
+  matn oladi; savol matni/variantlari backend'dan lokalizatsiyalangan holda keladi
+  (`api.startTest` `locale` yuboradi). Modal ochilganda savol taymeri pauza qilinadi.
+- `lib/hidden.ts` — yashirilgan e'lonlar (localStorage `ishbor_hidden`, `favorites.ts`
+  bilan bir xil `useSyncExternalStore` shabloni).
+- `login/page.tsx` — parolni ko'rsatish (ko'z), `confirmPassword`, `noValidate` + maydon
+  ostidagi lokalizatsiyalangan xatolar (`auth.err*`). `jobs/new` — maosh diapazoni va
+  maydon validatsiyasi (`post.err*`).
+- **Responsive:** mobil `SiteNav` (hamburger menyu, `md:` da to'liq nav), mobil-xavfsiz
+  `ui/dialog` (`w-[calc(100%-2rem)]`, `max-h-[calc(100dvh-2rem)]`), formalar `sm:` da ustunli.
+- `language-selector.tsx` — premium til tanlagich (bayroq + kod, animatsion dropdown,
+  klaviatura bilan boshqarish, `lib/locale-preference.ts` orqali localStorage'da saqlash).
+  Bayroqlar `flags.tsx` (SVG — emoji bayroqlar Windows'da harf ko'rinadi). `SiteNav`da ishlatiladi.
 
 ### Anti-cheat oqimi (`test/page.tsx`, `phase === 'active'`)
 

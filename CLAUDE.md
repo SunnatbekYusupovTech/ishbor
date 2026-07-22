@@ -104,6 +104,24 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
   - **Reyting:** `jobController` egasining test natijalarini `populate` qiladi;
     `components/rating.tsx` yulduz + avatar.
   - Yangi fayllar: `lib/favorites.ts`, `components/rating.tsx`, `components/JobDetailDialog.tsx`.
+- **Responsive + i18n + UX tuzatishlar (butun sayt):**
+  - **Test savollari lokalizatsiyasi:** ingliz kanonik (ballash indeks bo'yicha), RU/UZ
+    tarjimalar `backend/src/data/questionTranslations.ts` da (texnologiya + tartib bo'yicha).
+    `Question` modeliga `key` + `translations` qo'shildi; `seed.ts` `<tech>-<n>` kalit va
+    tarjimalarni biriktiradi; `testController.startTest` `locale` (body yoki
+    `Accept-Language`) bo'yicha lokalizatsiya qiladi va **kanonik tartibda** variantlarni
+    aynan bir xil `order` bilan aralashtiradi (ballash o'zgarmaydi). **Diqqat:** tarjimalar
+    ishlashi uchun `npm run seed -w backend` qayta ishga tushirilishi shart.
+  - **Anti-cheat test sahifasiga ulandi:** `useAntiCheat` (REST) + `AntiCheatBanner` +
+    `ViolationDialog`; `proctor` namespace uch tilga qo'shildi. Modal ochilganda savol
+    taymeri **pauza** qilinadi (modal "Keyingi"ni bosmaydi), hisoblagich backend'dan.
+  - **Login/register:** parolni ko'rsatish (ko'z ikonkasi), `confirmPassword`, brauzer
+    validatsiyasi o'chirildi (`noValidate`) — maydon ostida lokalizatsiyalangan xatolar.
+  - **Buglar:** yashirilgan e'lonlar `lib/hidden.ts` (localStorage); maosh diapazoni
+    validatsiyasi (`jobs/new`); "Boshlash" 0 texnologiyada disabled + hint; ICU plural
+    (`selectedSummary`, `warningsLeft`); mobil header menyusi (hamburger); mobil-xavfsiz
+    `Dialog` (ekran chetlariga tegmaydi, `max-h`).
+  - Yangi fayllar: `backend/src/data/questionTranslations.ts`, `frontend/src/lib/hidden.ts`.
 
 ## Jamoaviy taqsimot
 

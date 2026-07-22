@@ -31,6 +31,30 @@ const DEADLINE_BUFFER_MS = 120_000;
  */
 const MIN_SECONDS_PER_QUESTION = 3;
 
+/** Locales that carry translated question content ('en' is the canonical source). */
+const SUPPORTED_LOCALES = ['en', 'ru', 'uz'] as const;
+type Locale = (typeof SUPPORTED_LOCALES)[number];
+
+function resolveLocale(raw: unknown): Locale {
+  const value = typeof raw === 'string' ? raw.slice(0, 2).toLowerCase() : '';
+  return (SUPPORTED_LOCALES as readonly string[]).includes(value) ? (value as Locale) : 'en';
+}
+
+/**
+ * Return a question's `text`/`options` in the requested locale, falling back to
+ * the canonical English content when a translation is missing. Options stay in
+ * canonical order — the caller applies the per-candidate shuffle afterwards, so
+ * index-based scoring is unaffected regardless of language.
+ */
+function localizeContent(q: IQuestion, locale: Locale): { text: string; options: string[] } {
+  if (locale === 'en') return { text: q.text, options: q.options };
+  const localized = q.translations?.[locale];
+  if (localized?.text && Array.isArray(localized.options) && localized.options.length === q.options.length) {
+    return { text: localized.text, options: localized.options };
+  }
+  return { text: q.text, options: q.options };
+}
+
 /**
  * Shape of a question as sent to the client — deliberately WITHOUT
  * `correctAnswer`. The client can render and answer but can never derive
@@ -83,10 +107,13 @@ export const getCatalog = asyncHandler(async (_req: Request, res: Response) => {
  */
 export const startTest = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const { direction, technologies } = req.body as {
+  const { direction, technologies, locale: rawLocale } = req.body as {
     direction: Direction;
     technologies: string[];
+    locale?: string;
   };
+  // Prefer an explicit body locale; fall back to the Accept-Language header.
+  const locale = resolveLocale(rawLocale ?? req.headers['accept-language']);
 
   // Validate the direction + that every chosen technology belongs to it.
   if (!DIRECTIONS.includes(direction)) {
@@ -216,8 +243,10 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
       perQuestionSeconds: PER_QUESTION_SECONDS,
       questions: questions.map((q, i) => {
         const pub = toPublicQuestion(q);
-        // Present options in the shuffled order for this candidate.
-        return { ...pub, options: applyOrder(pub.options, optionOrders[i].order) };
+        // Localise first (canonical order), then present options in this
+        // candidate's shuffled order. Scoring maps display→canonical by index.
+        const { text, options } = localizeContent(q, locale);
+        return { ...pub, text, options: applyOrder(options, optionOrders[i].order) };
       }),
     },
   });

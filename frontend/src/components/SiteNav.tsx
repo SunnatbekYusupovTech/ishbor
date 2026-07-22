@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Shield, MapPin, Heart, Bell } from 'lucide-react';
+import { Shield, MapPin, Heart, Bell, Menu, X } from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { api, tokenStore } from '@/lib/api';
 import { useFavorites } from '@/lib/favorites';
-import { LocaleSwitcher } from '@/components/locale-switcher';
+import { LanguageSelector } from '@/components/language-selector';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +24,7 @@ export function SiteNav() {
   const favorites = useFavorites();
   const [authed, setAuthed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Read auth state on mount + whenever the route changes (login/logout).
   useEffect(() => {
@@ -36,6 +37,7 @@ export function SiteNav() {
     } else {
       setIsAdmin(false);
     }
+    setMenuOpen(false);
   }, [pathname]);
 
   const logout = () => {
@@ -57,7 +59,18 @@ export function SiteNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="container flex h-16 items-center gap-3 sm:gap-5">
+      <div className="container flex h-16 items-center gap-1.5 sm:gap-5">
+        {/* Mobile menu toggle */}
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label={th('menu')}
+          aria-expanded={menuOpen}
+          className="-ml-1 shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+        >
+          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+
         {/* Brand mark — red, hh-style */}
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-base font-black leading-none text-brand-foreground shadow-sm">
@@ -75,7 +88,7 @@ export function SiteNav() {
           {th('city')}
         </button>
 
-        <nav className="ml-auto flex items-center gap-1 text-sm md:ml-2 md:mr-auto">
+        <nav className="ml-2 mr-auto hidden items-center gap-1 text-sm md:flex">
           {links.map((l) => {
             const active = pathname === l.href;
             return (
@@ -114,7 +127,7 @@ export function SiteNav() {
           )}
         </nav>
 
-        <div className="flex items-center gap-0.5">
+        <div className="ml-auto flex items-center gap-0.5 md:ml-0">
           {/* Saved listings */}
           <Link
             href="/?saved=1"
@@ -129,9 +142,11 @@ export function SiteNav() {
             )}
           </Link>
 
-          <NotificationsBell label={th('notifications')} />
+          <div className="hidden sm:block">
+            <NotificationsBell label={th('notifications')} />
+          </div>
 
-          <LocaleSwitcher />
+          <LanguageSelector />
           <ThemeToggle />
 
           {authed ? (
@@ -155,13 +170,44 @@ export function SiteNav() {
           ) : (
             <Link
               href="/login"
-              className="ml-1 rounded-md bg-primary px-3.5 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              className="ml-1 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 sm:px-3.5"
             >
               {t('login')}
             </Link>
           )}
         </div>
       </div>
+
+      {/* Mobile nav panel */}
+      {menuOpen && (
+        <nav className="border-t bg-background md:hidden">
+          <div className="container flex flex-col py-2">
+            <button
+              type="button"
+              className="flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground"
+            >
+              <MapPin className="h-4 w-4 text-primary" />
+              {th('city')}
+            </button>
+            {links.map((l) => {
+              const active = pathname === l.href;
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    'rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                    active ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent',
+                  )}
+                >
+                  {t(l.key)}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
     </header>
   );
 }

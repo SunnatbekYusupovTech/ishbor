@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
   X,
   Heart,
+  EyeOff,
   ShieldCheck,
   Bookmark,
   LogIn,
@@ -21,6 +22,7 @@ import { JobCard } from '@/components/JobCard';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFavorites } from '@/lib/favorites';
+import { hiddenJobs, useHiddenJobs } from '@/lib/hidden';
 import { cn } from '@/lib/utils';
 
 const LEVELS: Level[] = ['junior', 'middle', 'senior'];
@@ -56,11 +58,11 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [savedOnly, setSavedOnly] = useState(false);
   const [authed, setAuthed] = useState(false);
 
   const favIds = useFavorites();
+  const hiddenIds = useHiddenJobs();
 
   // Read the "saved" view intent (from the header heart) + auth state on mount.
   useEffect(() => {
@@ -103,15 +105,16 @@ export default function JobsPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const favSet = new Set(favIds);
+    const hiddenSet = new Set(hiddenIds);
     return jobs.filter((j) => {
-      if (hidden.has(j.id)) return false;
+      if (hiddenSet.has(j.id)) return false;
       if (savedOnly && !favSet.has(j.id)) return false;
       if (!q) return true;
       return [j.title, j.company, j.description, j.postedByName]
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q));
     });
-  }, [jobs, query, hidden, savedOnly, favIds]);
+  }, [jobs, query, hiddenIds, savedOnly, favIds]);
 
   const hasFilters =
     level !== null ||
@@ -130,7 +133,7 @@ export default function JobsPage() {
     setSalaryMax('');
     setSort('newest');
   };
-  const hideJob = (id: string) => setHidden((prev) => new Set(prev).add(id));
+  const hideJob = (id: string) => hiddenJobs.hide(id);
 
   const roleTabs: { value: RoleFilter; label: string; icon: React.ReactNode }[] = [
     { value: 'all', label: t('tabAll'), icon: <Users className="h-4 w-4" /> },
@@ -356,15 +359,26 @@ export default function JobsPage() {
                 {t('resultsCount', { count: filtered.length })}
               </p>
             )}
-            {savedOnly && (
-              <button
-                onClick={() => toggleSaved(false)}
-                className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-              >
-                <X className="h-3.5 w-3.5" />
-                {t('sidebarFavorites')}
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {hiddenIds.length > 0 && (
+                <button
+                  onClick={() => hiddenJobs.clear()}
+                  className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <EyeOff className="h-3.5 w-3.5" />
+                  {t('restoreHidden', { count: hiddenIds.length })}
+                </button>
+              )}
+              {savedOnly && (
+                <button
+                  onClick={() => toggleSaved(false)}
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  {t('sidebarFavorites')}
+                </button>
+              )}
+            </div>
           </div>
 
           {error && (

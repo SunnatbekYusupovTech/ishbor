@@ -1,18 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { Clock, Check, Layers } from 'lucide-react';
+import { useTranslations, useLocale } from 'next-intl';
+import { Clock, Check, Layers, Info } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
 import { api, tokenStore, ApiError } from '@/lib/api';
 import { ResultCard } from '@/components/ResultCard';
-import { LevelBadge } from '@/components/badges';
 import { AntiCheatBanner } from '@/components/AntiCheatBanner';
 import { ViolationDialog } from '@/components/ViolationDialog';
 import { useHeartbeat } from '@/hooks/useHeartbeat';
 import { useAntiCheat } from '@/hooks/useAntiCheat';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useExamLockdown } from '@/hooks/useExamLockdown';
+import { LevelBadge } from '@/components/badges';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -29,6 +29,7 @@ export default function TestPage() {
   const t = useTranslations('test');
   const td = useTranslations('directions');
   const tt = useTranslations('technologies');
+  const locale = useLocale();
   const router = useRouter();
 
   const [phase, setPhase] = useState<Phase>('select');
@@ -42,11 +43,31 @@ export default function TestPage() {
   const [secondsLeft, setSecondsLeft] = useState(20);
   const [result, setResult] = useState<SubmitTestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [violationOpen, setViolationOpen] = useState(false);
 
   const sessionRef = useRef<StartTestResponse | null>(null);
   const answersRef = useRef<Record<string, number>>({});
   const indexRef = useRef(0);
   const submittingRef = useRef(false);
+  // Read by the countdown tick so we can pause without resetting the clock.
+  const violationOpenRef = useRef(false);
+  const lastViolationCountRef = useRef(0);
+
+  useEffect(() => {
+    violationOpenRef.current = violationOpen;
+  }, [violationOpen]);
+
+  const restart = useCallback(() => {
+    void fullscreen.exit();
+    setPhase('select');
+    setSession(null);
+    sessionRef.current = null;
+    setDirection(null);
+    setTechs(new Set());
+    setViolationOpen(false);
+    lastViolationCountRef.current = 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // The server killed the session (heartbeat lost / violation limit exceeded).
   // No submit call is made — the session is already terminated server-side —
@@ -80,6 +101,8 @@ export default function TestPage() {
     onTerminated: handleTerminated,
   });
 
+  // Proctoring: tab-switch/focus-loss, clipboard, right-click, PrintScreen,
+  // DevTools, and bot detection — REST-authoritative, socket is belt-and-suspenders.
   const anti = useAntiCheat({
     sessionId: session?.sessionId ?? '',
     enabled: phase === 'active',
@@ -102,6 +125,15 @@ export default function TestPage() {
   // server-side counters above are — but it raises the effort bar and is
   // one of the few signals that doesn't depend on a network round-trip.
   useExamLockdown({ enabled: phase === 'active' });
+
+  // Surface a mandatory warning each time the authoritative count rises.
+  useEffect(() => {
+    const total = anti.tabSwitchCount + anti.violationCount;
+    if (total > lastViolationCountRef.current) {
+      lastViolationCountRef.current = total;
+      setViolationOpen(true);
+    }
+  }, [anti.tabSwitchCount, anti.violationCount]);
 
   // Guard + load taxonomy.
   useEffect(() => {
@@ -151,13 +183,15 @@ export default function TestPage() {
     }
   }, [submit]);
 
-  // Per-question countdown: resets each question, auto-advances at zero.
+  // Per-question countdown: resets each question, auto-advances at zero. While a
+  // violation dialog is open the tick holds (so the modal never "presses Next").
   useEffect(() => {
     if (phase !== 'active') return;
     const perQ = sessionRef.current?.perQuestionSeconds ?? 20;
     setSecondsLeft(perQ);
     const id = setInterval(() => {
       setSecondsLeft((s) => {
+        if (violationOpenRef.current) return s; // paused
         if (s <= 1) {
           clearInterval(id);
           advance();
@@ -188,12 +222,13 @@ export default function TestPage() {
     setError(null);
     setResult(null);
     submittingRef.current = false;
+    lastViolationCountRef.current = 0;
     // Fire synchronously, still inside the click's user-activation window —
     // fullscreen requests made after an `await` can be silently rejected by
     // the browser once that activation has expired.
     void fullscreen.request();
     try {
-      const res = await api.startTest({ direction, technologies: Array.from(techs) });
+      const res = await api.startTest({ direction, technologies: Array.from(techs), locale });
       sessionRef.current = res;
       answersRef.current = {};
       indexRef.current = 0;
@@ -211,15 +246,6 @@ export default function TestPage() {
     setAnswers(answersRef.current);
   };
 
-  const restart = () => {
-    void fullscreen.exit();
-    setPhase('select');
-    setSession(null);
-    sessionRef.current = null;
-    setDirection(null);
-    setTechs(new Set());
-  };
-
   // ---------------- RENDER ----------------
 
   if (phase === 'result' && result) {
@@ -228,6 +254,7 @@ export default function TestPage() {
 
   if (phase === 'select') {
     const availableTechs = direction && catalog ? catalog.directions[direction] : [];
+    const noTech = techs.size === 0;
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <div>
@@ -245,7 +272,7 @@ export default function TestPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
                 1
               </span>
               {t('chooseDirection')}
@@ -275,7 +302,7 @@ export default function TestPage() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
                   2
                 </span>
                 {t('chooseTech')}
@@ -294,8 +321,9 @@ export default function TestPage() {
                       key={tech}
                       onClick={() => toggleTech(tech)}
                       disabled={count === 0}
+                      aria-pressed={selected}
                       className={cn(
-                        'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-40',
+                        'flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-40',
                         selected
                           ? 'border-primary bg-primary text-primary-foreground'
                           : 'hover:bg-accent',
@@ -308,17 +336,28 @@ export default function TestPage() {
                 })}
               </div>
 
-              <div className="flex items-center justify-between border-t pt-4">
+              <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-sm text-muted-foreground">
                   {t('selectedSummary', {
                     techs: techs.size,
                     questions: techs.size * (catalog?.questionsPerTech ?? 5),
                   })}
                 </span>
-                <Button size="lg" disabled={techs.size === 0} onClick={start}>
+                <Button
+                  size="lg"
+                  disabled={noTech}
+                  onClick={start}
+                  className="w-full sm:w-auto"
+                >
                   {t('startTest')}
                 </Button>
               </div>
+              {noTech && (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Info className="h-3.5 w-3.5 shrink-0" />
+                  {t('selectAtLeastOne')}
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
@@ -353,7 +392,7 @@ export default function TestPage() {
         maxCount={anti.violationDialog === 'tab-switch' ? anti.maxTabSwitches : anti.maxViolations}
       />
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <span className="text-sm font-medium text-muted-foreground">
             {t('progress', { current: index + 1, total })}
           </span>
@@ -377,7 +416,7 @@ export default function TestPage() {
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
-            <CardTitle className="text-lg leading-snug">{question.text}</CardTitle>
+            <CardTitle className="text-base leading-snug sm:text-lg">{question.text}</CardTitle>
             <LevelBadge level={question.difficulty} />
           </div>
         </CardHeader>
@@ -397,18 +436,22 @@ export default function TestPage() {
                   name={question._id}
                   checked={selected === optIndex}
                   onChange={() => select(question._id, optIndex)}
-                  className="h-4 w-4 accent-primary"
+                  className="h-4 w-4 shrink-0 accent-primary"
                 />
                 <span className="text-sm">{option}</span>
               </label>
             ))}
           </fieldset>
         </CardContent>
-        <CardFooter className="justify-between">
+        <CardFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
           <span className="text-xs text-muted-foreground">
             {selected === undefined ? t('notAnswered') : t('answered')}
           </span>
-          <Button onClick={advance} disabled={phase === 'submitting'}>
+          <Button
+            onClick={advance}
+            disabled={phase === 'submitting'}
+            className="w-full sm:w-auto"
+          >
             {phase === 'submitting' ? t('submitting') : isLast ? t('finish') : t('next')}
           </Button>
         </CardFooter>

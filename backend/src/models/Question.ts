@@ -10,10 +10,28 @@ export const DIFFICULTY_WEIGHTS: Record<Difficulty, number> = {
   senior: 3,
 };
 
-export interface IQuestion extends Document {
-  _id: Types.ObjectId;
+/** A single localised rendering of a question (text + options in canonical order). */
+export interface LocalizedContent {
   text: string;
   options: string[];
+}
+
+export interface IQuestion extends Document {
+  _id: Types.ObjectId;
+  /**
+   * Stable content key (`<technology>-<n>`) used to pair a question with its
+   * translations and to keep localisation reproducible across re-seeds.
+   */
+  key?: string;
+  text: string;
+  options: string[];
+  /**
+   * Localised content by locale (e.g. `{ ru: {...}, uz: {...} }`). English lives
+   * in `text`/`options` (the canonical scoring reference). `options` in every
+   * locale are in the SAME order as the canonical options, so the option shuffle
+   * and index-based scoring stay language-agnostic.
+   */
+  translations?: Record<string, LocalizedContent>;
   /**
    * Index into `options` of the correct choice.
    * SECURITY: `select: false` keeps this out of every query result by default,
@@ -31,6 +49,8 @@ export interface IQuestion extends Document {
 
 const questionSchema = new Schema<IQuestion>(
   {
+    key: { type: String, index: true },
+    translations: { type: Schema.Types.Mixed },
     text: { type: String, required: true, trim: true },
     options: {
       type: [String],
