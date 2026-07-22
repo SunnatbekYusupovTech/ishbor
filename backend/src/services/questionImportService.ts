@@ -1,4 +1,4 @@
-import { Question } from '@/models/Question';
+import { Question, type LocalizedContent } from '@/models/Question';
 import { logger } from '@/utils/logger';
 import type { Difficulty } from '@/services/groqQuestionGenerator';
 
@@ -8,6 +8,9 @@ export interface ImportableQuestion {
   text: string;
   options: string[];
   correctAnswer: number;
+  /** Optional ru/uz translations — `startTest`'s `localizeContent` falls back
+   *  to the canonical (English) text/options when a locale is missing here. */
+  translations?: Partial<Record<'ru' | 'uz', LocalizedContent>>;
 }
 
 /** Normalises text for duplicate comparison — case/whitespace differences don't count as "new". */

@@ -135,16 +135,25 @@ npm run typecheck -w backend  # tsc --noEmit
   qattiqroq limit haqiqiy foydalanuvchilarni bloklab qo'yishi mumkin.
 - **AI orqali savol generatsiyasi:**
   - `services/groqQuestionGenerator.ts` — sof Groq chaqiruvchi (DB'siz),
-    ikkala quyidagi joy tomonidan ishlatiladi. Prompt aniq talab qiladi:
-    barcha variantlar bir xil uzunlik/uslubda bo'lishi kerak (AI generatsiya
-    qilingan testlardagi klassik kamchilik — eng uzun/batafsil variant
-    deyarli har doim to'g'ri javob bo'lib chiqadi, shuning uchun aniq
-    taqiqlangan) va to'g'ri javob indeksi savoldan-savolga har xil
-    pozitsiyada bo'lishi kerak.
-  - `services/questionImportService.ts` — savollarni bazaga yozadi,
-    matn bo'yicha (katta-kichik harf/probel farqisiz) **dublikatlarni
-    o'tkazib yuboradi**, `category`ni `technology`ga tenglashtirib
-    to'ldiradi (`seed.ts` konvensiyasi bilan bir xil).
+    ikkala quyidagi joy tomonidan ishlatiladi. **Bitta chaqiruvda EN + RU + UZ**
+    ni birga so'raydi (`translations: { ru, uz }`) — variantlar soni va tartibi
+    ingliz kanonik bilan bir xil bo'lishi majburiy (aks holda savol butunlay
+    tashlab yuboriladi — `generateQuestions` ichida himoya filtri bor,
+    mos kelmagan tarjima per-candidate shuffle'ni buzib qo'yishi mumkin edi).
+    Prompt yana aniq talab qiladi: barcha variantlar bir xil uzunlik/uslubda
+    bo'lishi kerak (AI generatsiya qilingan testlardagi klassik kamchilik —
+    eng uzun/batafsil variant deyarli har doim to'g'ri javob bo'lib chiqadi,
+    shuning uchun aniq taqiqlangan) va to'g'ri javob indeksi savoldan-savolga
+    har xil pozitsiyada bo'lishi kerak. **Diqqat:** AI tarjima sifati kafolatsiz
+    (model ba'zan noto'g'ri belgi/skript aralashtirib qo'yishi mumkin) —
+    strukturaviy tekshiruv bor (variantlar soni mos kelishi), lekin tarjima
+    matnining tabiiyligi qo'lda tekshirilmagan.
+  - `services/questionImportService.ts` — savollarni bazaga yozadi
+    (`translations` maydoni bilan birga, agar mavjud bo'lsa), matn bo'yicha
+    (katta-kichik harf/probel farqisiz) **dublikatlarni o'tkazib yuboradi**,
+    `category`ni `technology`ga tenglashtirib to'ldiradi (`seed.ts`
+    konvensiyasi bilan bir xil). Tarjimasiz savollar `startTest`da
+    `localizeContent` orqali kanonik inglizchaga fallback qiladi.
   - `scripts/generateQuestions.ts` (`npm run generate-questions`) — alohida,
     uzoq muddatli process (API server bilan bir jarayonda emas). Groq
     chaqirib, natijani o'zining `POST /api/webhooks/questions`iga yuboradi
