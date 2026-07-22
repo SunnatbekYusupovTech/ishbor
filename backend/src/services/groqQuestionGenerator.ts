@@ -37,7 +37,14 @@ Return JSON matching exactly this shape:
 Rules:
 - "options" must have between 2 and 6 items
 - "correctAnswer" is the 0-based index into "options" of the correct choice
-- Questions must be technically accurate and non-trivial`;
+- Questions must be technically accurate and non-trivial
+- CRITICAL: all options must be similar in length, phrasing style, and level of
+  detail. Never make the correct option noticeably longer, more specific, or
+  more "textbook-sounding" than the distractors — that makes it guessable
+  without knowing the answer. Wrong options should be equally plausible and
+  concise, not obviously weaker or vaguer.
+- Vary which index (0, 1, 2, 3...) holds the correct answer across questions —
+  do not default to always putting it first or last.`;
 
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',

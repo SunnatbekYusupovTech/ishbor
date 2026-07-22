@@ -108,14 +108,16 @@ npm run typecheck -w backend  # tsc --noEmit
 - `services/scoringService.ts` — ballash mantiqi (unit test bilan).
 - `sockets/antiCheat.ts` — real-time qoidabuzarlik kuzatuvi.
 - Tuning `.env` orqali: `TEST_DURATION_MINUTES`, `HEARTBEAT_TIMEOUT_MS`, `MAX_TAB_SWITCHES`.
-- **Cooldown:** `testController.startTest` foydalanuvchining oxirgi tugatilgan
-  urinishidan keyin `TEST_ATTEMPT_COOLDOWN_MINUTES` (default 10) o'tmaguncha
-  yangi sessiya ochilishiga yo'l qo'ymaydi — skript orqali qayta-qayta
-  start→submit qilib, qaytarilgan `percentage`ni to'g'ri javoblarni topish
-  uchun oracle sifatida ishlatishning oldini oladi. Agar oxirgi urinish
-  `TEST_LOW_SCORE_THRESHOLD`dan (default 50%) past bo'lsa, cooldown
-  `TEST_LOW_SCORE_COOLDOWN_MULTIPLIER`ga (default 3, ya'ni 30 daqiqa)
-  ko'paytiriladi — tez-tez past-sifatli qayta urinishni yanada
+- **Cooldown:** `testController.startTest` **har urinishda emas**, faqat
+  ketma-ket har **3-chi** boshlashda (`COOLDOWN_EVERY_N_STARTS`, kod ichida
+  qattiq belgilangan) foydalanuvchining oxirgi tugatilgan urinishidan keyin
+  `TEST_ATTEMPT_COOLDOWN_MINUTES` (default 10) o'tmaguncha yangi sessiya
+  ochilishiga yo'l qo'ymaydi — skript orqali qayta-qayta start→submit qilib,
+  qaytarilgan `percentage`ni to'g'ri javoblarni topish uchun oracle sifatida
+  ishlatishning oldini oladi, lekin oddiy foydalanuvchi 1-2 marta erkin qayta
+  urinib ko'rishi mumkin. Agar oxirgi urinish `TEST_LOW_SCORE_THRESHOLD`dan
+  (default 50%) past bo'lsa, cooldown `TEST_LOW_SCORE_COOLDOWN_MULTIPLIER`ga
+  (default 3, ya'ni 30 daqiqa) ko'paytiriladi — tez-tez past-sifatli qayta urinishni yanada
   qiyinlashtiradi. `testRateLimiter` (`middleware/rateLimiter.ts`) — IP
   bo'yicha qo'shimcha himoya qatlami.
 - **Ko'rilgan savollarni istisno qilish:** `startTest` foydalanuvchining
@@ -133,7 +135,12 @@ npm run typecheck -w backend  # tsc --noEmit
   qattiqroq limit haqiqiy foydalanuvchilarni bloklab qo'yishi mumkin.
 - **AI orqali savol generatsiyasi:**
   - `services/groqQuestionGenerator.ts` — sof Groq chaqiruvchi (DB'siz),
-    ikkala quyidagi joy tomonidan ishlatiladi.
+    ikkala quyidagi joy tomonidan ishlatiladi. Prompt aniq talab qiladi:
+    barcha variantlar bir xil uzunlik/uslubda bo'lishi kerak (AI generatsiya
+    qilingan testlardagi klassik kamchilik — eng uzun/batafsil variant
+    deyarli har doim to'g'ri javob bo'lib chiqadi, shuning uchun aniq
+    taqiqlangan) va to'g'ri javob indeksi savoldan-savolga har xil
+    pozitsiyada bo'lishi kerak.
   - `services/questionImportService.ts` — savollarni bazaga yozadi,
     matn bo'yicha (katta-kichik harf/probel farqisiz) **dublikatlarni
     o'tkazib yuboradi**, `category`ni `technology`ga tenglashtirib

@@ -30,6 +30,8 @@ const DEADLINE_BUFFER_MS = 120_000;
  * `ISession.suspiciouslyFast`.
  */
 const MIN_SECONDS_PER_QUESTION = 3;
+/** Cooldown is enforced only on every Nth consecutive test start, not every one. */
+const COOLDOWN_EVERY_N_STARTS = 3;
 
 /** Locales that carry translated question content ('en' is the canonical source). */
 const SUPPORTED_LOCALES = ['en', 'ru', 'uz'] as const;
@@ -135,29 +137,35 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.conflict('You already have an assessment in progress.');
   }
 
-  // Guard: per-account cooldown since the last finished attempt. This is the
-  // account-keyed complement to `testRateLimiter` (IP-keyed) — it closes the
-  // gap where a script starts+submits from many IPs to probe the scored
-  // `percentage` as an oracle for the hidden answer key, or otherwise farms
-  // attempts faster than a human ever would. A low-scoring last attempt gets
-  // a longer cooldown (`testLowScoreCooldownMultiplier`×) than a normal one —
-  // discourages rapid low-effort re-guessing more than a single flat duration.
-  const lastFinished = await Session.findOne({ userId, endTime: { $exists: true } })
-    .sort({ endTime: -1 })
-    .select('endTime percentage');
-  if (lastFinished?.endTime) {
-    const wasLowScore =
-      lastFinished.percentage != null && lastFinished.percentage < env.testLowScoreThreshold;
-    const cooldownMinutes = wasLowScore
-      ? env.testAttemptCooldownMinutes * env.testLowScoreCooldownMultiplier
-      : env.testAttemptCooldownMinutes;
-    const cooldownMs = cooldownMinutes * 60 * 1000;
-    const elapsedMs = Date.now() - lastFinished.endTime.getTime();
-    if (elapsedMs < cooldownMs) {
-      const waitMinutes = Math.ceil((cooldownMs - elapsedMs) / 60_000);
-      throw ApiError.tooManyRequests(
-        `Please wait ${waitMinutes} more minute(s) before starting another attempt.`,
-      );
+  // Guard: per-account cooldown, but only every `COOLDOWN_EVERY_N_STARTS`th
+  // consecutive start (default 3) — not after every single attempt. Lets a
+  // candidate freely retry a couple of times, then forces a pause, rather
+  // than penalizing every attempt equally. Still the account-keyed complement
+  // to `testRateLimiter` (IP-keyed): closes the gap where a script starts+
+  // submits from many IPs to probe the scored `percentage` as an oracle for
+  // the hidden answer key, or otherwise farms attempts faster than a human ever would.
+  const totalStarts = await Session.countDocuments({ userId });
+  if (totalStarts > 0 && totalStarts % COOLDOWN_EVERY_N_STARTS === 0) {
+    // A low-scoring last attempt gets a longer cooldown
+    // (`testLowScoreCooldownMultiplier`×) than a normal one — discourages
+    // rapid low-effort re-guessing more than a single flat duration.
+    const lastFinished = await Session.findOne({ userId, endTime: { $exists: true } })
+      .sort({ endTime: -1 })
+      .select('endTime percentage');
+    if (lastFinished?.endTime) {
+      const wasLowScore =
+        lastFinished.percentage != null && lastFinished.percentage < env.testLowScoreThreshold;
+      const cooldownMinutes = wasLowScore
+        ? env.testAttemptCooldownMinutes * env.testLowScoreCooldownMultiplier
+        : env.testAttemptCooldownMinutes;
+      const cooldownMs = cooldownMinutes * 60 * 1000;
+      const elapsedMs = Date.now() - lastFinished.endTime.getTime();
+      if (elapsedMs < cooldownMs) {
+        const waitMinutes = Math.ceil((cooldownMs - elapsedMs) / 60_000);
+        throw ApiError.tooManyRequests(
+          `Please wait ${waitMinutes} more minute(s) before starting another attempt.`,
+        );
+      }
     }
   }
 
