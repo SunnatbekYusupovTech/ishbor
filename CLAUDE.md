@@ -67,6 +67,16 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
+- **AI orqali savol generatsiyasi + anti-cheat/anti-abuse mustahkamlash (Sardor):**
+  `backend/src/scripts/generateQuestions.ts` (`npm run generate-questions`) —
+  Groq (bepul) orqali savollar generatsiya qilib, o'zining
+  `POST /api/webhooks/questions` webhook'iga yuboradi (`X-Webhook-Secret`
+  bilan himoyalangan, `node-cron` bilan o'z-o'zini rejalashtiradi). Qo'shimcha:
+  `TEST_ATTEMPT_COOLDOWN_MINUTES` (skript orqali score-oracle hujumidan
+  himoya), global + test-specific rate-limit, `navigator.webdriver` bot
+  aniqlash, `debugger`-trap DevTools aniqlash, admin sessiyalar sahifasida
+  shubhali (IP o'zgargan / juda tez tugagan) sessiyalarni belgilash.
+  Batafsil: `backend/CLAUDE.md` → "Test (assessment) engine".
 - **Kengaytirilgan filtrlar:** `Job` modeliga `location`, `salaryMin`/`salaryMax` qo'shildi.
   Server-side keyword qidiruv (title, company, description, postedByName), location filter,
   salary range filter, sort (newest/oldest/salary_asc/salary_desc). Frontendda barcha yangi

@@ -103,6 +103,31 @@ npm run typecheck -w backend  # tsc --noEmit
 - `services/scoringService.ts` — ballash mantiqi (unit test bilan).
 - `sockets/antiCheat.ts` — real-time qoidabuzarlik kuzatuvi.
 - Tuning `.env` orqali: `TEST_DURATION_MINUTES`, `HEARTBEAT_TIMEOUT_MS`, `MAX_TAB_SWITCHES`.
+- **Cooldown:** `testController.startTest` foydalanuvchining oxirgi tugatilgan
+  urinishidan keyin `TEST_ATTEMPT_COOLDOWN_MINUTES` (default 10) o'tmaguncha
+  yangi sessiya ochilishiga yo'l qo'ymaydi — skript orqali qayta-qayta
+  start→submit qilib, qaytarilgan `percentage`ni to'g'ri javoblarni topish
+  uchun oracle sifatida ishlatishning oldini oladi. `testRateLimiter`
+  (`middleware/rateLimiter.ts`) — IP bo'yicha qo'shimcha himoya qatlami.
+- **AI orqali savol generatsiyasi (`scripts/generateQuestions.ts`):**
+  `npm run generate-questions` — Groq (bepul, `console.groq.com`) chaqirib,
+  har texnologiya/qiyinchilik juftligi uchun savol generatsiya qiladi va
+  o'zining `POST /api/webhooks/questions`iga yuboradi. `node-cron` bilan
+  o'z-o'zini rejalashtiradi (`GENERATE_CRON`, default kuniga bir marta soat
+  03:00) — alohida uzoq muddatli process sifatida ishga tushirilishi kerak
+  (API server bilan bir jarayonda emas). `RUN_ONCE=true` — bir martalik test
+  uchun. Kerakli env: `GROQ_API_KEY`, `WEBHOOK_URL`, `QUESTION_IMPORT_SECRET`
+  (pastga qarang).
+- **Savol import webhook (`POST /api/webhooks/questions`):** tashqi
+  avtomatlashtirish (yuqoridagi skript, yoki Make.com) uchun — JWT o'rniga
+  `X-Webhook-Secret` header (`QUESTION_IMPORT_SECRET`) bilan himoyalangan
+  (`middleware/verifyWebhookSecret.ts`). Secret sozlanmagan bo'lsa route
+  `503` qaytaradi (ochiq qolib ketmaydi). Body: `{ questions: [{ technology,
+  difficulty, text, options, correctAnswer }] }` — `validation/webhookSchemas.ts`
+  qattiq tekshiradi (`technology` faqat `ALL_TECHNOLOGIES`dan,
+  `correctAnswer` `options` chegarasidan oshmasligi kerak). `category`
+  maydoni `technology`ga tenglashtirib avtomatik to'ldiriladi (`seed.ts`dagi
+  konvensiya bilan bir xil).
 
 ## Endpointlar (`/api`)
 
@@ -110,7 +135,8 @@ npm run typecheck -w backend  # tsc --noEmit
 (catalog, start, submit, tab-switch, violation) · `/jobs`
 (GET list `?type=&level=&stack=&keyword=&location=&salaryMin=&salaryMax=&sort=`, POST create) ·
 `/users` (leaderboard) · `/admin` (GET `violations`, stats, users CRUD, jobs CRUD,
-sessions/list, questions/list — admin-only).
+sessions/list, questions/list — admin-only) · `/webhooks` (POST `questions` —
+AI savol import, `X-Webhook-Secret` bilan himoyalangan).
 
 > `GET /jobs` e'lon egasining reytingini `populate` qilib qaytaradi (`rating` maydoni).
 > Barcha admin endpointlar `authenticate` + `adminOnly` middleware bilan himoyalangan.
