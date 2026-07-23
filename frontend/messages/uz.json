@@ -15,8 +15,11 @@
     "post": "E'lon berish",
     "login": "Kirish",
     "logout": "Chiqish",
-    "logoutAll": "Barcha qurilmalardan",
-    "logoutAllConfirm": "Barcha qurilmalardan chiqishni xohlaysizmi? Boshqa telefon/kompyuterlardagi kirishlar ham bekor qilinadi.",
+    "logoutTitle": "Chiqishni tasdiqlaysizmi?",
+    "logoutAllDevicesLabel": "Barcha qurilmalardan chiqish",
+    "logoutAllDevicesHint": "Boshqa telefon/kompyuterlardagi kirishlar ham bekor qilinadi.",
+    "confirmLogout": "Ha, chiqish",
+    "cancel": "Bekor qilish",
     "admin": "Admin"
   },
   "auth": {

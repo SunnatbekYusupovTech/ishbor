@@ -15,8 +15,11 @@
     "post": "Post a job",
     "login": "Log in",
     "logout": "Log out",
-    "logoutAll": "All devices",
-    "logoutAllConfirm": "Sign out of all devices? Sessions on your other phones/computers will end too.",
+    "logoutTitle": "Confirm log out",
+    "logoutAllDevicesLabel": "Log out of all devices",
+    "logoutAllDevicesHint": "Sessions on your other phones/computers will end too.",
+    "confirmLogout": "Yes, log out",
+    "cancel": "Cancel",
     "admin": "Admin"
   },
   "auth": {

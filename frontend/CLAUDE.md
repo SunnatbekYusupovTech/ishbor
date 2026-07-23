@@ -31,8 +31,8 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 - `leaderboard/page.tsx` — reyting.
 - `profile/page.tsx` — profil (ism/email/rol, `VerifiedBadge` + `RatingStars`,
   eng yaxshi natija/urinishlar, `isQaTester` bo'lsa ogohlantirish, test/reyting/chiqish
-  havolalari). `SiteNav`da faqat `authed` bo'lsa ko'rinadi (desktop: ikonka, mobil: to'liq
-  ekranli menyu).
+  havolalari). `SiteNav`dagi far-right `UserMenu` avatar-dropdown orqali ochiladi
+  (faqat `authed` bo'lsa ko'rinadi).
 - `login/page.tsx` — kirish/ro'yxatdan o'tish.
 - `layout.tsx` — SiteNav + ThemeProvider + i18n provayder.
 
@@ -43,11 +43,12 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
   tokenni yangilaydi va so'rovni bir marta qayta yuboradi — controllerlar buni
   bilishi shart emas, shaffof ishlaydi.
 - **Auth token:** `tokenStore` (localStorage `ishbor_token` + `ishbor_refresh_token`,
-  `get`/`set`/`getRefresh`/`setRefresh`/`clear`). Bitta qurilmadan chiqish —
-  `api.logout()`; **barcha** qurilmalardan chiqish — `api.logoutAllDevices()`
-  (`SiteNav.tsx`da kichik ikkilamchi tugma, ⚠️ joylashuvi Fazilov bilan hali
-  kelishilmagan). To'g'ridan-to'g'ri `tokenStore.clear()` ishlatma — refresh
-  token DB'da qolib ketadi.
+  `get`/`set`/`getRefresh`/`setRefresh`/`clear`). Chiqish `SiteNav.tsx`dagi
+  far-right avatar-dropdown (`UserMenu`, Profil + Chiqish) orqali — "Chiqish"
+  bosilganda `LogoutDialog` ochiladi ("Barcha qurilmalardan chiqish" checkbox
+  bilan): belgilansa `api.logoutAllDevices()` (har bir refresh tokenni bekor
+  qiladi), aks holda oddiy `api.logout()` (faqat shu qurilma). To'g'ridan-to'g'ri
+  `tokenStore.clear()` ishlatma — refresh token DB'da qolib ketadi.
 - **i18n:** har matn **uz/ru/en** `messages/*.json` ga qo'shiladi; komponentda `useTranslations('namespace')`, sana uchun `useFormatter`.
 - **Navigatsiya:** `@/i18n/navigation` dan `Link`, `useRouter`, `usePathname` (lokalizatsiyalangan).
 - **Uslub:** Tailwind + `cn()` (`lib/utils`). shadcn `components/ui/*` — asosiy primitivlar.

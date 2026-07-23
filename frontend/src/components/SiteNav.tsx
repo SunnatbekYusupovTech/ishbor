@@ -2,12 +2,21 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Shield, MapPin, Heart, Bell, Menu, X, UserCircle } from 'lucide-react';
+import { Shield, MapPin, Heart, Bell, Menu, X, UserCircle, LogOut } from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { api, tokenStore } from '@/lib/api';
 import { useFavorites } from '@/lib/favorites';
 import { LanguageSelector } from '@/components/language-selector';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Avatar } from '@/components/rating';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { useAnimatedOverlay } from '@/hooks/useAnimatedOverlay';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +34,9 @@ export function SiteNav() {
   const favorites = useFavorites();
   const [authed, setAuthed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userName, setUserName] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const menuRendered = useAnimatedOverlay(menuOpen);
 
   // Read auth state on mount + whenever the route changes (login/logout).
@@ -34,10 +45,17 @@ export function SiteNav() {
     if (tokenStore.get()) {
       api
         .me()
-        .then((p) => setIsAdmin(p?.role === 'admin'))
-        .catch(() => setIsAdmin(false));
+        .then((p) => {
+          setIsAdmin(p?.role === 'admin');
+          setUserName(p?.name ?? '');
+        })
+        .catch(() => {
+          setIsAdmin(false);
+          setUserName('');
+        });
     } else {
       setIsAdmin(false);
+      setUserName('');
     }
     setMenuOpen(false);
   }, [pathname]);
@@ -53,19 +71,12 @@ export function SiteNav() {
     };
   }, [menuRendered]);
 
-  const logout = () => {
-    // Revoke the refresh token server-side (best-effort) and drop both local
-    // tokens — fire-and-forget so the UI doesn't wait on a network round-trip.
-    void api.logout();
-    setAuthed(false);
-    router.push('/');
-  };
-
-  const logoutAll = () => {
-    // A stronger, less common action (signs out every other device too) —
-    // confirm before firing it, unlike the single-device `logout` above.
-    if (!window.confirm(t('logoutAllConfirm'))) return;
-    void api.logoutAllDevices();
+  const confirmLogout = (allDevices: boolean) => {
+    // Revoke the refresh token(s) server-side (best-effort) and drop both
+    // local tokens — fire-and-forget so the UI doesn't wait on a round-trip.
+    if (allDevices) void api.logoutAllDevices();
+    else void api.logout();
+    setLogoutDialogOpen(false);
     setAuthed(false);
     router.push('/');
   };
@@ -89,7 +100,7 @@ export function SiteNav() {
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-base font-black leading-none text-brand-foreground shadow-sm">
             ish
           </span>
-          <span className="hidden text-lg font-extrabold tracking-tight md:inline">Ishbor</span>
+          <span className="hidden text-lg font-extrabold tracking-tight sm:inline">Ishbor</span>
         </Link>
 
         {/* City selector — single-market label */}
@@ -155,19 +166,6 @@ export function SiteNav() {
             )}
           </Link>
 
-          {authed && (
-            <Link
-              href="/profile"
-              aria-label={th('profile')}
-              className={cn(
-                'rounded-full p-2 transition-colors hover:bg-accent hover:text-primary',
-                pathname === '/profile' ? 'text-primary' : 'text-muted-foreground',
-              )}
-            >
-              <UserCircle className="h-5 w-5" />
-            </Link>
-          )}
-
           <div className="hidden md:block">
             <NotificationsBell label={th('notifications')} />
           </div>
@@ -175,24 +173,9 @@ export function SiteNav() {
           <LanguageSelector />
           <ThemeToggle />
 
+          {/* Far-right: profile + logout, consolidated into one dropdown. */}
           {authed ? (
-            <>
-              <button
-                onClick={logout}
-                className="ml-1 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
-              >
-                {t('logout')}
-              </button>
-              {/* Secondary, less common action — smaller and quieter than the
-                  primary logout button on purpose. */}
-              <button
-                onClick={logoutAll}
-                className="hidden rounded-md px-2 py-1.5 text-xs text-muted-foreground/70 transition-colors hover:bg-accent hover:text-muted-foreground md:block"
-                title={t('logoutAllConfirm')}
-              >
-                {t('logoutAll')}
-              </button>
-            </>
+            <UserMenu name={userName} onLogoutRequest={() => setLogoutDialogOpen(true)} />
           ) : (
             <Link
               href="/login"
@@ -251,21 +234,6 @@ export function SiteNav() {
                 </Link>
               );
             })}
-            {authed && (
-              <Link
-                href="/profile"
-                onClick={() => setMenuOpen(false)}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
-                  pathname === '/profile'
-                    ? 'bg-accent text-foreground'
-                    : 'text-muted-foreground hover:bg-accent',
-                )}
-              >
-                <UserCircle className="h-3.5 w-3.5" />
-                {th('profile')}
-              </Link>
-            )}
             {isAdmin && (
               <Link
                 href="/admin"
@@ -284,7 +252,148 @@ export function SiteNav() {
           </div>
         </nav>
       )}
+
+      <LogoutDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
+        onConfirm={confirmLogout}
+      />
     </header>
+  );
+}
+
+/**
+ * Far-right, avatar-triggered dropdown consolidating profile + logout — the
+ * previous separate profile icon and two logout/logout-all buttons are now
+ * one menu, ending with logout at the bottom.
+ */
+function UserMenu({ name, onLogoutRequest }: { name: string; onLogoutRequest: () => void }) {
+  const t = useTranslations('nav');
+  const th = useTranslations('header');
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative ml-1">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={th('profile')}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={cn(
+          'rounded-full transition-shadow',
+          open && 'ring-2 ring-ring ring-offset-2 ring-offset-background',
+        )}
+      >
+        <Avatar name={name || '?'} size="sm" />
+      </button>
+
+      <div
+        role="menu"
+        className={cn(
+          'absolute right-0 z-50 mt-2 w-56 origin-top-right overflow-hidden rounded-2xl border border-border/70 bg-popover p-1.5 text-popover-foreground shadow-xl',
+          'transition-all duration-200 ease-out',
+          open
+            ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
+            : 'pointer-events-none -translate-y-1 scale-95 opacity-0',
+        )}
+      >
+        <Link
+          href="/profile"
+          role="menuitem"
+          onClick={() => setOpen(false)}
+          className={cn(
+            'flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors',
+            pathname === '/profile'
+              ? 'bg-primary/10 text-foreground'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+          )}
+        >
+          <UserCircle className="h-4 w-4" />
+          {th('profile')}
+        </Link>
+        <div className="my-1 h-px bg-border" />
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            setOpen(false);
+            onLogoutRequest();
+          }}
+          className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
+        >
+          <LogOut className="h-4 w-4" />
+          {t('logout')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Confirms logout, with an opt-in checkbox to end sessions on every device. */
+function LogoutDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (allDevices: boolean) => void;
+}) {
+  const t = useTranslations('nav');
+  const [allDevices, setAllDevices] = useState(false);
+
+  // Reset the checkbox each time the dialog is (re)opened.
+  useEffect(() => {
+    if (open) setAllDevices(false);
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('logoutTitle')}</DialogTitle>
+        </DialogHeader>
+        <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors hover:bg-accent">
+          <input
+            type="checkbox"
+            checked={allDevices}
+            onChange={(e) => setAllDevices(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+          />
+          <span>
+            <span className="block font-medium">{t('logoutAllDevicesLabel')}</span>
+            <span className="block text-xs text-muted-foreground">
+              {t('logoutAllDevicesHint')}
+            </span>
+          </span>
+        </label>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {t('cancel')}
+          </Button>
+          <Button variant="destructive" onClick={() => onConfirm(allDevices)}>
+            {t('confirmLogout')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
