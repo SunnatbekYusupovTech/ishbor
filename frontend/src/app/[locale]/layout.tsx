@@ -5,7 +5,6 @@ import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
 import { ThemeProvider } from '@/components/theme-provider';
-import { SiteNav } from '@/components/SiteNav';
 import '../globals.css';
 
 /* UI face — covers uz (latin-ext), ru (cyrillic) and en. */
@@ -37,6 +36,13 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+/**
+ * Root shell only (html/body/providers) — deliberately no `SiteNav`/footer
+ * here. Those live in `(site)/layout.tsx` so they only wrap the public site;
+ * `admin/layout.tsx` gives the admin console its own bare shell instead of
+ * inheriting the main site's header (saved listings, language/theme,
+ * account dropdown — none of which belongs in an admin tool).
+ */
 export default async function LocaleLayout({
   children,
   params,
@@ -49,8 +55,6 @@ export default async function LocaleLayout({
 
   // Enable static rendering for this request.
   setRequestLocale(locale);
-
-  const t = await getTranslations('common');
 
   return (
     <html
@@ -66,17 +70,7 @@ export default async function LocaleLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <div className="flex min-h-screen flex-col">
-              <SiteNav />
-
-              <main className="container flex-1 py-6 md:py-10">{children}</main>
-
-              <footer className="border-t py-4">
-                <div className="container text-center text-xs text-muted-foreground">
-                  © {new Date().getFullYear()} {t('footer')}
-                </div>
-              </footer>
-            </div>
+            {children}
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>
