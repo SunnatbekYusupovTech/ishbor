@@ -32,6 +32,15 @@ const DEADLINE_BUFFER_MS = 120_000;
 const MIN_SECONDS_PER_QUESTION = 3;
 /** Cooldown is enforced only on every Nth consecutive test start, not every one. */
 const COOLDOWN_EVERY_N_STARTS = 3;
+/**
+ * A non-QA candidate may abandon an in-progress session and start a fresh
+ * one — e.g. to re-take the test in a different locale — up to this many
+ * times for free. Past that, the same `TEST_ATTEMPT_COOLDOWN_MINUTES`
+ * cooldown used elsewhere kicks in per restart, so switching locale/
+ * restarting can't be used to dodge the normal pacing limits.
+ */
+const MAX_FREE_RESTARTS = 2;
+const RESTART_TERMINATION_REASON = 'Abandoned by user restart.';
 
 /** Locales that carry translated question content ('en' is the canonical source). */
 const SUPPORTED_LOCALES = ['en', 'ru', 'uz'] as const;
@@ -139,17 +148,41 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
   const requester = await User.findById(userId).select('isQaTester');
   const isQaTester = !!requester?.isQaTester;
 
-  // Guard: only one active session per user — for a QA tester, abandon the
-  // stale one instead of rejecting, so "restart mid-test" just works.
+  // Guard: only one active session per user. A QA tester's stale session is
+  // always abandoned for free (see model docs). A regular candidate gets
+  // `MAX_FREE_RESTARTS` free abandons too — enough to, say, restart in a
+  // different locale without being stuck — then falls back to the normal
+  // per-account cooldown so repeated restart-to-dodge-cooldown doesn't work.
   const existing = await Session.findOne({ userId, status: 'in-progress' });
   if (existing) {
-    if (!isQaTester) {
-      throw ApiError.conflict('You already have an assessment in progress.');
+    if (isQaTester) {
+      existing.status = 'terminated';
+      existing.terminationReason = 'Restarted by QA tester.';
+      existing.endTime = new Date();
+      await existing.save();
+    } else {
+      const restartCount = await Session.countDocuments({
+        userId,
+        terminationReason: RESTART_TERMINATION_REASON,
+      });
+      if (restartCount >= MAX_FREE_RESTARTS) {
+        const lastRestart = await Session.findOne({ userId, terminationReason: RESTART_TERMINATION_REASON })
+          .sort({ endTime: -1 })
+          .select('endTime');
+        const cooldownMs = env.testAttemptCooldownMinutes * 60 * 1000;
+        const elapsedMs = lastRestart?.endTime ? Date.now() - lastRestart.endTime.getTime() : cooldownMs;
+        if (elapsedMs < cooldownMs) {
+          const waitMinutes = Math.ceil((cooldownMs - elapsedMs) / 60_000);
+          throw ApiError.tooManyRequests(
+            `Please wait ${waitMinutes} more minute(s) before restarting again.`,
+          );
+        }
+      }
+      existing.status = 'terminated';
+      existing.terminationReason = RESTART_TERMINATION_REASON;
+      existing.endTime = new Date();
+      await existing.save();
     }
-    existing.status = 'terminated';
-    existing.terminationReason = 'Restarted by QA tester.';
-    existing.endTime = new Date();
-    await existing.save();
   }
 
   // Guard: per-account cooldown, but only every `COOLDOWN_EVERY_N_STARTS`th

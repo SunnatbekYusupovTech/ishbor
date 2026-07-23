@@ -120,6 +120,15 @@ npm run typecheck -w backend  # tsc --noEmit
   (default 3, ya'ni 30 daqiqa) ko'paytiriladi — tez-tez past-sifatli qayta urinishni yanada
   qiyinlashtiradi. `testRateLimiter` (`middleware/rateLimiter.ts`) — IP
   bo'yicha qo'shimcha himoya qatlami.
+- **Sessiyani qayta boshlash (restart):** oldin faol (`in-progress`) sessiya
+  bor bo'lsa, oddiy (QA bo'lmagan) foydalanuvchi uchun ham endi `409` bilan
+  butunlay bloklanmaydi — masalan boshqa tilda qayta boshlash uchun
+  `MAX_FREE_RESTARTS` (2) marta **bepul** qayta boshlash mumkin (eski sessiya
+  `terminated` + `terminationReason: 'Abandoned by user restart.'` qilib
+  belgilanadi). 2 martadan oshsa, oddiy cooldown bilan bir xil
+  `TEST_ATTEMPT_COOLDOWN_MINUTES` kutish talab qilinadi (`429`) — tez-tez
+  qayta boshlab cooldown/ko'rilgan-savol mantig'ini chetlab o'tishning oldini
+  oladi. QA test hisobi bundan ham mustasno — pastga qarang.
 - **Ko'rilgan savollarni istisno qilish:** `startTest` foydalanuvchining
   barcha oldingi sessiyalaridagi `questionIds`ni (`Session.find({userId}).distinct(...)`)
   yig'ib, shu ro'yxatdan tashqaridagi savollarni birinchi navbatda taklif

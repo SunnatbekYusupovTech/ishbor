@@ -95,12 +95,19 @@ describe('assessment flow', () => {
     }
   });
 
-  it('blocks a second concurrent session', async () => {
+  it('allows a couple of free restarts of an in-progress session, then cools down', async () => {
     if (!dbReady) return;
     const first = await startSession();
     expect(first.status).toBe(201);
-    const second = await startSession();
-    expect(second.status).toBe(409);
+    // Free restart #1: abandons `first`, starts a new session instead of 409ing.
+    const restart1 = await startSession();
+    expect(restart1.status).toBe(201);
+    // Free restart #2.
+    const restart2 = await startSession();
+    expect(restart2.status).toBe(201);
+    // Past MAX_FREE_RESTARTS — falls back to the normal cooldown wait.
+    const restart3 = await startSession();
+    expect(restart3.status).toBe(429);
   });
 
   it('scores a perfect submission server-side and promotes the user', async () => {
