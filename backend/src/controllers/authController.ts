@@ -1,9 +1,10 @@
 import type { Request, Response } from 'express';
-import crypto from 'node:crypto';
 import { z } from 'zod';
 import { User } from '@/models/User';
 import { RefreshToken } from '@/models/RefreshToken';
 import { signAuthToken, generateRefreshToken, hashRefreshToken } from '@/utils/jwt';
+import { hashPassword, verifyPassword } from '@/utils/password';
+import { passwordPolicy } from '@/validation/userSchemas';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { env } from '@/config/env';
@@ -13,22 +14,6 @@ import { env } from '@/config/env';
  * NOTE: This uses scrypt password hashing as a self-contained default.
  * In production, wire this to your real identity provider / SSO.
  */
-
-/**
- * Only enforced on REGISTER. Login intentionally accepts any non-empty
- * string (see `loginSchema`) — tightening the policy later must never lock
- * out users who registered under an older, looser rule, and echoing policy
- * requirements back on a failed login would leak information to an attacker
- * probing for valid accounts.
- */
-const passwordPolicy = z
-  .string()
-  .min(8, 'Password must be at least 8 characters.')
-  .max(128)
-  .regex(/[a-z]/, 'Password must contain a lowercase letter.')
-  .regex(/[A-Z]/, 'Password must contain an uppercase letter.')
-  .regex(/[0-9]/, 'Password must contain a number.')
-  .regex(/[^A-Za-z0-9]/, 'Password must contain a symbol.');
 
 const registerSchema = z.object({
   name: z.string().trim().min(1).optional(),
@@ -45,20 +30,6 @@ const loginSchema = z.object({
 const refreshSchema = z.object({
   refreshToken: z.string().min(20),
 });
-
-function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const derived = crypto.scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${derived}`;
-}
-
-function verifyPassword(password: string, stored: string): boolean {
-  const [salt, hash] = stored.split(':');
-  if (!salt || !hash) return false;
-  const derived = crypto.scryptSync(password, salt, 64);
-  const hashBuf = Buffer.from(hash, 'hex');
-  return hashBuf.length === derived.length && crypto.timingSafeEqual(hashBuf, derived);
-}
 
 /** Mints a refresh token, persists only its hash, and returns the raw value. */
 async function issueRefreshToken(userId: string): Promise<string> {

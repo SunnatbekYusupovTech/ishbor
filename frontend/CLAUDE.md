@@ -19,22 +19,44 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 
 ## Marshrutlar (`app/[locale]/`)
 
-- `page.tsx` — **e'lonlar sahifasi** (asosiy): rol segmenti, filtrlar, qidiruv, card grid.
+**Ikkita mustaqil layout guruhi** (URL'ga ta'sir qilmaydi, faqat fayl tuzilishi):
+`(site)/` — asosiy sayt (`SiteNav` + footer bilan o'raladi, `(site)/layout.tsx`) —
+va `admin/` — admin konsoli (**hech qanday header'siz**, `admin/layout.tsx` faqat
+`<main className="container py-6 md:py-10">` beradi). Ildiz `layout.tsx` endi faqat
+html/body/`ThemeProvider`/`NextIntlClientProvider` — SiteNav/footer'ni o'z ichiga
+olmaydi, shuning uchun admin sahifalar saytning bosh sahifasidan butunlay ajratilgan
+ko'rinadi (saqlanganlar, til/tema, hisob dropdown'i — hech biri admin panelda yo'q).
+
+- `(site)/page.tsx` — **e'lonlar sahifasi** (asosiy): rol segmenti, filtrlar, qidiruv, card grid.
   Kengaytirilgan filtrlar: joylashuv, maosh oralig'i, sort (newest/oldest/salary_asc/salary_desc).
-- `jobs/new/page.tsx` — e'lon berish (location maydoni qo'shilgan).
+- `(site)/jobs/new/page.tsx` — e'lon berish (location maydoni qo'shilgan).
+- `admin/login/page.tsx` — **alohida** admin kirish sahifasi (email/parol, `api.login`
+  + `api.me()` bilan `role==='admin'` tekshiradi — aks holda token tashlab yuboriladi
+  va `notAdmin` xatosi ko'rsatiladi). 3 marta ketma-ket xato urinishdan keyin forma
+  15 soniyaga bloklanadi (`MAX_ATTEMPTS`/`COOLDOWN_MS`, sof frontend UX qatlami —
+  backenddagi IP-bo'yicha `authRateLimiter`dan mustaqil, qo'shimcha).
 - `admin/page.tsx` — Admin dashboard (statistika, bo'limlar bo'yicha tahlil).
 - `admin/users/page.tsx` — Foydalanuvchilarni boshqarish (qidiruv, pagination, o'chirish).
 - `admin/jobs/page.tsx` — E'lonlarni boshqarish (qidiruv, pagination, o'chirish).
 - `admin/sessions/page.tsx` — Anti-cheat sessiyalar (status filter, loglarni ko'rish).
 - `admin/questions/page.tsx` — Savollar bazasi (texnologiya va qiyinchilik bo'yicha filter).
-- `test/page.tsx` — malaka testi (anti-cheat, taymer).
-- `leaderboard/page.tsx` — reyting.
-- `profile/page.tsx` — profil (ism/email/rol, `VerifiedBadge` + `RatingStars`,
+- Barcha 5 ta `admin/*` sahifa `hooks/useAdminGuard.ts`dan foydalanadi — avval faqat
+  `tokenStore.get()` (istalgan tizimga kirgan foydalanuvchi) tekshirilardi; endi
+  `api.me()` orqali `role==='admin'` ham qayta tasdiqlanadi (backenddagi
+  `requireAdmin` kabi — keshlangan rolga ishonilmaydi), aks holda `/admin/login`ga
+  yo'naltiriladi (avval umumiy `/login`ga yuborilardi).
+- `(site)/test/page.tsx` — malaka testi (anti-cheat, taymer).
+- `(site)/leaderboard/page.tsx` — reyting.
+- `(site)/profile/page.tsx` — profil (ism/email/rol, `VerifiedBadge` + `RatingStars`,
   eng yaxshi natija/urinishlar, `isQaTester` bo'lsa ogohlantirish, test/reyting/chiqish
   havolalari). `SiteNav`dagi far-right `UserMenu` avatar-dropdown orqali ochiladi
-  (faqat `authed` bo'lsa ko'rinadi).
-- `login/page.tsx` — kirish/ro'yxatdan o'tish.
-- `layout.tsx` — SiteNav + ThemeProvider + i18n provayder.
+  (faqat `authed` bo'lsa ko'rinadi). To'liq CRUD: **Update** — `EditProfileCard`
+  (ism/email + ixtiyoriy parol o'zgartirish, `api.updateMe` → `PATCH /auth/me`);
+  **Delete** — `DangerZoneCard` (parol tasdig'i bilan `Dialog`, `api.deleteMe` →
+  `DELETE /auth/me`, muvaffaqiyatda `tokenStore.clear()` + `/`ga yo'naltirish).
+- `(site)/login/page.tsx` — kirish/ro'yxatdan o'tish.
+- `layout.tsx` — html/body, `ThemeProvider`, `NextIntlClientProvider` (SiteNav/footer
+  YO'Q — `(site)/layout.tsx`da).
 
 ## Muhim konvensiyalar
 
@@ -70,6 +92,15 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 - `login/page.tsx` — parolni ko'rsatish (ko'z), `confirmPassword`, `noValidate` + maydon
   ostidagi lokalizatsiyalangan xatolar (`auth.err*`). `jobs/new` — maosh diapazoni va
   maydon validatsiyasi (`post.err*`).
+- `components/form-field.tsx` — `login/page.tsx` va `profile/page.tsx` bo'lishadigan
+  `Field`, `PasswordField` (ko'z ikonkasi bilan), `inputCls`, `isPasswordStrongEnough`
+  (`backend/src/validation/userSchemas.ts`dagi `passwordPolicy`ni oynalaydi), `EMAIL_RE`.
+- `components/region-select.tsx` + `lib/regions.ts` — joylashuv tanlagich: 12 viloyat +
+  Qoraqalpog'iston Respublikasi + Toshkent shahri (`regions` namespace, `t(slug)`),
+  pastda "Boshqa" tanlansa erkin matn inputi chiqadi. `value`/`onChange` hali ham oddiy
+  `string` (backend `Job.location` erkin matn maydonicha qoladi — bu faqat UI yordamchisi,
+  enum emas). `jobs/new/page.tsx` (e'lon joylashuvi) va asosiy `page.tsx` (sidebar
+  joylashuv filtri) da ishlatiladi.
 - **Responsive:** breakpointlar bir bosqichga siljitilgan (`sm→md`, `md→lg`, `lg→xl`) —
   mobil uslub kengroq ekranlargacha ushlab turadi. `SiteNav` hamburger va
   e'lonlar sahifasi (`page.tsx`) "Filtrlar" tugmasi ikkalasi ham mobil'da

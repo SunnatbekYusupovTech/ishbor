@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search, Trash2, Building2 } from 'lucide-react';
-import { tokenStore, apiRequest as adminFetch } from '@/lib/api';
-import { useRouter } from '@/i18n/navigation';
+import { apiRequest as adminFetch } from '@/lib/api';
+import { useAdminGuard } from '@/hooks/useAdminGuard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -30,7 +30,7 @@ interface PageData {
 
 export default function AdminJobsPage() {
   const t = useTranslations('admin');
-  const router = useRouter();
+  const ready = useAdminGuard();
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export default function AdminJobsPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (!tokenStore.get()) { router.replace('/login'); return; }
+    if (!ready) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -52,7 +52,7 @@ export default function AdminJobsPage() {
       .finally(() => !cancelled && setLoading(false));
 
     return () => { cancelled = true; };
-  }, [page, search, router]);
+  }, [ready, page, search]);
 
   const deleteJob = async (id: string) => {
     if (!confirm(t('confirmDeleteJob'))) return;
