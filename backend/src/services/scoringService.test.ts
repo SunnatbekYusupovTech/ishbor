@@ -35,13 +35,15 @@ function techBlock(technology: string, correct: number) {
 }
 
 describe('levelFromPassedCount', () => {
-  it('maps passed-technology count to a level', () => {
+  it('maps passed-technology count to a tier (odd = named tier, even = its "strong" variant)', () => {
     expect(levelFromPassedCount(0)).toBe('none');
     expect(levelFromPassedCount(1)).toBe('junior');
-    expect(levelFromPassedCount(2)).toBe('middle');
+    expect(levelFromPassedCount(2)).toBe('strong-junior');
     expect(levelFromPassedCount(3)).toBe('middle');
-    expect(levelFromPassedCount(4)).toBe('senior');
-    expect(levelFromPassedCount(9)).toBe('senior');
+    expect(levelFromPassedCount(4)).toBe('strong-middle');
+    expect(levelFromPassedCount(5)).toBe('senior');
+    expect(levelFromPassedCount(6)).toBe('strong-senior');
+    expect(levelFromPassedCount(9)).toBe('strong-senior');
   });
 });
 
@@ -59,7 +61,7 @@ describe('calculateScore — technology passing', () => {
     expect(result.awardedLevel).toBe('junior');
   });
 
-  it('awards middle for 2–3 passed technologies', () => {
+  it('awards middle for 3 passed technologies', () => {
     const blocks = ['react', 'vue', 'css'].map((t) => techBlock(t, 5));
     const questions = blocks.flatMap((b) => b.questions);
     const answers = blocks.flatMap((b) => b.answers);
@@ -68,12 +70,21 @@ describe('calculateScore — technology passing', () => {
     expect(result.awardedLevel).toBe('middle');
   });
 
-  it('awards senior for 4+ passed technologies', () => {
+  it('awards strong-middle for 4 passed technologies', () => {
     const blocks = ['react', 'vue', 'css', 'html'].map((t) => techBlock(t, 4));
     const questions = blocks.flatMap((b) => b.questions);
     const answers = blocks.flatMap((b) => b.answers);
     const result = calculateScore(questions, answers);
     expect(result.passedCount).toBe(4);
+    expect(result.awardedLevel).toBe('strong-middle');
+  });
+
+  it('awards senior for 5 passed technologies', () => {
+    const blocks = ['react', 'vue', 'css', 'html', 'git'].map((t) => techBlock(t, 4));
+    const questions = blocks.flatMap((b) => b.questions);
+    const answers = blocks.flatMap((b) => b.answers);
+    const result = calculateScore(questions, answers);
+    expect(result.passedCount).toBe(5);
     expect(result.awardedLevel).toBe('senior');
   });
 

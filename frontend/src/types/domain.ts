@@ -1,7 +1,28 @@
 export type Level = 'junior' | 'middle' | 'senior';
 export type Stack = 'frontend' | 'backend' | 'fullstack' | 'mobile';
 export type Direction = 'frontend' | 'backend' | 'fullstack' | 'mobile';
-export type VerificationLevel = 'none' | 'junior' | 'middle' | 'senior';
+/**
+ * Six non-"none" tiers — odd counts of passed technologies (1/3/5) land on
+ * the named tier, even counts (2/4/6+) land on that tier's "strong" variant.
+ * Mirrors `backend/src/models/User.ts`'s `Tier` + `TIERS`.
+ */
+export type VerificationLevel =
+  | 'none'
+  | 'junior'
+  | 'strong-junior'
+  | 'middle'
+  | 'strong-middle'
+  | 'senior'
+  | 'strong-senior';
+export const TIERS: VerificationLevel[] = [
+  'none',
+  'junior',
+  'strong-junior',
+  'middle',
+  'strong-middle',
+  'senior',
+  'strong-senior',
+];
 export type Role = 'employer' | 'seeker' | 'admin';
 export type ListingType = 'vacancy' | 'resume';
 
@@ -57,7 +78,9 @@ export type SortOption = 'newest' | 'oldest' | 'salary_asc' | 'salary_desc';
 export interface LeaderboardEntry {
   rank: number;
   name: string;
+  /** The entry's `primaryDirection` tier if set, else their highest tier across any direction. */
   verificationLevel: VerificationLevel;
+  primaryDirection: Direction | null;
   bestPercentage: number;
   bestScore: number;
 }
@@ -67,7 +90,10 @@ export interface Me {
   name: string;
   email: string;
   role: Role;
-  verificationLevel: VerificationLevel;
+  /** One tier per direction — see `VerificationLevel` doc comment. */
+  verificationLevels: Record<Direction, VerificationLevel>;
+  /** The candidate's own "who am I" pick, editable via `api.updateMe`. */
+  primaryDirection: Direction | null;
   bestPercentage: number;
   bestScore: number;
   attempts: number;

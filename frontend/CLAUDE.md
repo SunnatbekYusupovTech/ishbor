@@ -19,17 +19,20 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 
 ## Marshrutlar (`app/[locale]/`)
 
-**Ikkita mustaqil layout guruhi** (URL'ga ta'sir qilmaydi, faqat fayl tuzilishi):
-`(site)/` — asosiy sayt (`SiteNav` + footer bilan o'raladi, `(site)/layout.tsx`) —
-va `admin/` — admin konsoli (**hech qanday header'siz**, `admin/layout.tsx` faqat
-`<main className="container py-6 md:py-10">` beradi). Ildiz `layout.tsx` endi faqat
-html/body/`ThemeProvider`/`NextIntlClientProvider` — SiteNav/footer'ni o'z ichiga
-olmaydi, shuning uchun admin sahifalar saytning bosh sahifasidan butunlay ajratilgan
-ko'rinadi (saqlanganlar, til/tema, hisob dropdown'i — hech biri admin panelda yo'q).
+**Fayl tuzilishi tekis** (route group YO'Q — bir marta `(site)`/`admin` route-group
+sinab ko'rilgan edi, lekin Vercel production build'ini buzgan, sababi to'liq
+aniqlanmagan; shu sabab qaytarilgan). Admin panelda header yo'qligi endi
+**`components/SiteChrome.tsx`** (client komponent) orqali — `usePathname()`
+`/admin` bilan boshlansa `SiteNav`/footer'siz oddiy `<main>` qaytaradi, aks holda
+odatdagi `SiteNav` + `<main>` + footer. `layout.tsx` (ildiz) shu `SiteChrome`ni
+`{children}` atrofida o'raydi — boshqa hech qanday layout fayli yo'q.
 
-- `(site)/page.tsx` — **e'lonlar sahifasi** (asosiy): rol segmenti, filtrlar, qidiruv, card grid.
-  Kengaytirilgan filtrlar: joylashuv, maosh oralig'i, sort (newest/oldest/salary_asc/salary_desc).
-- `(site)/jobs/new/page.tsx` — e'lon berish (location maydoni qo'shilgan).
+- `page.tsx` — **e'lonlar sahifasi** (asosiy): rol segmenti, filtrlar, qidiruv, card grid.
+  Kengaytirilgan filtrlar: joylashuv (`RegionSelect`), maosh oralig'i, sort.
+- `jobs/new/page.tsx` — e'lon berish. Seeker uchun daraja **stack-bo'yicha**:
+  `verificationLevels[form.stack]` (frontend testidan o'tish backend rezyume
+  joylashni ochmaydi) — tanlangan stack uchun `none` bo'lsa forma ogohlantiradi
+  va submit bloklanadi (`stackUnverifiedHint`).
 - `admin/login/page.tsx` — **alohida** admin kirish sahifasi (email/parol, `api.login`
   + `api.me()` bilan `role==='admin'` tekshiradi — aks holda token tashlab yuboriladi
   va `notAdmin` xatosi ko'rsatiladi). 3 marta ketma-ket xato urinishdan keyin forma
@@ -45,18 +48,22 @@ ko'rinadi (saqlanganlar, til/tema, hisob dropdown'i — hech biri admin panelda 
   `api.me()` orqali `role==='admin'` ham qayta tasdiqlanadi (backenddagi
   `requireAdmin` kabi — keshlangan rolga ishonilmaydi), aks holda `/admin/login`ga
   yo'naltiriladi (avval umumiy `/login`ga yuborilardi).
-- `(site)/test/page.tsx` — malaka testi (anti-cheat, taymer).
-- `(site)/leaderboard/page.tsx` — reyting.
-- `(site)/profile/page.tsx` — profil (ism/email/rol, `VerifiedBadge` + `RatingStars`,
-  eng yaxshi natija/urinishlar, `isQaTester` bo'lsa ogohlantirish, test/reyting/chiqish
-  havolalari). `SiteNav`dagi far-right `UserMenu` avatar-dropdown orqali ochiladi
-  (faqat `authed` bo'lsa ko'rinadi). To'liq CRUD: **Update** — `EditProfileCard`
-  (ism/email + ixtiyoriy parol o'zgartirish, `api.updateMe` → `PATCH /auth/me`);
-  **Delete** — `DangerZoneCard` (parol tasdig'i bilan `Dialog`, `api.deleteMe` →
+- `test/page.tsx` — malaka testi (anti-cheat, taymer).
+- `leaderboard/page.tsx` — reyting.
+- `profile/page.tsx` — profil: ism/email/rol, **"Kimligingizni tanlang"**
+  (`primaryDirection` tanlagich — 4 tugma, bosilganda darhol `api.updateMe`
+  bilan saqlanadi, optimistik yangilanadi), har bir yo'nalish uchun
+  `components/DirectionProgress.tsx` progress-bar (6 pog'ona: junior→
+  strong-junior→middle→strong-middle→senior→strong-senior, "siz shu yerdasiz"
+  width-based bar), eng yaxshi natija/urinishlar, `isQaTester` bo'lsa
+  ogohlantirish, test/reyting/chiqish havolalari. `SiteNav`dagi far-right
+  `UserMenu` avatar-dropdown orqali ochiladi (faqat `authed` bo'lsa ko'rinadi).
+  To'liq CRUD: **Update** — `EditProfileCard` (ism/email + ixtiyoriy parol
+  o'zgartirish, `api.updateMe` → `PATCH /auth/me`); **Delete** —
+  `DangerZoneCard` (parol tasdig'i bilan `Dialog`, `api.deleteMe` →
   `DELETE /auth/me`, muvaffaqiyatda `tokenStore.clear()` + `/`ga yo'naltirish).
-- `(site)/login/page.tsx` — kirish/ro'yxatdan o'tish.
-- `layout.tsx` — html/body, `ThemeProvider`, `NextIntlClientProvider` (SiteNav/footer
-  YO'Q — `(site)/layout.tsx`da).
+- `login/page.tsx` — kirish/ro'yxatdan o'tish.
+- `layout.tsx` — html/body, `ThemeProvider`, `NextIntlClientProvider`, `SiteChrome`.
 
 ## Muhim konvensiyalar
 
@@ -82,7 +89,14 @@ ko'rinadi (saqlanganlar, til/tema, hisob dropdown'i — hech biri admin panelda 
 - `JobCard.tsx` — bosiladigan e'lon kartasi → `JobDetailDialog` ochadi.
 - `JobDetailDialog.tsx` — to'liq detal modal (reyting, tavsif, bog'lanish).
 - `rating.tsx` — `RatingStars` (test %idan yulduz) + `Avatar` (ismdan gradient).
-- `badges.tsx` — `LevelBadge`, `StackBadge`, `VerifiedBadge`.
+- `badges.tsx` — `LevelBadge`, `StackBadge`, `VerifiedBadge` (7 qiymatli `VerificationLevel`:
+  none/junior/strong-junior/middle/strong-middle/senior/strong-senior — `types/domain.ts`).
+  `lib/utils.ts#displayTier(verificationLevels, primaryDirection)` — bitta "headline"
+  belgi kerak bo'lgan joyda (`SiteNav` UserMenu, admin/users jadvali): `primaryDirection`
+  tanlangan bo'lsa o'sha yo'nalish darajasi, aks holda barcha yo'nalishlar orasidan eng
+  yuqorisi. `JobCard`/`JobDetailDialog`dagi `rating.verificationLevel` esa backend
+  tomonidan **o'sha e'lonning `stack`iga mos** darajaga oldindan hisoblab beriladi
+  (`jobController` — bu yerda frontendda qayta hisoblash shart emas).
 - `QuestionCard`, `Timer`, `ResultCard`, `AntiCheatBanner`, `ViolationDialog` — test oqimi.
   `test/page.tsx` anti-cheat'ni ulaydi (`useAntiCheat` REST) va `proctor` namespace'dan
   matn oladi; savol matni/variantlari backend'dan lokalizatsiyalangan holda keladi

@@ -16,10 +16,11 @@ import {
 } from 'lucide-react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { api, tokenStore, ApiError } from '@/lib/api';
-import type { Me } from '@/types/domain';
+import type { Me, Direction } from '@/types/domain';
 import { Avatar, RatingStars } from '@/components/rating';
-import { VerifiedBadge } from '@/components/badges';
+import { DirectionProgress } from '@/components/DirectionProgress';
 import { Field, PasswordField, inputCls, isPasswordStrongEnough, EMAIL_RE } from '@/components/form-field';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -33,10 +34,13 @@ import {
 
 type FieldErrors = Partial<Record<'name' | 'email' | 'newPassword' | 'currentPassword', string>>;
 
+const DIRECTIONS: Direction[] = ['frontend', 'backend', 'fullstack', 'mobile'];
+
 export default function ProfilePage() {
   const t = useTranslations('profile');
   const ta = useTranslations('auth');
   const tj = useTranslations('jobs');
+  const ts = useTranslations('stacks');
   const router = useRouter();
 
   const [me, setMe] = useState<Me | null>(null);
@@ -58,6 +62,13 @@ export default function ProfilePage() {
   const logout = () => {
     void api.logout();
     router.push('/');
+  };
+
+  const onPickDirection = (direction: Direction) => {
+    if (!me || me.primaryDirection === direction) return;
+    const prev = me;
+    setMe({ ...me, primaryDirection: direction }); // optimistic
+    api.updateMe({ primaryDirection: direction }).catch(() => setMe(prev));
   };
 
   if (loading) {
@@ -121,7 +132,42 @@ export default function ProfilePage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <VerifiedBadge level={me.verificationLevel} />
+          {/* "Who am I" — the candidate's own pick, shown as their primary badge elsewhere. */}
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('primaryDirection')}
+            </span>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t('primaryDirectionHint')}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {DIRECTIONS.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => onPickDirection(d)}
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-sm transition-colors',
+                    me.primaryDirection === d
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'hover:bg-accent',
+                  )}
+                >
+                  {ts(d)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* One "you are here" progress bar per direction. */}
+          <div className="grid gap-2.5 border-t pt-4 sm:grid-cols-2">
+            {DIRECTIONS.map((d) => (
+              <DirectionProgress
+                key={d}
+                direction={d}
+                tier={me.verificationLevels[d]}
+                highlighted={me.primaryDirection === d}
+              />
+            ))}
+          </div>
 
           {hasResult ? (
             <div className="grid grid-cols-2 gap-4 border-t pt-4 sm:grid-cols-3">

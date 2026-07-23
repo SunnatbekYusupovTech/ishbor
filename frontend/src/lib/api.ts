@@ -5,7 +5,7 @@ import type {
   ViolationResponse,
   ViolationType,
 } from '@/types/test';
-import type { Job, CreateJobInput, LeaderboardEntry, Me, Catalog } from '@/types/domain';
+import type { Job, CreateJobInput, LeaderboardEntry, Me, Catalog, Direction } from '@/types/domain';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
 
@@ -207,6 +207,7 @@ export const api = {
     email?: string;
     currentPassword?: string;
     newPassword?: string;
+    primaryDirection?: Direction | null;
   }) =>
     request<Me>('/auth/me', {
       method: 'PATCH',

@@ -102,7 +102,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        verificationLevel: user.verificationLevel,
+        verificationLevels: user.verificationLevels,
       },
     },
   });

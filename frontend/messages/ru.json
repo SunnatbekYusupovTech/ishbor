@@ -123,8 +123,11 @@
   },
   "levels": {
     "junior": "Junior",
+    "strong-junior": "Сильный Junior",
     "middle": "Middle",
+    "strong-middle": "Сильный Middle",
     "senior": "Senior",
+    "strong-senior": "Сильный Senior",
     "none": "Не подтверждён"
   },
   "stacks": {
@@ -192,6 +195,8 @@
     "title": "Профиль",
     "subtitle": "Ваш аккаунт и результаты тестов.",
     "verification": "Уровень квалификации",
+    "primaryDirection": "Кем вы являетесь?",
+    "primaryDirectionHint": "Этот выбор отображается как ваш основной бейдж в рейтинге и объявлениях.",
     "bestResult": "Лучший результат",
     "attempts": "Попытки",
     "qaTester": "QA тестовый аккаунт",
@@ -227,6 +232,7 @@
     "employerNote": "Работодатель",
     "employerHint": "Разместите вакансию — тест не требуется.",
     "seekerNote": "Это ваш подтверждённый уровень — он добавится в резюме.",
+    "stackUnverifiedHint": "Вы ещё не прошли тест по этому направлению — сначала пройдите тест, чтобы разместить резюме.",
     "resumeTitle": "Заголовок",
     "resumeTitlePlaceholder": "Например: Ищу работу Junior Frontend Developer",
     "checking": "Проверка…",

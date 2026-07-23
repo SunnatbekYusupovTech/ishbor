@@ -59,6 +59,7 @@ describe('GET /api/admin/violations', () => {
 
     const flaggedSession = await Session.create({
       userId: candidate._id,
+      direction: 'frontend',
       questionIds: [],
       optionOrders: [],
       status: 'terminated',
@@ -74,6 +75,7 @@ describe('GET /api/admin/violations', () => {
     // A clean, fully legitimate session — should NOT show up in the feed.
     await Session.create({
       userId: candidate._id,
+      direction: 'frontend',
       questionIds: [],
       optionOrders: [],
       status: 'submitted',

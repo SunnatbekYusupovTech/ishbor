@@ -123,8 +123,11 @@
   },
   "levels": {
     "junior": "Junior",
+    "strong-junior": "Kuchli Junior",
     "middle": "Middle",
+    "strong-middle": "Kuchli Middle",
     "senior": "Senior",
+    "strong-senior": "Kuchli Senior",
     "none": "Tasdiqlanmagan"
   },
   "stacks": {
@@ -192,6 +195,8 @@
     "title": "Profil",
     "subtitle": "Hisobingiz va test natijalaringiz.",
     "verification": "Malaka darajasi",
+    "primaryDirection": "Kimligingizni tanlang",
+    "primaryDirectionHint": "Bu tanlov reyting va e'lonlarda asosiy belgingiz sifatida ko'rsatiladi.",
     "bestResult": "Eng yaxshi natija",
     "attempts": "Urinishlar",
     "qaTester": "QA test hisobi",
@@ -227,6 +232,7 @@
     "employerNote": "Ish beruvchi",
     "employerHint": "Vakansiya joylang — test talab qilinmaydi.",
     "seekerNote": "Bu sizning tasdiqlangan darajangiz — rezyumega qo'shiladi.",
+    "stackUnverifiedHint": "Bu yo'nalish uchun hali testdan o'tmagansiz — rezyume joylashdan oldin shu yo'nalish bo'yicha testni topshiring.",
     "resumeTitle": "Sarlavha",
     "resumeTitlePlaceholder": "Masalan: Junior Frontend Developer izlayapman",
     "checking": "Tekshirilmoqda…",

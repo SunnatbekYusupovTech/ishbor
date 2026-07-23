@@ -63,7 +63,9 @@ beforeAll(async () => {
 beforeEach(async () => {
   if (!dbReady) return;
   await Session.deleteMany({});
-  await User.findByIdAndUpdate(userId, { verificationLevel: 'none' });
+  await User.findByIdAndUpdate(userId, {
+    verificationLevels: { frontend: 'none', backend: 'none', fullstack: 'none', mobile: 'none' },
+  });
 });
 
 afterAll(async () => {
@@ -138,7 +140,7 @@ describe('assessment flow', () => {
     expect(submit.body.data.passedCount).toBe(1);
 
     const user = await User.findById(userId);
-    expect(user!.verificationLevel).toBe('junior');
+    expect(user!.verificationLevels.frontend).toBe('junior');
   });
 
   it('ignores a forged answer for a question not in the session', async () => {

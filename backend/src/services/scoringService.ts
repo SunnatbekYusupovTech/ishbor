@@ -1,5 +1,5 @@
 import { DIFFICULTY_WEIGHTS, type IQuestion } from '@/models/Question';
-import type { VerificationLevel } from '@/models/User';
+import type { Tier } from '@/models/User';
 import type { ISessionAnswer } from '@/models/Session';
 
 /** A technology is "passed" when the candidate answers at least this ratio of
@@ -17,7 +17,7 @@ export interface ScoreResult {
   score: number; // raw weighted points earned
   maxScore: number; // maximum attainable weighted points
   percentage: number; // 0–100, rounded to 2 decimals (kept for display/leaderboard)
-  awardedLevel: VerificationLevel;
+  awardedLevel: Tier;
   correctCount: number;
   totalQuestions: number;
   /** Number of technologies the candidate passed. */
@@ -27,18 +27,39 @@ export interface ScoreResult {
 }
 
 /**
- * Maps the number of PASSED technologies onto a verification level.
- *   0        -> none (fail)
- *   1        -> junior
- *   2–3      -> middle
- *   4+       -> senior
+ * Maps the number of PASSED technologies (within a single session, all for
+ * the same `direction`) onto a tier. Odd counts land on the named tier;
+ * even counts land on that tier's "strong" variant — 6+ tops out at
+ * strong-senior (a direction only has 5–15 technologies, but nothing stops
+ * a candidate selecting more in `fullstack`).
+ *   0    -> none
+ *   1    -> junior
+ *   2    -> strong-junior
+ *   3    -> middle
+ *   4    -> strong-middle
+ *   5    -> senior
+ *   6+   -> strong-senior
  */
-export function levelFromPassedCount(passed: number): VerificationLevel {
-  if (passed >= 4) return 'senior';
-  if (passed >= 2) return 'middle';
-  if (passed >= 1) return 'junior';
+export function levelFromPassedCount(passed: number): Tier {
+  if (passed >= 6) return 'strong-senior';
+  if (passed === 5) return 'senior';
+  if (passed === 4) return 'strong-middle';
+  if (passed === 3) return 'middle';
+  if (passed === 2) return 'strong-junior';
+  if (passed === 1) return 'junior';
   return 'none';
 }
+
+/** Rank order for comparing tiers (never downgrade a stronger tier). */
+export const TIER_RANK: Record<Tier, number> = {
+  none: 0,
+  junior: 1,
+  'strong-junior': 2,
+  middle: 3,
+  'strong-middle': 4,
+  senior: 5,
+  'strong-senior': 6,
+};
 
 /** Minimum correct answers needed to pass a technology of `total` questions. */
 export function techPassThreshold(total: number): number {

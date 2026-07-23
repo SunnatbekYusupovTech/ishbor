@@ -1,9 +1,10 @@
 import type { Request, Response } from 'express';
 import type { Types } from 'mongoose';
-import { User } from '@/models/User';
+import { User, TIERS, type Tier } from '@/models/User';
 import { Job } from '@/models/Job';
 import { Session } from '@/models/Session';
 import { Question } from '@/models/Question';
+import { DIRECTIONS, type Direction } from '@/config/catalog';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
 
@@ -144,7 +145,7 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
       .sort({ createdAt: -1 })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum)
-      .select('name email role verificationLevel bestPercentage attempts createdAt')
+      .select('name email role verificationLevels primaryDirection bestPercentage attempts createdAt')
       .lean(),
     User.countDocuments(filter),
   ]);
@@ -157,7 +158,8 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
         name: u.name,
         email: u.email,
         role: u.role,
-        verificationLevel: u.verificationLevel,
+        verificationLevels: u.verificationLevels,
+        primaryDirection: u.primaryDirection ?? null,
         bestPercentage: u.bestPercentage,
         attempts: u.attempts,
         createdAt: u.createdAt,
@@ -171,19 +173,25 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
 
 /**
  * PATCH /api/admin/users/:id
- * ADMIN — update user role, verification level, or ban status.
+ * ADMIN — update user role, or a single direction's verification tier.
  */
 export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { role, verificationLevel } = req.body as {
+  const { role, direction, verificationLevel } = req.body as {
     role?: string;
+    direction?: string;
     verificationLevel?: string;
   };
 
   const update: Record<string, unknown> = {};
   if (role && ['employer', 'seeker', 'admin'].includes(role)) update.role = role;
-  if (verificationLevel && ['none', 'junior', 'middle', 'senior'].includes(verificationLevel)) {
-    update.verificationLevel = verificationLevel;
+  if (
+    direction &&
+    DIRECTIONS.includes(direction as Direction) &&
+    verificationLevel &&
+    TIERS.includes(verificationLevel as Tier)
+  ) {
+    update[`verificationLevels.${direction}`] = verificationLevel;
   }
 
   if (Object.keys(update).length === 0) {
@@ -191,7 +199,7 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const user = await User.findByIdAndUpdate(id, { $set: update }, { new: true })
-    .select('name email role verificationLevel bestPercentage attempts')
+    .select('name email role verificationLevels primaryDirection bestPercentage attempts')
     .lean();
 
   if (!user) throw ApiError.notFound('User not found.');
@@ -203,7 +211,8 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      verificationLevel: user.verificationLevel,
+      verificationLevels: user.verificationLevels,
+      primaryDirection: user.primaryDirection ?? null,
       bestPercentage: user.bestPercentage,
       attempts: user.attempts,
     },

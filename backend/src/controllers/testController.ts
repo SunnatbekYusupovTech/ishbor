@@ -3,7 +3,7 @@ import mongoose, { type Types } from 'mongoose';
 import { Question, type IQuestion } from '@/models/Question';
 import { Session, type ISession } from '@/models/Session';
 import { User } from '@/models/User';
-import { calculateScore } from '@/services/scoringService';
+import { calculateScore, TIER_RANK } from '@/services/scoringService';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { env } from '@/config/env';
@@ -274,6 +274,7 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
 
   const session = await Session.create({
     userId,
+    direction,
     questionIds: questions.map((q) => q._id),
     optionOrders,
     status: 'in-progress',
@@ -352,9 +353,15 @@ async function finalizeSession(
       user.bestScore = result.score;
     }
     if (!opts.isLate && result.awardedLevel !== 'none') {
-      const rank: Record<string, number> = { none: 0, junior: 1, middle: 2, senior: 3 };
-      if (rank[result.awardedLevel] > rank[user.verificationLevel]) {
-        user.verificationLevel = result.awardedLevel;
+      // Only THIS session's direction is touched — passing a `frontend` test
+      // says nothing about `backend`, `fullstack`, or `mobile`.
+      const current = user.verificationLevels?.[session.direction] ?? 'none';
+      if (TIER_RANK[result.awardedLevel] > TIER_RANK[current]) {
+        user.verificationLevels = {
+          ...user.verificationLevels,
+          [session.direction]: result.awardedLevel,
+        };
+        user.markModified('verificationLevels');
       }
     }
     await user.save();

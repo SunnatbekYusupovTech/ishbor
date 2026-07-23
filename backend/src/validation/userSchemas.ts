@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DIRECTIONS } from '@/config/catalog';
 
 /**
  * Enforced on REGISTER and on setting a NEW password via `PATCH /auth/me`.
@@ -30,10 +31,17 @@ export const updateMeSchema = z.object({
       email: z.string().trim().toLowerCase().email().optional(),
       currentPassword: z.string().min(1).max(128).optional(),
       newPassword: passwordPolicy.optional(),
+      /** The candidate's own "who am I" pick — `null` clears it. */
+      primaryDirection: z.enum(DIRECTIONS as [string, ...string[]]).nullable().optional(),
     })
-    .refine((b) => b.name !== undefined || b.email !== undefined || b.newPassword !== undefined, {
-      message: 'Provide at least one field to update.',
-    })
+    .refine(
+      (b) =>
+        b.name !== undefined ||
+        b.email !== undefined ||
+        b.newPassword !== undefined ||
+        b.primaryDirection !== undefined,
+      { message: 'Provide at least one field to update.' },
+    )
     .refine((b) => !b.newPassword || !!b.currentPassword, {
       message: 'currentPassword is required to set a new password.',
       path: ['currentPassword'],

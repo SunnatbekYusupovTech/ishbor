@@ -5,6 +5,13 @@ import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { logger } from '@/utils/logger';
 
+/** Collapses a 6-tier `Tier` down to the 3-value `JobLevel` a resume post
+ *  carries (drops the "strong-" prefix); `'none'` has no equivalent post. */
+function tierToJobLevel(tier: string): JobLevel | null {
+  if (tier === 'none') return null;
+  return tier.replace(/^strong-/, '') as JobLevel;
+}
+
 /** Helper: parse a display-salary string like "$500 - $900" to numeric bounds. */
 function parseSalaryRange(salary?: string): { salaryMin?: number; salaryMax?: number } {
   if (!salary) return {};
@@ -81,9 +88,9 @@ export const listJobs = asyncHandler(async (req: Request, res: Response) => {
   const jobs = await Job.find(filter)
     .sort(sortOption)
     .limit(200)
-    .populate<{ postedBy: Pick<IUser, 'role' | 'verificationLevel' | 'bestPercentage' | 'bestScore' | 'attempts' | 'createdAt'> | null }>(
+    .populate<{ postedBy: Pick<IUser, 'role' | 'verificationLevels' | 'bestPercentage' | 'bestScore' | 'attempts' | 'createdAt'> | null }>(
       'postedBy',
-      'role verificationLevel bestPercentage bestScore attempts createdAt',
+      'role verificationLevels bestPercentage bestScore attempts createdAt',
     )
     .lean();
 
@@ -106,9 +113,11 @@ export const listJobs = asyncHandler(async (req: Request, res: Response) => {
         postedByName: j.postedByName,
         postedByRole: author?.role ?? (j.type === 'resume' ? 'seeker' : 'employer'),
         createdAt: j.createdAt,
+        // The badge shown next to a listing is the author's tier for THIS
+        // job's own stack — a frontend job shows their frontend badge, etc.
         rating: author
           ? {
-              verificationLevel: author.verificationLevel,
+              verificationLevel: author.verificationLevels?.[j.stack] ?? 'none',
               bestPercentage: author.bestPercentage,
               bestScore: author.bestScore,
               attempts: author.attempts,
@@ -162,11 +171,16 @@ export const createJob = asyncHandler(async (req: Request, res: Response) => {
   } else {
     // seeker → resume
     type = 'resume';
-    if (user.verificationLevel === 'none') {
-      throw ApiError.forbidden('You must pass the skill assessment before posting a resume.');
+    // A seeker's advertised level is their earned badge for THIS stack —
+    // passing a frontend test doesn't unlock posting a backend resume.
+    const stackTier = user.verificationLevels?.[stack] ?? 'none';
+    const jobLevel = tierToJobLevel(stackTier);
+    if (!jobLevel) {
+      throw ApiError.forbidden(
+        `You must pass the ${stack} skill assessment before posting a resume for it.`,
+      );
     }
-    // A seeker's advertised level is their earned verification badge.
-    resolvedLevel = user.verificationLevel as JobLevel;
+    resolvedLevel = jobLevel;
     resolvedCompany = undefined;
   }
 

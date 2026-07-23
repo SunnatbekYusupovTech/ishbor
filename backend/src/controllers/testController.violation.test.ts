@@ -31,6 +31,7 @@ describe('POST /api/test/violation', () => {
     });
     const session = await Session.create({
       userId: user._id,
+      direction: 'frontend',
       questionIds: [],
       optionOrders: [],
       status: 'in-progress',

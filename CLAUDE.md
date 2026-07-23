@@ -67,6 +67,16 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
+- **6-pog'onali yo'nalish-bo'yicha malaka darajasi (Sardor):** `User.verificationLevel`
+  (bitta, 4 qiymat) o'rniga `verificationLevels` — **har yo'nalish** (frontend/backend/
+  fullstack/mobile) uchun alohida, 7 qiymatli `Tier` (none/junior/strong-junior/middle/
+  strong-middle/senior/strong-senior; 1/3/5 o'tilgan texnologiya = junior/middle/senior,
+  juft sonlar = "strong" varianti). `Session.direction` saqlanadi, `finalizeSession`
+  faqat o'sha yo'nalishni yangilaydi. `primaryDirection` — foydalanuvchi profilida
+  o'zi tanlaydigan "men kimman" (faqat ko'rsatish uchun). Profil sahifasida har
+  yo'nalish uchun width-based progress bar (`DirectionProgress`). Resume joylash
+  endi **tanlangan stack**ka mos darajaga qarab ochiladi (`jobs/new`). Batafsil:
+  `backend/CLAUDE.md` → "Modellar", `frontend/CLAUDE.md` → "Marshrutlar".
 - **QA/anti-cheat test hisobi + trilingual AI savol tarjimasi + mobil responsive
   (Sardor):** `qa@ishbor.uz` (`User.isQaTester`) — cooldown va "faol sessiya bor"
   qo'riqchilaridan mustasno, `POST /test/auto-complete` bilan sessiyani darhol

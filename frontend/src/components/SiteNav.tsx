@@ -31,7 +31,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useAnimatedOverlay } from '@/hooks/useAnimatedOverlay';
-import { cn } from '@/lib/utils';
+import { cn, displayTier } from '@/lib/utils';
 
 const links = [
   { href: '/', key: 'jobs' },
@@ -349,7 +349,7 @@ function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void
           </span>
           <div className="flex items-center gap-2">
             {me.attempts > 0 && <RatingStars percentage={me.bestPercentage} size="sm" showValue={false} />}
-            <VerifiedBadge level={me.verificationLevel} />
+            <VerifiedBadge level={displayTier(me.verificationLevels, me.primaryDirection)} />
           </div>
         </div>
 

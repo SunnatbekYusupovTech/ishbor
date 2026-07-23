@@ -123,8 +123,11 @@
   },
   "levels": {
     "junior": "Junior",
+    "strong-junior": "Strong Junior",
     "middle": "Middle",
+    "strong-middle": "Strong Middle",
     "senior": "Senior",
+    "strong-senior": "Strong Senior",
     "none": "Unverified"
   },
   "stacks": {
@@ -192,6 +195,8 @@
     "title": "Profile",
     "subtitle": "Your account and test results.",
     "verification": "Verification level",
+    "primaryDirection": "Who are you?",
+    "primaryDirectionHint": "Shown as your primary badge on the leaderboard and job posts.",
     "bestResult": "Best result",
     "attempts": "Attempts",
     "qaTester": "QA testing account",
@@ -227,6 +232,7 @@
     "employerNote": "Employer",
     "employerHint": "Post a vacancy — no test required.",
     "seekerNote": "This is your verified level — it will be attached to your resume.",
+    "stackUnverifiedHint": "You haven't passed the test for this stack yet — take it before posting a resume for it.",
     "resumeTitle": "Headline",
     "resumeTitlePlaceholder": "e.g. Looking for a Junior Frontend Developer role",
     "checking": "Checking…",

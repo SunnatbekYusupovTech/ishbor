@@ -1,5 +1,6 @@
 import { Schema, model, type Document, type Types } from 'mongoose';
-import type { VerificationLevel } from '@/models/User';
+import type { Tier } from '@/models/User';
+import { DIRECTIONS, type Direction } from '@/config/catalog';
 
 export type SessionStatus =
   | 'in-progress'
@@ -26,6 +27,9 @@ export interface IOptionOrder {
 export interface ISession extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
+  /** Which direction this attempt was for — `finalizeSession` upgrades only
+   *  `User.verificationLevels[direction]`, never any other direction's tier. */
+  direction: Direction;
   /** Snapshot of the question ids served for this session (prevents tampering). */
   questionIds: Types.ObjectId[];
   /** Per-question shuffled option order (display -> original index). */
@@ -62,7 +66,7 @@ export interface ISession extends Document {
   score?: number; // raw weighted points earned
   maxScore?: number; // maximum attainable weighted points
   percentage?: number;
-  awardedLevel?: VerificationLevel;
+  awardedLevel?: Tier;
 
   createdAt: Date;
   updatedAt: Date;
@@ -87,6 +91,7 @@ const optionOrderSchema = new Schema<IOptionOrder>(
 const sessionSchema = new Schema<ISession>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    direction: { type: String, enum: DIRECTIONS, required: true },
     questionIds: {
       type: [Schema.Types.ObjectId],
       ref: 'Question',
@@ -116,7 +121,7 @@ const sessionSchema = new Schema<ISession>(
     percentage: { type: Number, min: 0, max: 100 },
     awardedLevel: {
       type: String,
-      enum: ['none', 'junior', 'middle', 'senior'],
+      enum: ['none', 'junior', 'strong-junior', 'middle', 'strong-middle', 'senior', 'strong-senior'],
     },
   },
   { timestamps: true },

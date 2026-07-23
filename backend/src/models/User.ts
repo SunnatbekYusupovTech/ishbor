@@ -1,12 +1,18 @@
 import { Schema, model, type Document, type Types } from 'mongoose';
+import { DIRECTIONS, type Direction } from '@/config/catalog';
 
-export type VerificationLevel = 'none' | 'junior' | 'middle' | 'senior';
 /**
- * `admin` is deliberately NOT selectable through public registration
- * (`authController.ts`'s `registerSchema` only allows `employer`/`seeker`) —
- * it can only be granted by editing the database directly (or a future
- * admin-only user-management endpoint). Never trust a role from user input.
+ * Six non-"none" tiers instead of the old four (none/junior/middle/senior) —
+ * the odd counts of passed technologies (1/3/5) land on the named tier,
+ * even counts (2/4/6+) land on that tier's "strong" variant. See
+ * `scoringService.tierFromPassedCount` for the exact mapping.
  */
+export type Tier = 'none' | 'junior' | 'strong-junior' | 'middle' | 'strong-middle' | 'senior' | 'strong-senior';
+export const TIERS: Tier[] = ['none', 'junior', 'strong-junior', 'middle', 'strong-middle', 'senior', 'strong-senior'];
+
+/** Kept as an alias so `import type { VerificationLevel }` elsewhere doesn't need renaming everywhere at once. */
+export type VerificationLevel = Tier;
+
 export type UserRole = 'employer' | 'seeker' | 'admin';
 
 export const USER_ROLES: UserRole[] = ['employer', 'seeker', 'admin'];
@@ -18,7 +24,19 @@ export interface IUser extends Document {
   passwordHash: string;
   /** 'employer' posts vacancies; 'seeker' posts a resume after passing the test. */
   role: UserRole;
-  verificationLevel: VerificationLevel;
+  /**
+   * One tier per direction — passing "frontend" doesn't imply anything
+   * about "backend". `startTest` records which direction a session was for
+   * (`Session.direction`); `finalizeSession` upgrades only that direction's
+   * entry (never downgrades, same rule as before, just scoped per-key).
+   */
+  verificationLevels: Record<Direction, Tier>;
+  /**
+   * The candidate's own pick of "who they are" — shown as their primary
+   * badge (leaderboard, job posts) when set. Purely a self-description; it
+   * does not gate or unlock anything and is edited via `PATCH /auth/me`.
+   */
+  primaryDirection?: Direction;
   /** Best test result the user has ever achieved — powers the leaderboard. */
   bestPercentage: number;
   bestScore: number;
@@ -58,11 +76,11 @@ const userSchema = new Schema<IUser>(
       default: 'seeker',
       index: true,
     },
-    verificationLevel: {
-      type: String,
-      enum: ['none', 'junior', 'middle', 'senior'],
-      default: 'none',
+    verificationLevels: {
+      type: Schema.Types.Mixed,
+      default: () => Object.fromEntries(DIRECTIONS.map((d) => [d, 'none'])),
     },
+    primaryDirection: { type: String, enum: DIRECTIONS },
     bestPercentage: { type: Number, default: 0, min: 0, max: 100, index: true },
     bestScore: { type: Number, default: 0, min: 0 },
     attempts: { type: Number, default: 0, min: 0 },

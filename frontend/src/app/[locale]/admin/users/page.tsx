@@ -8,14 +8,16 @@ import { useAdminGuard } from '@/hooks/useAdminGuard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { cn } from '@/lib/utils';
+import { cn, displayTier } from '@/lib/utils';
+import type { Direction, VerificationLevel } from '@/types/domain';
 
 interface AdminUser {
   id: string;
   name: string;
   email: string;
   role: string;
-  verificationLevel: string;
+  verificationLevels: Record<Direction, VerificationLevel>;
+  primaryDirection: Direction | null;
   bestPercentage: number;
   attempts: number;
   createdAt: string;
@@ -127,7 +129,9 @@ export default function AdminUsersPage() {
                           {user.role}
                         </span>
                       </td>
-                      <td className="px-4 py-3 capitalize text-muted-foreground">{user.verificationLevel}</td>
+                      <td className="px-4 py-3 capitalize text-muted-foreground">
+                        {displayTier(user.verificationLevels, user.primaryDirection)}
+                      </td>
                       <td className="px-4 py-3 font-medium">{user.bestPercentage}%</td>
                       <td className="px-4 py-3">
                         <button

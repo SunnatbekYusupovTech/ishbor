@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ShieldCheck, Lock } from 'lucide-react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { api, tokenStore, ApiError } from '@/lib/api';
-import type { CreateJobInput, Level, Stack, Role, VerificationLevel } from '@/types/domain';
+import type { CreateJobInput, Level, Stack, Direction, Role, VerificationLevel } from '@/types/domain';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -33,7 +33,12 @@ export default function NewJobPage() {
 
   const [gate, setGate] = useState<Gate>('checking');
   const [role, setRole] = useState<Role>('seeker');
-  const [verifiedLevel, setVerifiedLevel] = useState<VerificationLevel>('none');
+  const [verificationLevels, setVerificationLevels] = useState<Record<Direction, VerificationLevel>>({
+    frontend: 'none',
+    backend: 'none',
+    fullstack: 'none',
+    mobile: 'none',
+  });
 
   useEffect(() => {
     if (!tokenStore.get()) {
@@ -44,9 +49,12 @@ export default function NewJobPage() {
       .me()
       .then((profile) => {
         setRole(profile.role);
-        setVerifiedLevel(profile.verificationLevel);
-        // Only seekers must be verified; employers post vacancies freely.
-        if (profile.role === 'seeker' && profile.verificationLevel === 'none') {
+        setVerificationLevels(profile.verificationLevels);
+        // Only seekers must be verified (in at least one direction); employers
+        // post vacancies freely. Which SPECIFIC direction they need depends on
+        // the stack they pick in the form below — checked there, not here.
+        const verifiedAnywhere = Object.values(profile.verificationLevels).some((v) => v !== 'none');
+        if (profile.role === 'seeker' && !verifiedAnywhere) {
           setGate('unverified');
         } else {
           setGate('ready');
@@ -83,7 +91,7 @@ export default function NewJobPage() {
     );
   }
 
-  return <JobForm role={role} verifiedLevel={verifiedLevel} />;
+  return <JobForm role={role} verificationLevels={verificationLevels} />;
 }
 
 type JobFieldErrors = Partial<Record<'title' | 'company' | 'description' | 'salary', string>>;
@@ -95,7 +103,13 @@ function salaryBounds(raw: string): number[] {
     .filter((n) => Number.isFinite(n));
 }
 
-function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: VerificationLevel }) {
+function JobForm({
+  role,
+  verificationLevels,
+}: {
+  role: Role;
+  verificationLevels: Record<Direction, VerificationLevel>;
+}) {
   const t = useTranslations('post');
   const tl = useTranslations('levels');
   const ts = useTranslations('stacks');
@@ -117,6 +131,11 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [phoneLocal, setPhoneLocal] = useState('');
+
+  // The badge shown/enforced depends on which stack is currently selected —
+  // passing a frontend test doesn't unlock posting a backend resume.
+  const stackTier = verificationLevels[form.stack] ?? 'none';
+  const stackUnverified = !isEmployer && stackTier === 'none';
 
   const set = <K extends keyof CreateJobInput>(k: K, v: CreateJobInput[K]) => {
     setForm((f) => ({ ...f, [k]: v }));
@@ -179,13 +198,13 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
       <Card>
         <CardHeader>
           <CardTitle>{isEmployer ? t('titleVacancy') : t('titleResume')}</CardTitle>
-          <Alert className="mt-2">
+          <Alert className="mt-2" variant={stackUnverified ? 'warning' : 'default'}>
             <ShieldCheck className="h-4 w-4" />
             <AlertTitle className="capitalize">
-              {isEmployer ? t('employerNote') : tl(verifiedLevel as Level)}
+              {isEmployer ? t('employerNote') : tl(stackTier)}
             </AlertTitle>
             <AlertDescription>
-              {isEmployer ? t('employerHint') : t('seekerNote')}
+              {isEmployer ? t('employerHint') : stackUnverified ? t('stackUnverifiedHint') : t('seekerNote')}
             </AlertDescription>
           </Alert>
         </CardHeader>
@@ -292,7 +311,7 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
               </Alert>
             )}
 
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
+            <Button type="submit" size="lg" className="w-full" disabled={loading || stackUnverified}>
               {loading ? t('posting') : t('publish')}
             </Button>
           </form>
