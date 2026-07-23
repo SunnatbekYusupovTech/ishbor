@@ -60,6 +60,7 @@ export default function JobsPage() {
   const [error, setError] = useState<string | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const favIds = useFavorites();
   const hiddenIds = useHiddenJobs();
@@ -135,6 +136,16 @@ export default function JobsPage() {
   };
   const hideJob = (id: string) => hiddenJobs.hide(id);
 
+  // Lock page scroll while the mobile filters overlay is open.
+  useEffect(() => {
+    if (!mobileFiltersOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileFiltersOpen]);
+
   const roleTabs: { value: RoleFilter; label: string; icon: React.ReactNode }[] = [
     { value: 'all', label: t('tabAll'), icon: <Users className="h-4 w-4" /> },
     { value: 'vacancy', label: t('tabEmployers'), icon: <Building2 className="h-4 w-4" /> },
@@ -166,30 +177,67 @@ export default function JobsPage() {
           </Button>
         </div>
 
-        {/* Role segmented control */}
-        <div className="mt-3 inline-flex rounded-xl border bg-card p-1 text-sm font-medium shadow-sm">
-          {roleTabs.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setRole(tab.value)}
-              className={cn(
-                'flex items-center gap-1.5 rounded-lg px-3.5 py-2 transition-all',
-                role === tab.value
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {tab.icon}
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
+        {/* Role segmented control + mobile filters trigger */}
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="inline-flex rounded-xl border bg-card p-1 text-sm font-medium shadow-sm">
+            {roleTabs.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setRole(tab.value)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-lg px-3.5 py-2 transition-all',
+                  role === tab.value
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {tab.icon}
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border bg-card px-3.5 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent lg:hidden"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {t('filters')}
+            {hasFilters && (
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            )}
+          </button>
         </div>
       </section>
 
       {/* ── Two-column body ─────────────────────────────────────── */}
       <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-        {/* Sidebar */}
-        <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+        {/* Sidebar — a normal sticky column on desktop; a fullscreen (full
+            width + full height) overlay on mobile, toggled by the button
+            above. `hidden` keeps it out of the mobile layout flow entirely
+            when closed, so it never contributes to page width/overflow. */}
+        <aside
+          className={cn(
+            'space-y-4 lg:block lg:h-auto lg:w-auto lg:overflow-visible lg:bg-transparent lg:p-0 lg:sticky lg:top-20 lg:self-start',
+            mobileFiltersOpen
+              ? 'fixed inset-0 z-50 h-dvh w-full overflow-y-auto bg-background p-4'
+              : 'hidden',
+          )}
+        >
+          {/* Mobile-only header (title + close) — the desktop column has no need for it. */}
+          <div className="flex items-center justify-between lg:hidden">
+            <h2 className="text-lg font-bold">{t('filters')}</h2>
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen(false)}
+              aria-label={t('close')}
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
           {/* Activity / saved */}
           <div className="rounded-2xl border bg-card p-4 shadow-sm">
             <h2 className="text-sm font-bold">{t('sidebarTitle')}</h2>

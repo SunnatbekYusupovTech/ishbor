@@ -247,7 +247,7 @@ function NotificationsBell({ label }: { label: string }) {
         <Bell className="h-5 w-5" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border bg-popover p-4 text-popover-foreground shadow-lg">
           <p className="text-sm font-semibold">{label}</p>
           <p className="mt-2 text-sm text-muted-foreground">{t('noNotifications')}</p>
         </div>

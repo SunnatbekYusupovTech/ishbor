@@ -61,6 +61,7 @@
     "searchPlaceholder": "Search by role, company or candidate…",
     "filters": "Filters",
     "reset": "Reset",
+    "close": "Close",
     "filterLevel": "Level",
     "filterStack": "Direction",
     "filterLocation": "Location",
