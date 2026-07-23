@@ -167,6 +167,20 @@
     "loadError": "Reytingni yuklab bo'lmadi.",
     "points": "{score} ball"
   },
+  "profile": {
+    "title": "Profil",
+    "subtitle": "Hisobingiz va test natijalaringiz.",
+    "verification": "Malaka darajasi",
+    "bestResult": "Eng yaxshi natija",
+    "attempts": "Urinishlar",
+    "qaTester": "QA test hisobi",
+    "qaTesterHint": "Bu hisob cooldownlardan mustasno va testni istalgan payt qayta boshlash imkoniyatiga ega.",
+    "takeTest": "Test topshirish",
+    "viewLeaderboard": "Reytingni ko'rish",
+    "logout": "Chiqish",
+    "loadError": "Profilni yuklab bo'lmadi.",
+    "noResult": "Hali test topshirilmagan."
+  },
   "post": {
     "title": "Yangi e'lon",
     "titleVacancy": "Yangi vakansiya",

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Shield, MapPin, Heart, Bell, Menu, X } from 'lucide-react';
+import { Shield, MapPin, Heart, Bell, Menu, X, UserCircle } from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { api, tokenStore } from '@/lib/api';
 import { useFavorites } from '@/lib/favorites';
@@ -155,6 +155,19 @@ export function SiteNav() {
             )}
           </Link>
 
+          {authed && (
+            <Link
+              href="/profile"
+              aria-label={th('profile')}
+              className={cn(
+                'rounded-full p-2 transition-colors hover:bg-accent hover:text-primary',
+                pathname === '/profile' ? 'text-primary' : 'text-muted-foreground',
+              )}
+            >
+              <UserCircle className="h-5 w-5" />
+            </Link>
+          )}
+
           <div className="hidden md:block">
             <NotificationsBell label={th('notifications')} />
           </div>
@@ -238,6 +251,21 @@ export function SiteNav() {
                 </Link>
               );
             })}
+            {authed && (
+              <Link
+                href="/profile"
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                  pathname === '/profile'
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:bg-accent',
+                )}
+              >
+                <UserCircle className="h-3.5 w-3.5" />
+                {th('profile')}
+              </Link>
+            )}
             {isAdmin && (
               <Link
                 href="/admin"

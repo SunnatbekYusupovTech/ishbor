@@ -29,6 +29,10 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 - `admin/questions/page.tsx` — Savollar bazasi (texnologiya va qiyinchilik bo'yicha filter).
 - `test/page.tsx` — malaka testi (anti-cheat, taymer).
 - `leaderboard/page.tsx` — reyting.
+- `profile/page.tsx` — profil (ism/email/rol, `VerifiedBadge` + `RatingStars`,
+  eng yaxshi natija/urinishlar, `isQaTester` bo'lsa ogohlantirish, test/reyting/chiqish
+  havolalari). `SiteNav`da faqat `authed` bo'lsa ko'rinadi (desktop: ikonka, mobil: to'liq
+  ekranli menyu).
 - `login/page.tsx` — kirish/ro'yxatdan o'tish.
 - `layout.tsx` — SiteNav + ThemeProvider + i18n provayder.
 

@@ -167,6 +167,20 @@
     "loadError": "Could not load the leaderboard.",
     "points": "{score} pts"
   },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your account and test results.",
+    "verification": "Verification level",
+    "bestResult": "Best result",
+    "attempts": "Attempts",
+    "qaTester": "QA testing account",
+    "qaTesterHint": "This account is exempt from cooldowns and can restart a test at any time.",
+    "takeTest": "Take the test",
+    "viewLeaderboard": "View leaderboard",
+    "logout": "Log out",
+    "loadError": "Could not load the profile.",
+    "noResult": "No test taken yet."
+  },
   "post": {
     "title": "New listing",
     "titleVacancy": "New vacancy",
