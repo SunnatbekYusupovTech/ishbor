@@ -8,6 +8,7 @@ import { api, tokenStore } from '@/lib/api';
 import { useFavorites } from '@/lib/favorites';
 import { LanguageSelector } from '@/components/language-selector';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useAnimatedOverlay } from '@/hooks/useAnimatedOverlay';
 import { cn } from '@/lib/utils';
 
 const links = [
@@ -25,6 +26,7 @@ export function SiteNav() {
   const [authed, setAuthed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRendered = useAnimatedOverlay(menuOpen);
 
   // Read auth state on mount + whenever the route changes (login/logout).
   useEffect(() => {
@@ -40,15 +42,16 @@ export function SiteNav() {
     setMenuOpen(false);
   }, [pathname]);
 
-  // Lock page scroll while the fullscreen mobile menu is open.
+  // Lock page scroll while the fullscreen mobile menu is mounted (including
+  // the brief exit-animation window after close, so the page doesn't jump).
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuRendered) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [menuOpen]);
+  }, [menuRendered]);
 
   const logout = () => {
     // Revoke the refresh token server-side (best-effort) and drop both local
@@ -189,9 +192,16 @@ export function SiteNav() {
       </div>
 
       {/* Mobile nav — fullscreen (full width + full height) sidebar, slides
-          in from the left, mirrors the jobs-page filters overlay. */}
-      {menuOpen && (
-        <nav className="fixed inset-0 z-50 h-dvh w-full animate-in overflow-y-auto bg-background p-4 slide-in-from-left fade-in duration-300 lg:hidden">
+          in/out from the left, mirrors the jobs-page filters overlay.
+          Stays mounted for `duration-300` after close so the exit
+          animation can play instead of vanishing instantly. */}
+      {menuRendered && (
+        <nav
+          className={cn(
+            'fixed inset-0 z-50 h-dvh w-full overflow-y-auto bg-background p-4 duration-300 lg:hidden',
+            menuOpen ? 'animate-in fade-in slide-in-from-left' : 'animate-out fade-out slide-out-to-left',
+          )}
+        >
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">{th('menu')}</h2>
             <button

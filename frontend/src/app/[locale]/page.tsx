@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFavorites } from '@/lib/favorites';
 import { hiddenJobs, useHiddenJobs } from '@/lib/hidden';
+import { useAnimatedOverlay } from '@/hooks/useAnimatedOverlay';
 import { cn } from '@/lib/utils';
 
 const LEVELS: Level[] = ['junior', 'middle', 'senior'];
@@ -61,6 +62,7 @@ export default function JobsPage() {
   const [savedOnly, setSavedOnly] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const mobileFiltersRendered = useAnimatedOverlay(mobileFiltersOpen);
 
   const favIds = useFavorites();
   const hiddenIds = useHiddenJobs();
@@ -136,15 +138,16 @@ export default function JobsPage() {
   };
   const hideJob = (id: string) => hiddenJobs.hide(id);
 
-  // Lock page scroll while the mobile filters overlay is open.
+  // Lock page scroll while the mobile filters overlay is mounted (including
+  // the brief exit-animation window after close, so the page doesn't jump).
   useEffect(() => {
-    if (!mobileFiltersOpen) return;
+    if (!mobileFiltersRendered) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [mobileFiltersOpen]);
+  }, [mobileFiltersRendered]);
 
   const roleTabs: { value: RoleFilter; label: string; icon: React.ReactNode }[] = [
     { value: 'all', label: t('tabAll'), icon: <Users className="h-4 w-4" /> },
@@ -215,13 +218,20 @@ export default function JobsPage() {
       <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
         {/* Sidebar — a normal sticky column on desktop; a fullscreen (full
             width + full height) overlay on mobile, toggled by the button
-            above. `hidden` keeps it out of the mobile layout flow entirely
-            when closed, so it never contributes to page width/overflow. */}
+            above. Stays mounted the whole time (desktop needs it always);
+            `mobileFiltersRendered` only controls the mobile overlay's
+            presence, staying true for `duration-300` after close so the
+            slide/fade-out animation has time to play before it's hidden. */}
         <aside
           className={cn(
             'space-y-4 xl:block xl:h-auto xl:w-auto xl:overflow-visible xl:bg-transparent xl:p-0 xl:sticky xl:top-20 xl:self-start',
-            mobileFiltersOpen
-              ? 'fixed inset-0 z-50 h-dvh w-full animate-in overflow-y-auto bg-background p-4 slide-in-from-left fade-in duration-300'
+            mobileFiltersRendered
+              ? cn(
+                  'fixed inset-0 z-50 h-dvh w-full overflow-y-auto bg-background p-4 duration-300',
+                  mobileFiltersOpen
+                    ? 'animate-in fade-in slide-in-from-left'
+                    : 'animate-out fade-out slide-out-to-left',
+                )
               : 'hidden',
           )}
         >

@@ -71,7 +71,7 @@ export function JobCard({ job, onHide }: { job: Job; onHide?: (id: string) => vo
           </button>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-3 md:gap-4">
           {/* Avatar + verified check */}
           <div className="relative shrink-0">
             <Avatar name={subtitle} size="lg" />
@@ -85,7 +85,7 @@ export function JobCard({ job, onHide }: { job: Job; onHide?: (id: string) => vo
             )}
           </div>
 
-          <div className="min-w-0 flex-1 pr-12">
+          <div className="min-w-0 flex-1 pr-9 md:pr-12">
             <span
               className={cn(
                 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold',
@@ -98,18 +98,19 @@ export function JobCard({ job, onHide }: { job: Job; onHide?: (id: string) => vo
               {roleLabel}
             </span>
 
-            {/* Title opens the detail dialog */}
+            {/* Title opens the detail dialog — wraps instead of truncating so it
+                stays fully readable down to a 320px-wide viewport. */}
             <DialogTrigger asChild>
               <button
                 type="button"
-                className="mt-1.5 block max-w-full truncate text-left text-lg font-bold leading-tight tracking-tight transition-colors hover:text-primary focus-visible:outline-none focus-visible:text-primary"
+                className="mt-1.5 block max-w-full break-words text-left text-lg font-bold leading-tight tracking-tight transition-colors hover:text-primary focus-visible:outline-none focus-visible:text-primary"
               >
                 {job.title}
               </button>
             </DialogTrigger>
 
-            <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
-              <span className="truncate">{subtitle}</span>
+            <p className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
+              <span className="break-words">{subtitle}</span>
               {verified && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" />}
             </p>
 
@@ -138,7 +139,7 @@ export function JobCard({ job, onHide }: { job: Job; onHide?: (id: string) => vo
         </div>
 
         {/* Footer — time + primary contact action */}
-        <div className="mt-4 flex items-center justify-between gap-3 border-t pt-3">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t pt-3">
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
             {format.relativeTime(new Date(job.createdAt), now)}
