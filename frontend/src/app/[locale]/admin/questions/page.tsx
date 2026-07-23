@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { FileQuestion, Search, Filter } from 'lucide-react';
-import { apiRequest as adminFetch } from '@/lib/api';
-import { useAdminGuard } from '@/hooks/useAdminGuard';
+import { tokenStore, apiRequest as adminFetch } from '@/lib/api';
+import { useRouter } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -29,7 +29,7 @@ interface PageData {
 
 export default function AdminQuestionsPage() {
   const t = useTranslations('admin');
-  const ready = useAdminGuard();
+  const router = useRouter();
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export default function AdminQuestionsPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!tokenStore.get()) { router.replace('/login'); return; }
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -53,7 +53,7 @@ export default function AdminQuestionsPage() {
       .finally(() => !cancelled && setLoading(false));
 
     return () => { cancelled = true; };
-  }, [ready, page, techFilter, diffFilter]);
+  }, [page, techFilter, diffFilter, router]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">

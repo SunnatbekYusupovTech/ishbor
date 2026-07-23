@@ -9,7 +9,6 @@ import type { CreateJobInput, Level, Stack, Role, VerificationLevel } from '@/ty
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { RegionSelect } from '@/components/region-select';
 import { cn } from '@/lib/utils';
 
 const LEVELS: Level[] = ['junior', 'middle', 'senior'];
@@ -244,10 +243,11 @@ function JobForm({ role, verifiedLevel }: { role: Role; verifiedLevel: Verificat
             </div>
 
             <Field label={t('location')}>
-              <RegionSelect
-                value={form.location ?? ''}
-                onChange={(v) => set('location', v)}
-                selectClassName={inputCls}
+              <input
+                value={form.location}
+                onChange={(e) => set('location', e.target.value)}
+                placeholder="Toshkent, Remote…"
+                className={inputCls}
               />
             </Field>
 

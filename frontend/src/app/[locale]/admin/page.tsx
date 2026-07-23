@@ -13,9 +13,8 @@ import {
   Building2,
   Clock,
 } from 'lucide-react';
-import { apiRequest } from '@/lib/api';
-import { Link } from '@/i18n/navigation';
-import { useAdminGuard } from '@/hooks/useAdminGuard';
+import { tokenStore, apiRequest } from '@/lib/api';
+import { Link, useRouter } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -28,13 +27,16 @@ interface Stats {
 
 export default function AdminDashboardPage() {
   const t = useTranslations('admin');
-  const ready = useAdminGuard();
+  const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!tokenStore.get()) {
+      router.replace('/login');
+      return;
+    }
 
     let cancelled = false;
     apiRequest<Stats>('/admin/stats')
@@ -43,7 +45,7 @@ export default function AdminDashboardPage() {
       .finally(() => !cancelled && setLoading(false));
 
     return () => { cancelled = true; };
-  }, [ready, t]);
+  }, [router, t]);
 
   const statCards = [
     {
