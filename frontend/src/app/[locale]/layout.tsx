@@ -5,7 +5,7 @@ import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
 import { ThemeProvider } from '@/components/theme-provider';
-import { SiteChrome } from '@/components/SiteChrome';
+import { SiteNav } from '@/components/SiteNav';
 import '../globals.css';
 
 /* UI face — covers uz (latin-ext), ru (cyrillic) and en. */
@@ -50,6 +50,8 @@ export default async function LocaleLayout({
   // Enable static rendering for this request.
   setRequestLocale(locale);
 
+  const t = await getTranslations('common');
+
   return (
     <html
       lang={locale}
@@ -64,7 +66,17 @@ export default async function LocaleLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <SiteChrome>{children}</SiteChrome>
+            <div className="flex min-h-screen flex-col">
+              <SiteNav />
+
+              <main className="container flex-1 py-6 md:py-10">{children}</main>
+
+              <footer className="border-t py-4">
+                <div className="container text-center text-xs text-muted-foreground">
+                  © {new Date().getFullYear()} {t('footer')}
+                </div>
+              </footer>
+            </div>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>
