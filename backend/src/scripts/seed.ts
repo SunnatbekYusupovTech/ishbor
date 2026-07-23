@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import { connectDatabase, disconnectDatabase } from '@/config/db';
 import { Question } from '@/models/Question';
 import { User } from '@/models/User';
@@ -6,12 +5,7 @@ import { Job } from '@/models/Job';
 import { seedQuestions } from '@/data/questions';
 import { questionTranslations } from '@/data/questionTranslations';
 import { logger } from '@/utils/logger';
-
-function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const derived = crypto.scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${derived}`;
-}
+import { hashPassword } from '@/utils/password';
 
 /** Sample VACANCIES, seeded under a demo employer account. */
 const sampleJobs = [

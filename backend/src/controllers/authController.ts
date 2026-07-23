@@ -89,6 +89,14 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.unauthorized('Invalid email or password.');
   }
 
+  // Transparent upgrade: accounts created before the bcrypt migration still
+  // have a scrypt hash (`salt:derived`) — re-hash with bcrypt now that we
+  // have the plaintext password in hand, so it never has to happen again.
+  if (!user.passwordHash.startsWith('$2')) {
+    user.passwordHash = hashPassword(password);
+    await user.save();
+  }
+
   const token = signAuthToken({ userId: user._id.toString(), email: user.email });
   const refreshToken = await issueRefreshToken(user._id.toString());
 

@@ -238,6 +238,17 @@ AI savol import, `X-Webhook-Secret` bilan himoyalangan).
 - `hashPassword`/`verifyPassword` `utils/password.ts`ga chiqarilgan (avval
   `authController.ts`da mahalliy edi) — `register`, `updateMe`, `deleteMe`
   bittasidan foydalanadi.
+- **Parol hashlash — bcrypt (`bcryptjs`):** `hashPassword` endi `bcrypt.hashSync`
+  (12 round) ishlatadi. Oldingi self-rolled scrypt (`salt:derived` hex format)
+  hali ham **login vaqtida tekshirish uchun** qo'llab-quvvatlanadi
+  (`verifyPassword` hash prefiksiga (`$2...`) qarab qaysi algoritmni ishlatishni
+  aniqlaydi) — bu bcrypt'dan oldin ro'yxatdan o'tgan userlar login qila olishi
+  uchun. `authController.login` muvaffaqiyatli login'dan so'ng eski scrypt
+  hash'ni **shaffof ravishda bcrypt'ga qayta hashlaydi** (`passwordHash`ni
+  yangilab saqlaydi) — shu orqan vaqt o'tishi bilan barcha faol userlar
+  bcrypt'ga o'tadi, alohida migratsiya skripti kerak emas. `seed.ts` endi
+  o'zining scrypt nusxasini emas, shu `hashPassword`ni ishlatadi (yangi
+  seed'langan userlar to'g'ridan-to'g'ri bcrypt bilan yaratiladi).
 
 > `GET /jobs` e'lon egasining reytingini `populate` qilib qaytaradi (`rating` maydoni).
 > Barcha admin endpointlar `authenticate` + `adminOnly` middleware bilan himoyalangan.
