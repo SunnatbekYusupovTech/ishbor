@@ -196,25 +196,12 @@ npm run typecheck -w backend  # tsc --noEmit
 
 ## Endpointlar (`/api`)
 
-`/health` · `/auth` (register, login, refresh, logout, logout-all, me [GET/PATCH/DELETE]) ·
-`/test` (catalog, start, submit, auto-complete [QA-tester only], tab-switch, violation) · `/jobs`
+`/health` · `/auth` (register, login, refresh, logout, logout-all, me) · `/test`
+(catalog, start, submit, tab-switch, violation) · `/jobs`
 (GET list `?type=&level=&stack=&keyword=&location=&salaryMin=&salaryMax=&sort=`, POST create) ·
 `/users` (leaderboard) · `/admin` (GET `violations`, stats, users CRUD, jobs CRUD,
 sessions/list, questions/list — admin-only) · `/webhooks` (POST `questions` —
 AI savol import, `X-Webhook-Secret` bilan himoyalangan).
-
-- **`PATCH /auth/me`** (`userController.updateMe`, `validation/userSchemas.ts`) —
-  o'z profilini tahrirlash: `name`/`email`/`newPassword` barchasi ixtiyoriy,
-  faqat yuborilgan maydon o'zgaradi. `newPassword` yuborilsa `currentPassword`
-  ham majburiy (schema `refine` + controllerda qayta tekshiriladi,
-  `utils/password.ts#verifyPassword`). Email band bo'lsa `409`.
-- **`DELETE /auth/me`** (`userController.deleteMe`) — parol bilan tasdiqlangan
-  o'z-o'zini o'chirish. Kaskad: `Job.deleteMany({postedBy})`,
-  `Session.deleteMany({userId})`, `RefreshToken.deleteMany({userId})`, keyin
-  `User` hujjati o'chiriladi — orfan yozuv qolmaydi.
-- `hashPassword`/`verifyPassword` `utils/password.ts`ga chiqarilgan (avval
-  `authController.ts`da mahalliy edi) — `register`, `updateMe`, `deleteMe`
-  bittasidan foydalanadi.
 
 > `GET /jobs` e'lon egasining reytingini `populate` qilib qaytaradi (`rating` maydoni).
 > Barcha admin endpointlar `authenticate` + `adminOnly` middleware bilan himoyalangan.

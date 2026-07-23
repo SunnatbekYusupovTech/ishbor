@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ShieldAlert, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
-import { apiRequest as adminFetch } from '@/lib/api';
-import { useAdminGuard } from '@/hooks/useAdminGuard';
+import { tokenStore, apiRequest as adminFetch } from '@/lib/api';
+import { useRouter } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -51,7 +51,7 @@ const statusIcons: Record<string, React.ReactNode> = {
 
 export default function AdminSessionsPage() {
   const t = useTranslations('admin');
-  const ready = useAdminGuard();
+  const router = useRouter();
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export default function AdminSessionsPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!tokenStore.get()) { router.replace('/login'); return; }
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -73,7 +73,7 @@ export default function AdminSessionsPage() {
       .finally(() => !cancelled && setLoading(false));
 
     return () => { cancelled = true; };
-  }, [ready, page, filter]);
+  }, [page, filter, router]);
 
   const statusFilters = ['', 'in-progress', 'submitted', 'expired', 'terminated'];
 

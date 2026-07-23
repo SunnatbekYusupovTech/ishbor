@@ -23,7 +23,6 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFavorites } from '@/lib/favorites';
 import { hiddenJobs, useHiddenJobs } from '@/lib/hidden';
-import { RegionSelect } from '@/components/region-select';
 import { useAnimatedOverlay } from '@/hooks/useAnimatedOverlay';
 import { cn } from '@/lib/utils';
 
@@ -308,11 +307,11 @@ export default function JobsPage() {
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {t('filterLocation')}
               </span>
-              <RegionSelect
+              <input
                 value={location}
-                onChange={setLocation}
-                className="mt-2"
-                selectClassName="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={t('locationPlaceholder')}
+                className="mt-2 h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
               />
             </div>
 

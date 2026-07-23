@@ -200,27 +200,6 @@ export const api = {
   // --- Current user ---
   me: () => request<Me>('/auth/me'),
 
-  /** Every field optional — send only what's changing. Setting `newPassword`
-   *  requires `currentPassword` (server-enforced, see `userSchemas.ts`). */
-  updateMe: (body: {
-    name?: string;
-    email?: string;
-    currentPassword?: string;
-    newPassword?: string;
-  }) =>
-    request<Me>('/auth/me', {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    }),
-
-  /** Password-confirmed self-deletion — cascades server-side (listings,
-   *  sessions, refresh tokens). Caller must clear local tokens afterwards. */
-  deleteMe: (password: string) =>
-    request<{ deleted: boolean }>('/auth/me', {
-      method: 'DELETE',
-      body: JSON.stringify({ password }),
-    }),
-
   // --- Jobs ---
   getJobs: (filters: {
     type?: string;
