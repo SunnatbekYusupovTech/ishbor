@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
-import mongoose from 'mongoose';
+import mongoose, { type Types } from 'mongoose';
 import { Question, type IQuestion } from '@/models/Question';
-import { Session } from '@/models/Session';
+import { Session, type ISession } from '@/models/Session';
 import { User } from '@/models/User';
 import { calculateScore } from '@/services/scoringService';
 import { ApiError } from '@/utils/ApiError';
@@ -131,10 +131,25 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  // Guard: only one active session per user.
+  // QA/anti-cheat testing accounts (`User.isQaTester`, see model docs) are
+  // exempt from both guards below — they need to restart a test mid-way and
+  // start again immediately, over and over, to exercise the anti-cheat flow
+  // in each locale without waiting out cooldowns or being blocked by a
+  // stale in-progress session.
+  const requester = await User.findById(userId).select('isQaTester');
+  const isQaTester = !!requester?.isQaTester;
+
+  // Guard: only one active session per user — for a QA tester, abandon the
+  // stale one instead of rejecting, so "restart mid-test" just works.
   const existing = await Session.findOne({ userId, status: 'in-progress' });
   if (existing) {
-    throw ApiError.conflict('You already have an assessment in progress.');
+    if (!isQaTester) {
+      throw ApiError.conflict('You already have an assessment in progress.');
+    }
+    existing.status = 'terminated';
+    existing.terminationReason = 'Restarted by QA tester.';
+    existing.endTime = new Date();
+    await existing.save();
   }
 
   // Guard: per-account cooldown, but only every `COOLDOWN_EVERY_N_STARTS`th
@@ -144,7 +159,7 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
   // to `testRateLimiter` (IP-keyed): closes the gap where a script starts+
   // submits from many IPs to probe the scored `percentage` as an oracle for
   // the hidden answer key, or otherwise farms attempts faster than a human ever would.
-  const totalStarts = await Session.countDocuments({ userId });
+  const totalStarts = isQaTester ? 0 : await Session.countDocuments({ userId });
   if (totalStarts > 0 && totalStarts % COOLDOWN_EVERY_N_STARTS === 0) {
     // A low-scoring last attempt gets a longer cooldown
     // (`testLowScoreCooldownMultiplier`×) than a normal one — discourages
@@ -261,6 +276,61 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
+ * Scores `sanitizedAnswers` (already canonical-index, already validated
+ * against this session's served questions) against the hidden key, persists
+ * the result on the session + the candidate's profile, and returns the same
+ * shape `submitTest` and `autoCompleteTest` both respond with. Shared so the
+ * two entry points (real submission vs. QA-tester instant-finish) can't drift.
+ */
+async function finalizeSession(
+  session: ISession,
+  sanitizedAnswers: Array<{ questionId: Types.ObjectId; userAnswer: number }>,
+  opts: { isLate: boolean; ipMismatch?: boolean; suspiciouslyFast?: boolean },
+) {
+  // Load the served questions WITH the hidden key for scoring only.
+  const questions = await Question.find({ _id: { $in: session.questionIds } }).select(
+    '+correctAnswer',
+  );
+
+  const result = calculateScore(questions, sanitizedAnswers);
+
+  // Informational-only integrity signals for admin review — neither one
+  // blocks scoring or the candidate's result (see field docs on `ISession`).
+  session.ipMismatch = opts.ipMismatch;
+  session.suspiciouslyFast = opts.suspiciouslyFast;
+
+  session.answers = sanitizedAnswers;
+  session.score = result.score;
+  session.maxScore = result.maxScore;
+  session.percentage = result.percentage;
+  session.awardedLevel = result.awardedLevel;
+  session.status = opts.isLate ? 'expired' : 'submitted';
+  session.endTime = new Date();
+  await session.save();
+
+  // Record the attempt on the user's profile (powers the leaderboard) and,
+  // on a clean on-time pass, promote their verification badge. We never
+  // downgrade a previously earned badge or a lower best result.
+  const user = await User.findById(session.userId);
+  if (user) {
+    user.attempts += 1;
+    if (!opts.isLate && result.percentage > user.bestPercentage) {
+      user.bestPercentage = result.percentage;
+      user.bestScore = result.score;
+    }
+    if (!opts.isLate && result.awardedLevel !== 'none') {
+      const rank: Record<string, number> = { none: 0, junior: 1, middle: 2, senior: 3 };
+      if (rank[result.awardedLevel] > rank[user.verificationLevel]) {
+        user.verificationLevel = result.awardedLevel;
+      }
+    }
+    await user.save();
+  }
+
+  return result;
+}
+
+/**
  * POST /api/test/submit
  * Server RE-CALCULATES the score from the hidden answer key. The client's only
  * contribution is (questionId, userAnswer) pairs; it cannot influence scoring.
@@ -310,52 +380,75 @@ export const submitTest = asyncHandler(async (req: Request, res: Response) => {
       };
     });
 
-  // Load the served questions WITH the hidden key for scoring only.
-  const questions = await Question.find({ _id: { $in: session.questionIds } }).select(
-    '+correctAnswer',
-  );
-
-  const result = calculateScore(questions, sanitizedAnswers);
-
-  // Informational-only integrity signals for admin review — neither one
-  // blocks scoring or the candidate's result (see field docs on `ISession`).
-  session.ipMismatch = !!session.startIp && req.ip !== session.startIp;
   const elapsedSeconds = (now.getTime() - session.startTime.getTime()) / 1000;
-  session.suspiciouslyFast = elapsedSeconds < session.questionIds.length * MIN_SECONDS_PER_QUESTION;
-
-  session.answers = sanitizedAnswers;
-  session.score = result.score;
-  session.maxScore = result.maxScore;
-  session.percentage = result.percentage;
-  session.awardedLevel = result.awardedLevel;
-  session.status = isLate ? 'expired' : 'submitted';
-  session.endTime = now;
-  await session.save();
-
-  // Record the attempt on the user's profile (powers the leaderboard) and,
-  // on a clean on-time pass, promote their verification badge. We never
-  // downgrade a previously earned badge or a lower best result.
-  const user = await User.findById(userId);
-  if (user) {
-    user.attempts += 1;
-    if (!isLate && result.percentage > user.bestPercentage) {
-      user.bestPercentage = result.percentage;
-      user.bestScore = result.score;
-    }
-    if (!isLate && result.awardedLevel !== 'none') {
-      const rank: Record<string, number> = { none: 0, junior: 1, middle: 2, senior: 3 };
-      if (rank[result.awardedLevel] > rank[user.verificationLevel]) {
-        user.verificationLevel = result.awardedLevel;
-      }
-    }
-    await user.save();
-  }
+  const result = await finalizeSession(session, sanitizedAnswers, {
+    isLate,
+    ipMismatch: !!session.startIp && req.ip !== session.startIp,
+    suspiciouslyFast: elapsedSeconds < session.questionIds.length * MIN_SECONDS_PER_QUESTION,
+  });
 
   logger.info(
     `Session ${session._id} submitted: ${result.percentage}% -> ${result.awardedLevel}${
       isLate ? ' (LATE/expired)' : ''
     }`,
   );
+
+  res.status(200).json({
+    success: true,
+    data: {
+      sessionId: session._id.toString(),
+      status: session.status,
+      score: result.score,
+      maxScore: result.maxScore,
+      percentage: result.percentage,
+      correctCount: result.correctCount,
+      totalQuestions: result.totalQuestions,
+      awardedLevel: result.awardedLevel,
+      passedCount: result.passedCount,
+      technologies: result.technologies,
+      tabSwitchCount: session.tabSwitchCount,
+      late: isLate,
+    },
+  });
+});
+
+/**
+ * POST /api/test/auto-complete
+ * QA-tester only (`User.isQaTester`) — instantly finishes the given
+ * in-progress session with every answer correct, so a tester can see the
+ * post-test flow (ResultCard, badge award, ...) in each locale without
+ * manually answering 5 real questions on every anti-cheat run.
+ */
+export const autoCompleteTest = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { sessionId } = req.body as { sessionId: string };
+
+  const requester = await User.findById(userId).select('isQaTester');
+  if (!requester?.isQaTester) {
+    throw ApiError.forbidden('Not available for this account.');
+  }
+
+  const session = await Session.findOne({ _id: sessionId, userId });
+  if (!session) {
+    throw ApiError.notFound('Session not found.');
+  }
+  if (session.status !== 'in-progress') {
+    throw ApiError.conflict(`Session is already "${session.status}" and cannot be completed.`);
+  }
+
+  const questions = await Question.find({ _id: { $in: session.questionIds } }).select(
+    '+correctAnswer',
+  );
+  const sanitizedAnswers = questions.map((q) => ({
+    questionId: q._id,
+    userAnswer: q.correctAnswer,
+  }));
+
+  const now = new Date();
+  const isLate = now.getTime() > session.deadline.getTime();
+  const result = await finalizeSession(session, sanitizedAnswers, { isLate });
+
+  logger.info(`Session ${session._id} auto-completed by QA tester -> ${result.percentage}%`);
 
   res.status(200).json({
     success: true,

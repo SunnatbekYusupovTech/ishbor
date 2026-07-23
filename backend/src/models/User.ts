@@ -25,6 +25,16 @@ export interface IUser extends Document {
   attempts: number;
   /** IP the account registered from — powers the per-IP signup limit (see `authController.register`). */
   registrationIp?: string;
+  /**
+   * QA/anti-cheat testing account — never settable through public registration
+   * (only via `seed.ts` or a direct DB edit). `startTest` exempts it from the
+   * cooldown gate and the one-in-progress-session guard (abandons the old
+   * session instead of rejecting), and it unlocks `POST /test/auto-complete`
+   * so a tester can instantly finish with a perfect score to inspect the
+   * result flow (badge, ResultCard, ...) in each locale without playing
+   * through 5 real questions every time.
+   */
+  isQaTester: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +67,7 @@ const userSchema = new Schema<IUser>(
     bestScore: { type: Number, default: 0, min: 0 },
     attempts: { type: Number, default: 0, min: 0 },
     registrationIp: { type: String, index: true },
+    isQaTester: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

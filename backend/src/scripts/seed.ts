@@ -143,6 +143,26 @@ async function seed(): Promise<void> {
       `(employer@ishbor.uz / seeker@ishbor.uz, parol: password123).`,
   );
 
+  // QA/anti-cheat testing account (`User.isQaTester`) — a normal seeker in
+  // every other respect, but `startTest` exempts it from the cooldown gate
+  // and the one-in-progress-session guard, and it unlocks
+  // `POST /test/auto-complete` (instant perfect-score finish). Lets whoever's
+  // testing repeatedly restart mid-test and walk the full result flow
+  // (ResultCard, badge award, ...) in uz/ru/en without real cooldowns.
+  await User.findOneAndUpdate(
+    { email: 'qa@ishbor.uz' },
+    {
+      $set: {
+        name: 'QA Tester',
+        passwordHash: hashPassword('password123'),
+        role: 'seeker',
+        isQaTester: true,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+  logger.info('Seeded QA tester account (qa@ishbor.uz, parol: password123, cooldownlarsiz).');
+
   await disconnectDatabase();
   process.exit(0);
 }

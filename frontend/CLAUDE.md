@@ -65,8 +65,18 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 - `login/page.tsx` — parolni ko'rsatish (ko'z), `confirmPassword`, `noValidate` + maydon
   ostidagi lokalizatsiyalangan xatolar (`auth.err*`). `jobs/new` — maosh diapazoni va
   maydon validatsiyasi (`post.err*`).
-- **Responsive:** mobil `SiteNav` (hamburger menyu, `md:` da to'liq nav), mobil-xavfsiz
-  `ui/dialog` (`w-[calc(100%-2rem)]`, `max-h-[calc(100dvh-2rem)]`), formalar `sm:` da ustunli.
+- **Responsive:** breakpointlar bir bosqichga siljitilgan (`sm→md`, `md→lg`, `lg→xl`) —
+  mobil uslub kengroq ekranlargacha ushlab turadi. `SiteNav` hamburger va
+  e'lonlar sahifasi (`page.tsx`) "Filtrlar" tugmasi ikkalasi ham mobil'da
+  **to'liq ekranli** (full width+height) overlay/sidebar ochadi — chapdan
+  slayd bilan (`animate-in fade-in slide-in-from-left`), yopilganda ham
+  silliq (`animate-out fade-out slide-out-to-left`, `duration-300`).
+  Ochish/yopish animatsiyasi `hooks/useAnimatedOverlay.ts` orqali — overlay
+  yopilgandan keyin ham `duration-300` davomida DOM'da qoladi, shu payt
+  chiqish animatsiyasi o'ynaydi. `JobCard` 320px gacha: sarlavha/kompaniya
+  nomi `truncate` emas `break-words` (wrap), footer qatori `flex-wrap`.
+  Mobil-xavfsiz `ui/dialog` (`w-[calc(100%-2rem)]`, `max-h-[calc(100dvh-2rem)]`),
+  formalar `sm:`(→`md:`) da ustunli.
 - `language-selector.tsx` — premium til tanlagich (bayroq + kod, animatsion dropdown,
   klaviatura bilan boshqarish, `lib/locale-preference.ts` orqali localStorage'da saqlash).
   Bayroqlar `flags.tsx` (SVG — emoji bayroqlar Windows'da harf ko'rinadi). `SiteNav`da ishlatiladi.
@@ -95,6 +105,13 @@ sintetik `status: 'terminated'` natija to'g'ridan-to'g'ri `ResultCard`ga berilad
 Yangi buzilish turi qo'shsang: `types/test.ts`dagi `ViolationType`,
 `useAntiCheat.ts`, `ViolationDialog.tsx` (`bodyKeyByType`) va `messages/*.json`dagi
 `proctor` namespace'ni yangila (backendda ham `VIOLATION_TYPES`).
+
+`api.me().isQaTester` bo'lsa (faqat `qa@ishbor.uz` — backend: `User.isQaTester`,
+batafsil `backend/CLAUDE.md`), faol test paytida "QA: Avtomatik tugatish (5/5)"
+tugmasi chiqadi — `api.autoCompleteTest(sessionId)` sessiyani darhol to'g'ri
+javoblar bilan yakunlaydi, natija oddiy `submitTest` bilan bir xil `ResultCard`
+oqimidan o'tadi. Anti-cheat/lokalizatsiyani cooldownsiz, testni istalgan payt
+qayta boshlab tez-tez sinash uchun.
 
 > Screenshot aniqlash faqat PrintScreen tugmasi bilan cheklangan — OS darajasidagi
 > skrinshot vositalari (Snipping Tool, Cmd+Shift+4) hech qanday brauzer API orqali

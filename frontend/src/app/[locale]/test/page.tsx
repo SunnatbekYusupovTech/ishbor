@@ -44,6 +44,7 @@ export default function TestPage() {
   const [result, setResult] = useState<SubmitTestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [violationOpen, setViolationOpen] = useState(false);
+  const [isQaTester, setIsQaTester] = useState(false);
 
   const sessionRef = useRef<StartTestResponse | null>(null);
   const answersRef = useRef<Record<string, number>>({});
@@ -145,6 +146,12 @@ export default function TestPage() {
       .getCatalog()
       .then(setCatalog)
       .catch((err) => setError(err instanceof ApiError ? err.message : t('couldNotStart')));
+    // Only a QA/anti-cheat testing account gets the auto-finish shortcut
+    // below — silently ignored for everyone else.
+    api
+      .me()
+      .then((me) => setIsQaTester(!!me.isQaTester))
+      .catch(() => setIsQaTester(false));
   }, [router, t]);
 
   const submit = useCallback(async () => {
@@ -160,6 +167,27 @@ export default function TestPage() {
 
     try {
       const res = await api.submitTest({ sessionId: s.sessionId, answers: arr });
+      void fullscreen.exit();
+      setResult(res);
+      setPhase('result');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('submitFailed'));
+      submittingRef.current = false;
+      setPhase('active');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
+
+  // QA-tester-only shortcut — instantly finishes with a perfect score so a
+  // tester can inspect the post-test flow (ResultCard, badge award, ...) in
+  // each locale without answering 5 real questions every anti-cheat run.
+  const autoFinish = useCallback(async () => {
+    const s = sessionRef.current;
+    if (!s || submittingRef.current) return;
+    submittingRef.current = true;
+    setPhase('submitting');
+    try {
+      const res = await api.autoCompleteTest(s.sessionId);
       void fullscreen.exit();
       setResult(res);
       setPhase('result');
@@ -384,6 +412,18 @@ export default function TestPage() {
         maxViolations={anti.maxViolations}
         connected={connected}
       />
+      {isQaTester && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={autoFinish}
+          disabled={phase === 'submitting'}
+          className="w-full border-dashed"
+        >
+          {t('qaAutoFinish')}
+        </Button>
+      )}
       <ViolationDialog
         open={anti.violationDialog !== null}
         type={anti.violationDialog ?? 'tab-switch'}

@@ -34,6 +34,12 @@ export const tabSwitchSchema = z.object({
   }),
 });
 
+export const autoCompleteTestSchema = z.object({
+  body: z.object({
+    sessionId: objectId,
+  }),
+});
+
 /** Non-tab-switch integrity violation types the client can report. */
 export const VIOLATION_TYPES = [
   'copy-paste',

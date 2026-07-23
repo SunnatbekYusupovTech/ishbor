@@ -67,6 +67,17 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
+- **QA/anti-cheat test hisobi + trilingual AI savol tarjimasi + mobil responsive
+  (Sardor):** `qa@ishbor.uz` (`User.isQaTester`) — cooldown va "faol sessiya bor"
+  qo'riqchilaridan mustasno, `POST /test/auto-complete` bilan sessiyani darhol
+  5/5 yakunlaydi (test/page.tsx'da "QA: Avtomatik tugatish" tugmasi) — anti-cheat
+  oqimini uz/ru/en'da tez-tez sinash uchun. Batafsil: `backend/CLAUDE.md` →
+  "Test (assessment) engine". AI orqali generatsiya qilingan savollar endi
+  Groq'dan bitta chaqiruvda EN+RU+UZ tarjima bilan keladi. Mobil UI: e'lonlar
+  sahifasi sidebar'i va header menyu endi mobil'da to'liq ekranli (full
+  width+height), chapdan slayd bilan ochiladigan/yopiladigan (animate-in/out,
+  duration-300) overlay; breakpointlar bir bosqichga siljitildi (`sm→md→lg→xl`);
+  e'lon kartalari 320px gacha wrap bo'ladigan qilib moslashtirildi.
 - **AI orqali savol generatsiyasi + anti-cheat/anti-abuse mustahkamlash (Sardor):**
   `backend/src/scripts/generateQuestions.ts` (`npm run generate-questions`) —
   Groq (bepul) orqali savollar generatsiya qilib, o'zining

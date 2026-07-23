@@ -71,4 +71,6 @@ export interface Me {
   bestPercentage: number;
   bestScore: number;
   attempts: number;
+  /** QA/anti-cheat testing account — unlocks the "auto-finish" test shortcut. */
+  isQaTester?: boolean;
 }

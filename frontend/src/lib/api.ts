@@ -177,6 +177,14 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  /** QA-tester-only shortcut — instantly finishes a session with a perfect
+   *  score. 403s for any non-QA account (see `Me.isQaTester`). */
+  autoCompleteTest: (sessionId: string) =>
+    request<SubmitTestResponse>('/test/auto-complete', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId }),
+    }),
+
   recordTabSwitch: (sessionId: string) =>
     request<TabSwitchResponse>('/test/tab-switch', {
       method: 'POST',

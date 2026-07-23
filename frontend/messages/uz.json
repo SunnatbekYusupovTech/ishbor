@@ -215,6 +215,7 @@
     "finish": "Yakunlash",
     "submitting": "Yuborilmoqda…",
     "submitFailed": "Testni yuborib bo'lmadi.",
+    "qaAutoFinish": "QA: Avtomatik tugatish (5/5)",
     "couldNotStart": "Testni boshlab bo'lmadi.",
     "terminated": "Test oynadan juda ko'p chiqib ketganingiz uchun tugatildi."
   },

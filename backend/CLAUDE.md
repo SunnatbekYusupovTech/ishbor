@@ -127,6 +127,19 @@ npm run typecheck -w backend  # tsc --noEmit
   olingan savollar emas, yangi savollar chiqadi. Agar texnologiya uchun
   ko'rilmagan savollar yetarli bo'lmasa, qolganini ko'rilganlardan
   to'ldiradi (test qisqarib qolmasin deb).
+- **QA/anti-cheat test hisobi (`User.isQaTester`):** `qa@ishbor.uz` / `password123`
+  (`seed.ts` orqali seed qilinadi) — oddiy `seeker`, lekin `startTest` ikkita
+  qo'riqchidan mustasno: (1) cooldown gate umuman ishlamaydi, (2) "allaqachon
+  faol sessiya bor" konflikti o'rniga eski `in-progress` sessiya avtomatik
+  `terminated` qilinib, yangisi darhol boshlanadi — ya'ni testni istalgan
+  vaqt yarmida qayta boshlash mumkin. Bundan tashqari `POST /test/auto-complete`
+  (faqat shu akkaunt uchun, aks holda `403`) sessiyani **darhol 5/5 to'g'ri
+  javob bilan** yakunlaydi — `testController.ts`dagi `finalizeSession()`
+  orqali `submitTest` bilan bir xil ballash/badge-berish yo'lidan o'tadi.
+  Frontendda `test/page.tsx` `api.me().isQaTester` bo'lsa faol test paytida
+  "QA: Avtomatik tugatish (5/5)" tugmasini ko'rsatadi (`messages/*.json` →
+  `test.qaAutoFinish`). Maqsad — anti-cheat va natija oqimini (ResultCard,
+  badge, uz/ru/en lokalizatsiya) real cooldown/savollarsiz tez-tez sinash.
 - **Registratsiya IP-limiti:** `authController.register` bitta IP'dan
   `MAX_ACCOUNTS_PER_IP` (default 2) dan ortiq akkaunt ro'yxatdan o'tishiga
   yo'l qo'ymaydi (`User.registrationIp`, `403`) — mavjud akkauntlarga

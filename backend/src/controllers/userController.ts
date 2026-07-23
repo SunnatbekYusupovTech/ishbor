@@ -33,7 +33,7 @@ export const getLeaderboard = asyncHandler(async (_req: Request, res: Response) 
  */
 export const getMe = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findById(req.user!.userId)
-    .select('name email role verificationLevel bestPercentage bestScore attempts')
+    .select('name email role verificationLevel bestPercentage bestScore attempts isQaTester')
     .lean();
 
   if (!user) throw ApiError.unauthorized('User not found.');
@@ -49,6 +49,7 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
       bestPercentage: user.bestPercentage,
       bestScore: user.bestScore,
       attempts: user.attempts,
+      isQaTester: user.isQaTester,
     },
   });
 });
