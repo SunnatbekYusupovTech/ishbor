@@ -37,7 +37,7 @@ export function JobCard({ job, onHide }: { job: Job; onHide?: (id: string) => vo
     <JobDetailDialog job={job}>
       <article
         className={cn(
-          'group relative rounded-2xl border bg-card p-4 shadow-sm transition-all duration-200 sm:p-5',
+          'group relative rounded-2xl border bg-card p-4 shadow-sm transition-all duration-200 md:p-5',
           'hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5',
         )}
       >

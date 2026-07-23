@@ -156,10 +156,10 @@ export default function JobsPage() {
     <div className="space-y-5">
       {/* ── Search band ─────────────────────────────────────────── */}
       <section>
-        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t('title')}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">{t('title')}</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{t('subtitle')}</p>
 
-        <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
+        <div className="mt-4 flex flex-col gap-2.5 md:flex-row">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -192,7 +192,7 @@ export default function JobsPage() {
                 )}
               >
                 {tab.icon}
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="hidden md:inline">{tab.label}</span>
               </button>
             ))}
           </div>
@@ -200,7 +200,7 @@ export default function JobsPage() {
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border bg-card px-3.5 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent lg:hidden"
+            className="flex items-center gap-1.5 rounded-xl border bg-card px-3.5 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent xl:hidden"
           >
             <SlidersHorizontal className="h-4 w-4" />
             {t('filters')}
@@ -212,21 +212,21 @@ export default function JobsPage() {
       </section>
 
       {/* ── Two-column body ─────────────────────────────────────── */}
-      <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
         {/* Sidebar — a normal sticky column on desktop; a fullscreen (full
             width + full height) overlay on mobile, toggled by the button
             above. `hidden` keeps it out of the mobile layout flow entirely
             when closed, so it never contributes to page width/overflow. */}
         <aside
           className={cn(
-            'space-y-4 lg:block lg:h-auto lg:w-auto lg:overflow-visible lg:bg-transparent lg:p-0 lg:sticky lg:top-20 lg:self-start',
+            'space-y-4 xl:block xl:h-auto xl:w-auto xl:overflow-visible xl:bg-transparent xl:p-0 xl:sticky xl:top-20 xl:self-start',
             mobileFiltersOpen
-              ? 'fixed inset-0 z-50 h-dvh w-full overflow-y-auto bg-background p-4'
+              ? 'fixed inset-0 z-50 h-dvh w-full animate-in overflow-y-auto bg-background p-4 slide-in-from-left fade-in duration-300'
               : 'hidden',
           )}
         >
           {/* Mobile-only header (title + close) — the desktop column has no need for it. */}
-          <div className="flex items-center justify-between lg:hidden">
+          <div className="flex items-center justify-between xl:hidden">
             <h2 className="text-lg font-bold">{t('filters')}</h2>
             <button
               type="button"

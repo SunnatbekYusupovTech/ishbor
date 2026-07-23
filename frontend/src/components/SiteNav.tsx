@@ -40,6 +40,16 @@ export function SiteNav() {
     setMenuOpen(false);
   }, [pathname]);
 
+  // Lock page scroll while the fullscreen mobile menu is open.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
   const logout = () => {
     // Revoke the refresh token server-side (best-effort) and drop both local
     // tokens — fire-and-forget so the UI doesn't wait on a network round-trip.
@@ -59,14 +69,14 @@ export function SiteNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="container flex h-16 items-center gap-1.5 sm:gap-5">
+      <div className="container flex h-16 items-center gap-1.5 md:gap-5">
         {/* Mobile menu toggle */}
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
           aria-label={th('menu')}
           aria-expanded={menuOpen}
-          className="-ml-1 shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+          className="-ml-1 shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
         >
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -76,19 +86,19 @@ export function SiteNav() {
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-base font-black leading-none text-brand-foreground shadow-sm">
             ish
           </span>
-          <span className="hidden text-lg font-extrabold tracking-tight sm:inline">Ishbor</span>
+          <span className="hidden text-lg font-extrabold tracking-tight md:inline">Ishbor</span>
         </Link>
 
         {/* City selector — single-market label */}
         <button
           type="button"
-          className="hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:inline-flex"
+          className="hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground lg:inline-flex"
         >
           <MapPin className="h-4 w-4 text-primary" />
           {th('city')}
         </button>
 
-        <nav className="ml-2 mr-auto hidden items-center gap-1 text-sm md:flex">
+        <nav className="ml-2 mr-auto hidden items-center gap-1 text-sm lg:flex">
           {links.map((l) => {
             const active = pathname === l.href;
             return (
@@ -96,7 +106,7 @@ export function SiteNav() {
                 key={l.href}
                 href={l.href}
                 className={cn(
-                  'relative rounded-md px-2.5 py-1.5 font-medium transition-colors sm:px-3',
+                  'relative rounded-md px-2.5 py-1.5 font-medium transition-colors md:px-3',
                   active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
@@ -112,7 +122,7 @@ export function SiteNav() {
             <Link
               href="/admin"
               className={cn(
-                'relative flex items-center gap-1 rounded-md px-2.5 py-1.5 font-medium transition-colors sm:px-3',
+                'relative flex items-center gap-1 rounded-md px-2.5 py-1.5 font-medium transition-colors md:px-3',
                 pathname.startsWith('/admin')
                   ? 'text-foreground'
                   : 'text-muted-foreground hover:text-foreground',
@@ -127,7 +137,7 @@ export function SiteNav() {
           )}
         </nav>
 
-        <div className="ml-auto flex items-center gap-0.5 md:ml-0">
+        <div className="ml-auto flex items-center gap-0.5 lg:ml-0">
           {/* Saved listings */}
           <Link
             href="/?saved=1"
@@ -142,7 +152,7 @@ export function SiteNav() {
             )}
           </Link>
 
-          <div className="hidden sm:block">
+          <div className="hidden md:block">
             <NotificationsBell label={th('notifications')} />
           </div>
 
@@ -161,7 +171,7 @@ export function SiteNav() {
                   primary logout button on purpose. */}
               <button
                 onClick={logoutAll}
-                className="hidden rounded-md px-2 py-1.5 text-xs text-muted-foreground/70 transition-colors hover:bg-accent hover:text-muted-foreground sm:block"
+                className="hidden rounded-md px-2 py-1.5 text-xs text-muted-foreground/70 transition-colors hover:bg-accent hover:text-muted-foreground md:block"
                 title={t('logoutAllConfirm')}
               >
                 {t('logoutAll')}
@@ -170,7 +180,7 @@ export function SiteNav() {
           ) : (
             <Link
               href="/login"
-              className="ml-1 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 sm:px-3.5"
+              className="ml-1 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 md:px-3.5"
             >
               {t('login')}
             </Link>
@@ -178,10 +188,23 @@ export function SiteNav() {
         </div>
       </div>
 
-      {/* Mobile nav panel */}
+      {/* Mobile nav — fullscreen (full width + full height) sidebar, slides
+          in from the left, mirrors the jobs-page filters overlay. */}
       {menuOpen && (
-        <nav className="border-t bg-background md:hidden">
-          <div className="container flex flex-col py-2">
+        <nav className="fixed inset-0 z-50 h-dvh w-full animate-in overflow-y-auto bg-background p-4 slide-in-from-left fade-in duration-300 lg:hidden">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">{th('menu')}</h2>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(false)}
+              aria-label={th('close')}
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="mt-4 flex flex-col py-2">
             <button
               type="button"
               className="flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground"
@@ -205,6 +228,21 @@ export function SiteNav() {
                 </Link>
               );
             })}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                  pathname.startsWith('/admin')
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:bg-accent',
+                )}
+              >
+                <Shield className="h-3.5 w-3.5" />
+                {t('admin')}
+              </Link>
+            )}
           </div>
         </nav>
       )}

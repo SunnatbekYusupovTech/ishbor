@@ -116,7 +116,8 @@
     "noNotifications": "Пока нет уведомлений.",
     "messages": "Сообщения",
     "profile": "Профиль",
-    "menu": "Меню"
+    "menu": "Меню",
+    "close": "Закрыть"
   },
   "levels": {
     "junior": "Junior",
