@@ -31,6 +31,23 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(20),
 });
 
+/**
+ * Derives a free `@handle` for the public profile from the email local part,
+ * appending `2`, `3`, ... on collision. Best-effort: if we somehow can't find
+ * a free one, registration proceeds without a username and the profile is
+ * reachable by id until the user picks one (`PATCH /auth/me`).
+ */
+async function generateUsername(email: string): Promise<string | undefined> {
+  const base = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 24);
+  const seed = base.length >= 3 ? base : `user_${base}`;
+
+  for (let suffix = 0; suffix < 25; suffix++) {
+    const candidate = suffix === 0 ? seed : `${seed}${suffix + 1}`;
+    if (!(await User.exists({ username: candidate }))) return candidate;
+  }
+  return undefined;
+}
+
 /** Mints a refresh token, persists only its hash, and returns the raw value. */
 async function issueRefreshToken(userId: string): Promise<string> {
   const token = generateRefreshToken();
@@ -61,6 +78,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     passwordHash: hashPassword(password),
     role: role ?? 'seeker',
     registrationIp: req.ip,
+    username: await generateUsername(email),
   });
 
   const token = signAuthToken({ userId: user._id.toString(), email: user.email });

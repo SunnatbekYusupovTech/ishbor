@@ -93,6 +93,30 @@ export const env = {
    * locking out legitimate users.
    */
   maxAccountsPerIp: numberFromEnv('MAX_ACCOUNTS_PER_IP', 2),
+
+  /**
+   * Where user-uploaded images (avatars, profile covers, portfolio previews)
+   * are written, and the ceiling on a single upload. The directory is served
+   * read-only at `/uploads` (see `app.ts`) and created on first write.
+   *
+   * Resolution order:
+   *   1. `UPLOAD_DIR` — explicit override, wins everywhere.
+   *   2. `RAILWAY_VOLUME_MOUNT_PATH/uploads` — Railway injects this variable
+   *      automatically whenever a volume is attached, so on Railway you just
+   *      add a volume and uploads land on it (surviving redeploys) with no
+   *      extra configuration.
+   *   3. `uploads` — relative to CWD, for local dev.
+   *
+   * The container's filesystem is ephemeral on Railway: WITHOUT a volume,
+   * every uploaded image is wiped on the next deploy. See `backend/Dockerfile`
+   * + the deploy notes in `backend/CLAUDE.md`.
+   */
+  uploadDir:
+    process.env.UPLOAD_DIR ??
+    (process.env.RAILWAY_VOLUME_MOUNT_PATH
+      ? `${process.env.RAILWAY_VOLUME_MOUNT_PATH.replace(/\/+$/, '')}/uploads`
+      : 'uploads'),
+  maxUploadBytes: numberFromEnv('MAX_UPLOAD_BYTES', 5 * 1024 * 1024),
 } as const;
 
 export type Env = typeof env;

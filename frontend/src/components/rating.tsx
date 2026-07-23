@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { resolveImageUrl } from '@/lib/images';
 
 /** Map a 0–100 test percentage onto a 0–5 star scale. */
 export function percentToStars(percentage: number): number {
@@ -81,28 +83,54 @@ function gradientFor(name: string): string {
   return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
 }
 
-const avatarSize = { sm: 'h-9 w-9 text-xs', md: 'h-11 w-11 text-sm', lg: 'h-14 w-14 text-lg' } as const;
+const avatarSize = {
+  sm: 'h-9 w-9 text-xs',
+  md: 'h-11 w-11 text-sm',
+  lg: 'h-14 w-14 text-lg',
+  xl: 'h-24 w-24 text-3xl sm:h-28 sm:w-28',
+} as const;
 
 export function Avatar({
   name,
+  src,
   size = 'md',
   className,
 }: {
   name: string;
-  size?: 'sm' | 'md' | 'lg';
+  /** Profile picture URL — falls back to the initials gradient when absent
+   *  or when the image fails to load (broken/expired link). */
+  src?: string | null;
+  size?: keyof typeof avatarSize;
   className?: string;
 }) {
+  const [failed, setFailed] = useState(false);
+  // Uploaded avatars are stored origin-less (`/uploads/…`); external ones pass through.
+  const resolved = resolveImageUrl(src);
+  const showImage = !!resolved && !failed;
+
   return (
     <div
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br font-bold text-white shadow-sm ring-2 ring-background',
-        gradientFor(name),
+        'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br font-bold text-white shadow-sm ring-2 ring-background',
+        !showImage && gradientFor(name),
         avatarSize[size],
         className,
       )}
       aria-hidden
     >
-      {initials(name)}
+      {showImage ? (
+        // User-supplied remote URL; next/image would need every possible host
+        // allow-listed in next.config up front.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={resolved}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        initials(name)
+      )}
     </div>
   );
 }

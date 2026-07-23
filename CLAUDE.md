@@ -67,6 +67,40 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
+- **Rasm yuklash (drag & drop + kompyuterdan tanlash):** avatar, profil
+  muqovasi va portfolio rasmlari endi **URL orqali emas, to'g'ridan-to'g'ri
+  kompyuterdan** qo'yiladi — faylni tashlab (drag & drop), bosib tanlab yoki
+  clipboard'dan `Ctrl+V` bilan. URL qo'yish imkoniyati saqlanib qoldi
+  (ochiladigan maydon). Backend: `POST /api/uploads/image` +
+  `services/imageStorage.ts` (magic-byte tekshiruvi — `Content-Type`ga
+  ishonilmaydi; SVG ataylab rad etiladi; fayl nomi doim `randomUUID`),
+  fayllar `/uploads` ostida faqat o'qish uchun beriladi. Eski rasmlar
+  almashtirilganda/o'chirilganda darhol, saqlanmasdan tashlab ketilganlari
+  esa `services/uploadCleanup.ts` sweeper'i bilan (24 soatlik grace period)
+  tozalanadi. Frontend: `components/profile/ImageDropzone.tsx` +
+  `lib/images.ts#resolveImageUrl`. Yangi env: `UPLOAD_DIR`,
+  `MAX_UPLOAD_BYTES`. **Railway deploy:** fayl tizimi efemer — yuklangan
+  rasmlar saqlanishi uchun backend servisiga **Volume** ulash shart (app
+  `RAILWAY_VOLUME_MOUNT_PATH`ni avtomatik o'qiydi). Root→node huquq muammosi
+  `docker-entrypoint.sh` (su-exec) bilan hal qilingan. Batafsil:
+  `backend/CLAUDE.md` → "Rasm yuklash" / "Railway deploy", `README.md` →
+  "Deploying on Railway".
+- **Frilanser profili sahifasi (`/u/<handle>`) — yangi modul:** ommaviy,
+  tizimga kirmasdan ham ko'rinadigan profil sahifasi. Bo'limlar: muqova +
+  dumaloq avatar + ism/@username + onlayn holat + asosiy mutaxassislik +
+  ko'nikma teglari (`ProfileHeader`), "O'zim haqimda", ijtimoiy tarmoqlar
+  (faqat to'ldirilganlari ko'rsatiladi), portfolio (cheksiz ish, adaptiv
+  grid, qo'shish/tahrirlash/o'chirish), o'ng sidebar (mamlakat, til,
+  **mahalliy vaqt** — `timezone`dan real-time, ro'yxatdan o'tgan sana,
+  "Profilni tahrirlash"), sharhlar (avatar + ism + reyting + matn + sana,
+  bo'sh holat uchun alohida dizayn). Barcha qo'shish/tahrirlash/o'chirish
+  tugmalari **faqat profil egasiga** ko'rinadi (`isOwner`), va serverda ham
+  har bir mutatsiya `userId` bo'yicha filtrlanadi — himoya UI'da emas,
+  so'rov filtrida. Yangi modellar: `PortfolioItem`, `Review`; `User`ga
+  `username`/`avatarUrl`/`coverUrl`/`specialization`/`skills`/`about`/
+  `socials`/`country`/`language`/`timezone`/`lastSeenAt` qo'shildi.
+  Batafsil: `backend/CLAUDE.md` → "Frilanser profili",
+  `frontend/CLAUDE.md` → "Marshrutlar".
 - **6-pog'onali yo'nalish-bo'yicha malaka darajasi (Sardor):** `User.verificationLevel`
   (bitta, 4 qiymat) o'rniga `verificationLevels` — **har yo'nalish** (frontend/backend/
   fullstack/mobile) uchun alohida, 7 qiymatli `Tier` (none/junior/strong-junior/middle/

@@ -13,6 +13,7 @@ import {
   LogOut,
   Mail,
   FlaskConical,
+  IdCard,
 } from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { api, tokenStore } from '@/lib/api';
@@ -287,6 +288,7 @@ function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void
   const th = useTranslations('header');
   const tj = useTranslations('jobs');
   const tp = useTranslations('profile');
+  const tf = useTranslations('freelancer');
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -374,6 +376,17 @@ function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void
           >
             <UserCircle className="h-4 w-4" />
             {th('profile')}
+          </Link>
+          {/* Public freelancer page. `username` is optional on legacy accounts,
+              so the id is the fallback handle — `/u/<handle>` accepts both. */}
+          <Link
+            href={`/u/${me.username ?? me.id}` as '/'}
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <IdCard className="h-4 w-4" />
+            {tf('myPublicProfile')}
           </Link>
           <div className="my-1 h-px bg-border" />
           <button

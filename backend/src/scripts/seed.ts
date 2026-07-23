@@ -3,6 +3,8 @@ import { connectDatabase, disconnectDatabase } from '@/config/db';
 import { Question } from '@/models/Question';
 import { User } from '@/models/User';
 import { Job } from '@/models/Job';
+import { PortfolioItem } from '@/models/PortfolioItem';
+import { Review } from '@/models/Review';
 import { seedQuestions } from '@/data/questions';
 import { questionTranslations } from '@/data/questionTranslations';
 import { logger } from '@/utils/logger';
@@ -74,6 +76,54 @@ const sampleResumes = [
   },
 ];
 
+/**
+ * Public freelancer profile for the demo seeker — the `/u/demo_candidate`
+ * page renders every section (header, about, socials, sidebar) from this.
+ */
+const demoFreelancerProfile = {
+  specialization: 'Frontend Developer',
+  skills: ['HTML', 'CSS', 'JavaScript', 'React', 'Next.js', 'Tailwind CSS', 'Figma'],
+  about:
+    'Frontend dasturchi. React, Next.js va TypeScript bilan tez, qulay va foydalanuvchiga ' +
+    'yaqin interfeyslar quraman. Dizayndan pixel-perfect verstka va komponent kutubxonalari ' +
+    'bilan ishlash tajribam bor. Masofaviy hamkorlikka ochiqman.',
+  avatarUrl: 'https://i.pravatar.cc/300?img=12',
+  coverUrl: 'https://picsum.photos/seed/ishbor-cover/1600/400',
+  socials: {
+    telegram: 'https://t.me/candidate_dev',
+    github: 'https://github.com/candidate-dev',
+    linkedin: 'https://www.linkedin.com/in/candidate-dev',
+    dribbble: 'https://dribbble.com/candidate-dev',
+  },
+  country: "O'zbekiston",
+  language: "O'zbek, Rus, Ingliz",
+  timezone: 'Asia/Tashkent',
+};
+
+/** Sample works for the demo seeker's portfolio grid. */
+const demoPortfolio = [
+  {
+    title: 'Ishbor — job board redesign',
+    category: 'Web',
+    description: "hh.uz uslubidagi e'lonlar lentasi, filtrlar va malaka belgilari. Next.js + Tailwind.",
+    imageUrl: 'https://picsum.photos/seed/ishbor-work-1/800/500',
+    link: 'https://example.com/ishbor',
+  },
+  {
+    title: 'FinFlow dashboard',
+    category: 'Dashboard',
+    description: "To'lov tizimi uchun analitika paneli: grafiklar, real-time hisobotlar.",
+    imageUrl: 'https://picsum.photos/seed/ishbor-work-2/800/500',
+  },
+  {
+    title: 'Nova UI kit',
+    category: 'UI/UX',
+    description: '40+ komponentdan iborat dizayn tizimi — Figma va React implementatsiyasi.',
+    imageUrl: 'https://picsum.photos/seed/ishbor-work-3/800/500',
+    link: 'https://example.com/nova-ui',
+  },
+];
+
 async function seed(): Promise<void> {
   await connectDatabase();
 
@@ -107,6 +157,7 @@ async function seed(): Promise<void> {
     {
       $set: {
         name: 'Demo Employer',
+        username: 'demo_employer',
         passwordHash: hashPassword('password123'),
         role: 'employer',
         verificationLevels: { frontend: 'none', backend: 'none', fullstack: 'none', mobile: 'none' },
@@ -124,6 +175,7 @@ async function seed(): Promise<void> {
     {
       $set: {
         name: 'Demo Candidate',
+        username: 'demo_candidate',
         passwordHash: hashPassword('password123'),
         role: 'seeker',
         // Matches sampleResumes below: a frontend + a backend listing.
@@ -132,6 +184,10 @@ async function seed(): Promise<void> {
         bestPercentage: 92,
         bestScore: 18,
         attempts: 1,
+        // Public freelancer profile (`/u/demo_candidate`) — gives the page
+        // something to render without hand-filling the edit form first.
+        ...demoFreelancerProfile,
+        lastSeenAt: new Date(),
       },
     },
     { upsert: true, new: true, setDefaultsOnInsert: true },
@@ -143,6 +199,24 @@ async function seed(): Promise<void> {
   logger.info(
     `Seeded ${sampleJobs.length} vacancies + ${sampleResumes.length} resumes ` +
       `(employer@ishbor.uz / seeker@ishbor.uz, parol: password123).`,
+  );
+
+  // Public freelancer profile content for the demo seeker (`/u/demo_candidate`).
+  await PortfolioItem.deleteMany({ userId: seeker!._id });
+  await PortfolioItem.insertMany(demoPortfolio.map((w) => ({ ...w, userId: seeker!._id })));
+
+  await Review.deleteMany({ targetUserId: seeker!._id });
+  await Review.create({
+    targetUserId: seeker!._id,
+    authorId: employer!._id,
+    authorName: employer!.name,
+    rating: 5,
+    text:
+      "Loyihani muddatidan oldin topshirdi, kod toza va hujjatlashtirilgan. Aloqaga doim tez " +
+      'javob beradi — yana birga ishlashga tayyormiz.',
+  });
+  logger.info(
+    `Seeded freelancer profile /u/demo_candidate (${demoPortfolio.length} works + 1 review).`,
   );
 
   // QA/anti-cheat testing account (`User.isQaTester`) — a normal seeker in

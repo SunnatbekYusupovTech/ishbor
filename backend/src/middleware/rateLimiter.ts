@@ -45,6 +45,23 @@ export const authRateLimiter = rateLimit({
  * `testController.startTest` is the complementary, harder-to-evade guard
  * since it's keyed by account rather than address.
  */
+/**
+ * Guards image uploads. Unlike the other endpoints, this one consumes disk —
+ * a scripted client could otherwise fill the volume with 5 MB files far
+ * faster than any human editing their profile. 30/hour is generous for the
+ * real workflow (set an avatar, a cover, a handful of portfolio previews)
+ * and useless for bulk abuse.
+ */
+export const uploadRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, _res, next) => {
+    next(ApiError.tooManyRequests('Too many uploads. Please try again later.'));
+  },
+});
+
 export const testRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
