@@ -2,13 +2,26 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Shield, MapPin, Heart, Bell, Menu, X, UserCircle, LogOut } from 'lucide-react';
+import {
+  Shield,
+  MapPin,
+  Heart,
+  Bell,
+  Menu,
+  X,
+  UserCircle,
+  LogOut,
+  Mail,
+  FlaskConical,
+} from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { api, tokenStore } from '@/lib/api';
 import { useFavorites } from '@/lib/favorites';
 import { LanguageSelector } from '@/components/language-selector';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Avatar } from '@/components/rating';
+import { Avatar, RatingStars } from '@/components/rating';
+import { VerifiedBadge } from '@/components/badges';
+import type { Me } from '@/types/domain';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -34,7 +47,7 @@ export function SiteNav() {
   const favorites = useFavorites();
   const [authed, setAuthed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userName, setUserName] = useState('');
+  const [me, setMe] = useState<Me | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const menuRendered = useAnimatedOverlay(menuOpen);
@@ -47,15 +60,15 @@ export function SiteNav() {
         .me()
         .then((p) => {
           setIsAdmin(p?.role === 'admin');
-          setUserName(p?.name ?? '');
+          setMe(p);
         })
         .catch(() => {
           setIsAdmin(false);
-          setUserName('');
+          setMe(null);
         });
     } else {
       setIsAdmin(false);
-      setUserName('');
+      setMe(null);
     }
     setMenuOpen(false);
   }, [pathname]);
@@ -174,8 +187,8 @@ export function SiteNav() {
           <ThemeToggle />
 
           {/* Far-right: profile + logout, consolidated into one dropdown. */}
-          {authed ? (
-            <UserMenu name={userName} onLogoutRequest={() => setLogoutDialogOpen(true)} />
+          {authed && me ? (
+            <UserMenu me={me} onLogoutRequest={() => setLogoutDialogOpen(true)} />
           ) : (
             <Link
               href="/login"
@@ -265,11 +278,15 @@ export function SiteNav() {
 /**
  * Far-right, avatar-triggered dropdown consolidating profile + logout — the
  * previous separate profile icon and two logout/logout-all buttons are now
- * one menu, ending with logout at the bottom.
+ * one menu, ending with logout at the bottom. Opens on a small identity
+ * card (avatar, name, email, verification + rating) so the trigger doubles
+ * as an at-a-glance account summary, not just a navigation shortcut.
  */
-function UserMenu({ name, onLogoutRequest }: { name: string; onLogoutRequest: () => void }) {
+function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void }) {
   const t = useTranslations('nav');
   const th = useTranslations('header');
+  const tj = useTranslations('jobs');
+  const tp = useTranslations('profile');
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -301,46 +318,77 @@ function UserMenu({ name, onLogoutRequest }: { name: string; onLogoutRequest: ()
           open && 'ring-2 ring-ring ring-offset-2 ring-offset-background',
         )}
       >
-        <Avatar name={name || '?'} size="sm" />
+        <Avatar name={me.name || '?'} size="sm" />
       </button>
 
       <div
         role="menu"
         className={cn(
-          'absolute right-0 z-50 mt-2 w-56 origin-top-right overflow-hidden rounded-2xl border border-border/70 bg-popover p-1.5 text-popover-foreground shadow-xl',
+          'absolute right-0 z-50 mt-2 w-72 origin-top-right overflow-hidden rounded-2xl border border-border/70 bg-popover text-popover-foreground shadow-xl',
           'transition-all duration-200 ease-out',
           open
             ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
             : 'pointer-events-none -translate-y-1 scale-95 opacity-0',
         )}
       >
-        <Link
-          href="/profile"
-          role="menuitem"
-          onClick={() => setOpen(false)}
-          className={cn(
-            'flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors',
-            pathname === '/profile'
-              ? 'bg-primary/10 text-foreground'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-          )}
-        >
-          <UserCircle className="h-4 w-4" />
-          {th('profile')}
-        </Link>
-        <div className="my-1 h-px bg-border" />
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            setOpen(false);
-            onLogoutRequest();
-          }}
-          className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
-        >
-          <LogOut className="h-4 w-4" />
-          {t('logout')}
-        </button>
+        {/* Identity card — avatar, name/email, role, and (if any) test result. */}
+        <div className="flex items-center gap-3 border-b bg-muted/30 p-3.5">
+          <Avatar name={me.name} size="md" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold">{me.name}</p>
+            <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+              <Mail className="h-3 w-3 shrink-0" />
+              {me.email}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 border-b px-3.5 py-2.5">
+          <span className="text-xs font-semibold text-muted-foreground">
+            {me.role === 'seeker' ? tj('seeker') : tj('employer')}
+          </span>
+          <div className="flex items-center gap-2">
+            {me.attempts > 0 && <RatingStars percentage={me.bestPercentage} size="sm" showValue={false} />}
+            <VerifiedBadge level={me.verificationLevel} />
+          </div>
+        </div>
+
+        {me.isQaTester && (
+          <div className="flex items-center gap-1.5 border-b bg-primary/5 px-3.5 py-2 text-xs font-medium text-primary">
+            <FlaskConical className="h-3.5 w-3.5 shrink-0" />
+            {tp('qaTester')}
+          </div>
+        )}
+
+        <div className="p-1.5">
+          <Link
+            href="/profile"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className={cn(
+              'flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors',
+              pathname === '/profile'
+                ? 'bg-primary/10 text-foreground'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+            )}
+          >
+            <UserCircle className="h-4 w-4" />
+            {th('profile')}
+          </Link>
+          <div className="my-1 h-px bg-border" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onLogoutRequest();
+            }}
+            className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
+          >
+            <LogOut className="h-4 w-4" />
+            {t('logout')}
+          </button>
+        </div>
       </div>
     </div>
   );
