@@ -62,12 +62,36 @@ odatdagi `SiteNav` + `<main>` + footer. `layout.tsx` (ildiz) shu `SiteChrome`ni
   o'zgartirish, `api.updateMe` → `PATCH /auth/me`); **Delete** —
   `DangerZoneCard` (parol tasdig'i bilan `Dialog`, `api.deleteMe` →
   `DELETE /auth/me`, muvaffaqiyatda `tokenStore.clear()` + `/`ga yo'naltirish).
+- `u/[handle]/page.tsx` — **ommaviy frilanser profili** (`/u/<username>`, yoki
+  username tanlamagan eski akkauntlar uchun `/u/<id>` — backend ikkalasini
+  ham hal qiladi). Tizimga kirmasdan ham ochiladi; javobdagi `isOwner`
+  qo'shish/tahrirlash/o'chirish tugmalarini yoqadi (serverda ham egalik
+  qayta tekshiriladi — batafsil `backend/CLAUDE.md` → "Frilanser profili").
+  Tuzilishi: `ProfileHeader` (muqova + avatar + ism/@username + onlayn
+  nuqta + mutaxassislik + ko'nikma teglari) → ikki ustun
+  `lg:grid-cols-[minmax(0,1fr)_300px]` (chapda `AboutSection` +
+  `SocialLinksSection` + `PortfolioSection`, o'ngda sticky `ProfileSidebar`)
+  → pastda to'liq kenglikdagi `ReviewsSection`. `EditProfileDialog` —
+  egasining hamma maydonlarini bitta `PATCH /auth/me`da saqlaydi.
+  Username o'zgarsa sahifa yangi handle'ga `router.replace` qiladi
+  (aks holda URL ishlamay qolardi).
 - `login/page.tsx` — kirish/ro'yxatdan o'tish.
 - `layout.tsx` — html/body, `ThemeProvider`, `NextIntlClientProvider`, `SiteChrome`.
 
 ## Muhim konvensiyalar
 
 - **API:** faqat `lib/api.ts` (`api.getJobs`, `api.me`, ...) orqali. `payload.data` qaytadi; xatoda `ApiError`.
+  **`ApiError.status === 0`** — alohida holat: so'rov serverga umuman yetib
+  bormagan (backend o'chiq, yoki brauzer CORS bilan bloklagan, ya'ni bu origin
+  backenddagi `CLIENT_ORIGIN` ro'yxatida yo'q). Server qaytargan rad javobidan
+  butunlay boshqacha muammo va boshqacha yechim, shuning uchun UI'da alohida
+  xabar ko'rsatiladi (`freelancer.errNetwork`). Yangi xato ishlovi yozganda
+  shuni hisobga oling — aks holda "server ishlamayapti" va "server rad etdi"
+  bir xil ko'rinadi.
+  > **Dev gotcha:** `frontend` `-p 3000`da ishlaydi, shuning uchun
+  > `backend/.env`dagi `CLIENT_ORIGIN` ham `http://localhost:3000`ni o'z
+  > ichiga olishi shart (vergul bilan bir nechta origin yozish mumkin).
+  > Mos kelmasa **hamma** so'rov bloklanadi.
   Har qanday so'rov 401 qaytarsa, `request()` avtomatik `POST /auth/refresh` chaqirib
   tokenni yangilaydi va so'rovni bir marta qayta yuboradi — controllerlar buni
   bilishi shart emas, shaffof ishlaydi.
@@ -88,7 +112,42 @@ odatdagi `SiteNav` + `<main>` + footer. `layout.tsx` (ildiz) shu `SiteChrome`ni
 
 - `JobCard.tsx` — bosiladigan e'lon kartasi → `JobDetailDialog` ochadi.
 - `JobDetailDialog.tsx` — to'liq detal modal (reyting, tavsif, bog'lanish).
-- `rating.tsx` — `RatingStars` (test %idan yulduz) + `Avatar` (ismdan gradient).
+- `rating.tsx` — `RatingStars` (test %idan yulduz) + `Avatar` (ismdan gradient;
+  ixtiyoriy `src` bilan rasm — yuklanmasa yoki havola buzilgan bo'lsa
+  avtomatik initsiallarga qaytadi; `size="xl"` profil sahifasi uchun).
+- `components/profile/*` — frilanser profili bo'limlari: `ProfileHeader`,
+  `AboutSection`, `SocialLinksSection`, `PortfolioSection` (grid + qo'shish/
+  tahrirlash/o'chirish dialoglari), `ProfileSidebar`, `ReviewsSection`,
+  `EditProfileDialog`, `social-icons.tsx`.
+  - **`social-icons.tsx`:** lucide-react v1 brend ikonkalarini olib tashlagan,
+    shuning uchun Telegram/Instagram/LinkedIn/GitHub/Behance/Dribbble
+    glifları shu faylda inline SVG (24×24, `currentColor`). Brend rangi
+    faqat **hover**da qo'llanadi (`--social` CSS o'zgaruvchisi orqali) —
+    tinch holatda sayt palitrasi buzilmasin deb.
+  - **`ImageDropzone.tsx`** — avatar, muqova va portfolio rasmi uchun bitta
+    qayta ishlatiladigan komponent. To'rt xil qo'yish usuli: **faylni
+    tashlash (drag & drop)**, bosib **kompyuterdan tanlash**, fokusdaligida
+    **clipboard'dan qo'yish (Ctrl+V)**, yoki ochiladigan "Yoki havola (URL)
+    qo'ying" maydoni. Fayl darhol `POST /uploads/image`ga yuboriladi va
+    forma faqat **satr** bilan ishlaydi — qo'lda qo'yilgan URL bilan bir xil
+    shakl. `''` — "tozalash".
+  - **`lib/images.ts#resolveImageUrl`** — bazada rasm origin'siz
+    (`/uploads/…`) saqlanadi, shuning uchun **har bir `<img src>`** shu
+    yordamchi orqali o'tishi kerak (`Avatar`, `ProfileHeader` muqovasi,
+    `PortfolioCard`, `ImageDropzone` preview'i). Tashqi `https://…`
+    havolalar o'zgarishsiz o'tadi. Yangi joyda rasm ko'rsatsangiz — buni
+    unutmang, aks holda yuklangan rasm 404 bo'ladi.
+  - **Rasmlar `next/image` emas, oddiy `<img>`:** avatar/muqova/portfolio
+    havolalari foydalanuvchidan keladi (tashqi host ham bo'lishi mumkin),
+    `next/image` esa har bir mumkin bo'lgan hostni `next.config`da oldindan
+    ro'yxatga olishni talab qiladi. Har bir `<img>`da `onError` fallback bor.
+  - **`lib/api.ts` multipart:** `request()` `body instanceof FormData`
+    bo'lsa `Content-Type`ni **o'rnatmaydi** — brauzer uni boundary bilan
+    o'zi qo'yishi shart. `api.uploadImage(file)` shuni ishlatadi.
+  - **Sana formati raqamli** (`month: '2-digit'`), oy nomi emas:
+    Chrome'da **o'zbek oy nomlari yo'q** — `month: 'long'` sayt standart
+    lokalida "2026 M07" bo'lib chiqadi. (Bu Chrome ICU chegarasi, butun
+    saytga tegishli: `format.relativeTime` ham uz'da "-2 d" beradi.)
 - `badges.tsx` — `LevelBadge`, `StackBadge`, `VerifiedBadge` (7 qiymatli `VerificationLevel`:
   none/junior/strong-junior/middle/strong-middle/senior/strong-senior — `types/domain.ts`).
   `lib/utils.ts#displayTier(verificationLevels, primaryDirection)` — bitta "headline"

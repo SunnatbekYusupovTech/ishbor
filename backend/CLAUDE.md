@@ -86,7 +86,8 @@ npm run typecheck -w backend  # tsc --noEmit
 
 ## Modellar
 
-- **User** — `role` (employer|seeker|admin — `admin` faqat DB orqali beriladi),
+- **User** — (frilanser profili maydonlari uchun pastdagi "Frilanser profili"
+  bo'limiga qarang) `role` (employer|seeker|admin — `admin` faqat DB orqali beriladi),
   `verificationLevels` — **har yo'nalish uchun alohida** daraja (`Record<Direction, Tier>`,
   `frontend`/`backend`/`fullstack`/`mobile` — frontend testidan o'tish backend haqida
   hech narsa demaydi). `Tier` 7 qiymatli: `none`, `junior`, `strong-junior`, `middle`,
@@ -104,6 +105,17 @@ npm run typecheck -w backend  # tsc --noEmit
   `verificationLevels`ini yangilaydi).
 - **RefreshToken** — `userId`, `tokenHash` (SHA-256, xom token hech qachon saqlanmaydi),
   `expiresAt` (TTL index), `revokedAt`.
+- **PortfolioItem** — frilanser profilidagi bitta ish (`userId`, `title`,
+  `category`, `description`, `imageUrl`, `link`). **Ataylab alohida
+  kolleksiya** (`User` ichida massiv emas): ishlar soni cheklanmagan, embed
+  qilingan massiv esa har bir `User` o'qishida (login, reyting, e'lonlar
+  ro'yxati) o'qilib, bekorga narx qilardi.
+- **Review** — profilga qoldirilgan sharh (`targetUserId`, `authorId`,
+  denormallashtirilgan `authorName`/`authorAvatarUrl`, `rating` 1–5, `text`).
+  `(targetUserId, authorId)` bo'yicha **unique compound index** — bitta
+  foydalanuvchi bitta profilga faqat bitta sharh qoldiradi; qayta yuborish
+  eskisini yangilaydi (upsert), ya'ni bitta akkaunt reytingni to'plab
+  ketolmaydi.
 
 ## Test (assessment) engine
 
@@ -212,18 +224,151 @@ npm run typecheck -w backend  # tsc --noEmit
   `correctAnswer` `options` chegarasidan oshmasligi kerak). Import mantig'i
   (dublikat tekshiruvi, `category` to'ldirish) `questionImportService`da.
 
+## Frilanser profili (`/u/<handle>` uchun backend)
+
+`controllers/profileController.ts` + `models/PortfolioItem.ts` + `models/Review.ts`.
+
+- **`User`dagi yangi maydonlar:** `username` (ommaviy `@handle`, **`sparse`
+  unique** — bu maydon paydo bo'lishidan oldin ochilgan akkauntlarda yo'q,
+  shuning uchun `null`lar unique indexda to'qnashmasin deb `sparse`),
+  `avatarUrl`, `coverUrl` (kompyuterdan yuklangan fayl **yoki** tashqi
+  havola — pastdagi "Rasm yuklash" bo'limiga qarang), `specialization`, `skills[]`,
+  `about`, `socials` (7 tarmoq: telegram/instagram/linkedin/github/behance/
+  dribbble/website), `country`, `language`, `timezone` (IANA zona — mahalliy
+  vaqtni **klient** hisoblaydi), `lastSeenAt`.
+- **Onlayn holati:** `lastSeenAt` `getMe`da yangilanadi, lekin **throttle**
+  bilan (`ONLINE_TOUCH_MS`, 2 daqiqa) — klient har sahifa yuklanishida
+  `/auth/me` chaqiradi, har chaqiruvda yozish bekorga bo'lardi. Yozuv
+  fire-and-forget: xato bo'lsa so'rovga chiqmaydi (holat kosmetik).
+  "Onlayn" = `Date.now() - lastSeenAt < ONLINE_WINDOW_MS` (5 daqiqa) —
+  oyna throttle'dan sezilarli keng bo'lishi shart.
+- **`username` avtomatik beriladi:** `authController.generateUsername` —
+  email local-part'idan, to'qnashuvda `2`, `3`, … qo'shiladi. Topilmasa
+  registratsiya baribir davom etadi (profil `id` orqali ochiladi).
+- **Handle ikki xil bo'ladi:** `resolveUser` avval `username` bo'yicha,
+  topilmasa `ObjectId` bo'yicha qidiradi — eski akkauntlar `/u/<id>` bilan
+  ham ochiladi.
+- **`middleware/optionalAuthenticate.ts`** — token bo'lsa `req.user`ni
+  to'ldiradi, bo'lmasa/yaroqsiz bo'lsa **hech qachon 401 tashlamaydi**.
+  Ommaviy, lekin egasiga boshqacha ko'rinadigan sahifalar uchun
+  (`isOwner`/`isMine` bayroqlari). Holatni **o'zgartiradigan** har bir
+  endpoint hamon oddiy `authenticate` ortida.
+- **Egalik tekshiruvi — so'rov filtrida:** portfolio/sharh mutatsiyalari
+  `{ _id, userId: req.user.userId }` bilan qidiradi, ya'ni birovnikini
+  tahrirlashga urinish hech nimaga mos kelmay `404` qaytaradi. UI'da
+  tugmani yashirish — faqat ko'rinish, himoya emas.
+- **Bo'sh satr = maydonni tozalash:** `PATCH /auth/me` va portfolio
+  `PATCH`ida `''` yuborilsa maydon `$unset` qilinadi (profilda umuman
+  ko'rsatilmaydi); kalitni umuman yubormaslik — "tegma" degani.
+  `validation/userSchemas.ts`dagi `linkField`/`textField` shu shartnomani
+  tekshiradi.
+  > **Diqqat (mongoose tuzog'i):** `socials` — nested subdocument.
+  > `{...user.socials}` bilan nusxalash **maydonlarni emas, mongoose
+  > ichki xossalarini** ko'chiradi. Shuning uchun `applyProfileFields`
+  > har bir tarmoqni `user.set('socials.<platform>', …)` bilan alohida
+  > yozadi (`undefined` — unset). Bu xatolik test bilan ushlangan.
+- **Sharhlar:** `POST /users/profile/:handle/reviews` — o'zini sharhlash
+  `403`; qayta yuborish eskisini **upsert** bilan yangilaydi. O'chirishni
+  faqat muallif qila oladi.
+- **Kaskad:** `deleteMe` endi `PortfolioItem` va `Review`ni ham o'chiradi —
+  sharhlar **ikkala yo'nalishda** (profilga kelganlari + o'zi yozganlari,
+  aks holda o'chirilgan muallif nomi boshqa profilda osilib qolardi).
+- Testlar: `controllers/profileController.test.ts` (29 ta) — ommaviy o'qish,
+  email/hash sizib chiqmasligi, begona portfolio/sharhni tahrirlab
+  bo'lmasligi, bo'sh-satr tozalash, username validatsiya/409/rename.
+
+## Rasm yuklash (upload)
+
+`POST /api/uploads/image` (`authenticate` + `uploadRateLimiter`) →
+`{ url: '/uploads/<uuid>.<ext>', bytes, mime }`. Fayllar `env.uploadDir`
+(default `backend/uploads/`, `.gitignore`da) ichiga yoziladi va `app.ts`da
+`/uploads` ostida **faqat o'qish uchun** (`express.static`) beriladi.
+Servis: `services/imageStorage.ts`.
+
+- **Nega alohida endpoint:** klient avval rasmni yuklaydi, keyin qaytgan
+  URL'ni forma bilan birga saqlaydi. Shu sabab profil/portfolio endpointlari
+  toza JSON bo'lib qoladi va UI hali saqlanmagan rasmni ham ko'rsata oladi.
+- **URL bazada origin'siz saqlanadi** (`/uploads/...`, `http://host` emas) —
+  API boshqa domenga ko'chsa, eski rasmlar o'lik hostga ishora qilib
+  qolmaydi. Origin'ni klient qayta ulaydi (`frontend/src/lib/images.ts`).
+- **Xavfsizlik (asosiy qarorlar):**
+  - **Magic-byte tekshiruvi** (`detectImageFormat`) — `Content-Type` ham,
+    fayl nomi ham **klient nazoratida**, shuning uchun formatni faqat
+    faylning o'z baytlari hal qiladi. `image/png` deb belgilangan HTML
+    rad etiladi (test bilan qoplangan).
+  - **SVG ataylab qo'llab-quvvatlanmaydi** — SVG bu rasm emas, hujjat:
+    ichida `<script>` bo'lishi mumkin va rasm URL'ini to'g'ridan-to'g'ri
+    ochgan foydalanuvchida shu origin'da bajarilardi.
+  - **Fayl nomi hech qachon klientdan olinmaydi** — `crypto.randomUUID()`.
+    Aks holda `../` bilan yo'lni tanlash yoki birovning faylini bosib
+    ketish mumkin bo'lardi.
+  - `multer.memoryStorage()` — baytlar tekshirilmaguncha diskka hech narsa
+    tushmaydi; `limits.fileSize` (`MAX_UPLOAD_BYTES`, default 5 MB) oqimni
+    yarmida uzadi, ya'ni yolg'on `Content-Length` bilan katta allocation
+    qildirib bo'lmaydi.
+  - Statik `/uploads` **`/api`dan tashqarida** va `globalRateLimiter`dan
+    oldin ulangan: bitta profil ko'rinishi avatar + muqova + har bir
+    portfolio rasmini tortadi, ularni 200/min API budjetiga qo'shish oddiy
+    ko'rishni rate-limit qilib qo'yardi. `nosniff` + `Content-Disposition:
+    inline` alohida o'rnatiladi.
+- **Railway deploy (postoyanniy disk):** Railway konteyner fayl tizimi
+  **efemer** — har deploy'da yuklangan rasmlar yo'qoladi. Yechim: Railway
+  **Volume** ulash. `env.uploadDir` `RAILWAY_VOLUME_MOUNT_PATH`ni avtomatik
+  o'qiydi (Railway uni volume ulanganda o'zi beradi) → `${mount}/uploads`,
+  ya'ni Railway'da faqat volume qo'shish kifoya, boshqa sozlash shart emas.
+  Ikki tuzoq hal qilingan:
+  1. **Yozish huquqi:** Railway volume `root`ники bo'lib ulanadi, jarayon
+     esa `node` ostida ishlaydi → EACCES. `backend/docker-entrypoint.sh`
+     root sifatida boshlanadi, faqat volume'ni `chown node`, keyin
+     `su-exec` bilan `node`ga tushib jarayonni ishga tushiradi (Node hech
+     qachon root ostida ishlamaydi). Shuning uchun `Dockerfile`da `USER node`
+     yo'q — entrypoint o'zi tushiradi.
+  2. **Kross-domen `<img>`:** front va backend Railway'da alohida domenlar.
+     `/uploads` statikasi `Cross-Origin-Resource-Policy: cross-origin` bilan
+     beriladi (helmet global), shuning uchun rasm boshqa domendagi frontga
+     joylashadi. `.sh` fayllar `.gitattributes` bilan LF'da saqlanadi (CRLF
+     shebang Alpine'da ishlamaydi).
+  > Frontend Railway servisiga `NEXT_PUBLIC_API_URL` **build-arg** sifatida
+  > backend'ning ommaviy URL'i beriladi (Dockerfile'da ARG), va backend'ning
+  > `CLIENT_ORIGIN`iga front domeni qo'shiladi — aks holda CORS bloklaydi.
+- **Bazada saqlanadigan qiymat** `INTERNAL_UPLOAD_RE` (`/uploads/<uuid>.<ext>`,
+  anchored) bilan tekshiriladi — `startsWith('/uploads/')` yetarli emas edi:
+  `deleteImage` keyinchalik shu qiymatni fayl yo'liga aylantiradi, ya'ni
+  traversal satri saqlanib qolsa xavfli bo'lardi.
+- **Orfan fayllarni tozalash — ikki qatlam:**
+  1. **Darhol:** avatar/muqova/portfolio rasmi almashtirilganda yoki yozuv
+     o'chirilganda eski fayl darhol o'chiriladi (`userController`,
+     `profileController`); `deleteMe` esa akkauntning barcha rasmlarini
+     (hujjatlar o'chishidan **oldin** yig'ib olib) tozalaydi.
+  2. **Davriy:** `services/uploadCleanup.ts` — birgina holatni birinchi
+     qatlam qoplay olmaydi: foydalanuvchi tahrirlash oynasida rasm yuklaydi
+     (preview ko'rsatish uchun u darhol saqlanadi), keyin **saqlamasdan
+     oynani yopadi**. Bu faylga hech kim ishora qilmaydi. Shuning uchun
+     sweeper katalogni ko'rib chiqadi va **24 soatdan eski** hamda hech
+     qayerda ishlatilmagan fayllarni o'chiradi. Grace period muhim: hozirgina
+     yuklangan fayl ta'rifiga ko'ra "ishlatilmagan" bo'ladi, faqat
+     "ishlatilmagan" bo'yicha o'chirish foydalanuvchining saqlashi bilan
+     poyga qilardi. `index.ts`da rejalashtiriladi (boot'dan 60s keyin, so'ng
+     har 6 soatda; timerlar `unref()`).
+
 ## Endpointlar (`/api`)
 
 `/health` · `/auth` (register, login, refresh, logout, logout-all, me [GET/PATCH/DELETE]) ·
 `/test` (catalog, start, submit, auto-complete [QA-tester only], tab-switch, violation) · `/jobs`
 (GET list `?type=&level=&stack=&keyword=&location=&salaryMin=&salaryMax=&sort=`, POST create) ·
-`/users` (leaderboard) · `/admin` (GET `violations`, stats, users CRUD, jobs CRUD,
+`/users` (leaderboard · GET `profile/:handle` [ommaviy, `optionalAuthenticate`] ·
+POST `profile/:handle/reviews` · POST/PATCH/DELETE `me/portfolio[/:id]` ·
+DELETE `me/reviews/:id`) · `/uploads` (POST `image` — rasm yuklash) · `/admin` (GET `violations`, stats, users CRUD, jobs CRUD,
 sessions/list, questions/list — admin-only) · `/webhooks` (POST `questions` —
 AI savol import, `X-Webhook-Secret` bilan himoyalangan).
 
 - **`PATCH /auth/me`** (`userController.updateMe`, `validation/userSchemas.ts`) —
-  o'z profilini tahrirlash: `name`/`email`/`newPassword`/`primaryDirection` barchasi
-  ixtiyoriy, faqat yuborilgan maydon o'zgaradi. `newPassword` yuborilsa `currentPassword`
+  o'z profilini tahrirlash: `name`/`email`/`newPassword`/`primaryDirection` **va
+  barcha frilanser-profil maydonlari** (`username`, `avatarUrl`, `coverUrl`,
+  `specialization`, `skills`, `about`, `socials`, `country`, `language`,
+  `timezone`) — barchasi ixtiyoriy, faqat yuborilgan maydon o'zgaradi.
+  `username` band bo'lsa `409`. `skills` butun ro'yxatni almashtiradi
+  (registrsiz dublikatlar olib tashlanadi). `newPassword` yuborilsa `currentPassword`
   ham majburiy (schema `refine` + controllerda qayta tekshiriladi,
   `utils/password.ts#verifyPassword`). Email band bo'lsa `409`. `primaryDirection`
   `null` bilan tozalanadi, DIRECTIONS enumiga qarshi tekshiriladi.

@@ -2,6 +2,7 @@ import http from 'node:http';
 import { createApp } from '@/app';
 import { connectDatabase, disconnectDatabase } from '@/config/db';
 import { initAntiCheatSocket } from '@/sockets/antiCheat';
+import { scheduleUploadCleanup } from '@/services/uploadCleanup';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
 
@@ -13,6 +14,10 @@ async function bootstrap(): Promise<void> {
 
   // Attach the real-time anti-cheat monitor to the same HTTP server.
   initAntiCheatSocket(server);
+
+  // Periodic housekeeping for images uploaded but never saved (edit dialog
+  // opened, picture chosen, dialog closed) — nothing else would remove those.
+  scheduleUploadCleanup();
 
   server.listen(env.port, () => {
     logger.info(`🚀 API + Socket.io listening on http://localhost:${env.port} (${env.nodeEnv})`);

@@ -5,7 +5,19 @@ import type {
   ViolationResponse,
   ViolationType,
 } from '@/types/test';
-import type { Job, CreateJobInput, LeaderboardEntry, Me, Catalog, Direction } from '@/types/domain';
+import type {
+  Job,
+  CreateJobInput,
+  LeaderboardEntry,
+  Me,
+  Catalog,
+  Direction,
+  FreelancerProfile,
+  PortfolioItem,
+  PortfolioItemInput,
+  ProfileReview,
+  SocialLinks,
+} from '@/types/domain';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
 
@@ -70,15 +82,30 @@ async function refreshAccessToken(): Promise<boolean> {
 
 async function request<T>(path: string, options: RequestInit = {}, _isRetry = false): Promise<T> {
   const token = tokenStore.get();
+  // A multipart upload must NOT carry an explicit Content-Type — the browser
+  // has to set it itself so it can append the boundary parameter. Everything
+  // else on this API is JSON.
+  const isMultipart = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
-  const res = await fetch(`${API_URL}/api${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/api${path}`, {
+      ...options,
+      headers: {
+        ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+  } catch {
+    // `fetch` only rejects when the request never produced a response at all:
+    // the API is down, DNS/connection failed, or — the common one in dev —
+    // the browser blocked it because this origin isn't in the server's
+    // CLIENT_ORIGIN allow-list. Surfacing that as `status: 0` lets callers
+    // tell "couldn't reach the server" apart from "the server said no",
+    // which otherwise look identical and are debugged very differently.
+    throw new ApiError(0, `Could not reach the API at ${API_URL}.`);
+  }
 
   const payload = await res.json().catch(() => ({}));
 
@@ -201,13 +228,27 @@ export const api = {
   me: () => request<Me>('/auth/me'),
 
   /** Every field optional — send only what's changing. Setting `newPassword`
-   *  requires `currentPassword` (server-enforced, see `userSchemas.ts`). */
+   *  requires `currentPassword` (server-enforced, see `userSchemas.ts`).
+   *  For the freelancer-profile fields an empty string CLEARS the value
+   *  (the profile then stops rendering it); omitting the key leaves it alone. */
   updateMe: (body: {
     name?: string;
     email?: string;
     currentPassword?: string;
     newPassword?: string;
     primaryDirection?: Direction | null;
+    // --- Public freelancer profile ---
+    username?: string;
+    avatarUrl?: string;
+    coverUrl?: string;
+    specialization?: string;
+    /** Replaces the whole tag list. */
+    skills?: string[];
+    about?: string;
+    socials?: SocialLinks;
+    country?: string;
+    language?: string;
+    timezone?: string;
   }) =>
     request<Me>('/auth/me', {
       method: 'PATCH',
@@ -254,6 +295,56 @@ export const api = {
 
   // --- Leaderboard ---
   getLeaderboard: () => request<LeaderboardEntry[]>('/users/leaderboard'),
+
+  // --- Public freelancer profile (`/u/<handle>`) ---
+
+  /** `handle` is the `@username` or, for accounts without one, the user id.
+   *  Public: works signed-out too — the token only decides `isOwner`/`isMine`. */
+  getProfile: (handle: string) =>
+    request<FreelancerProfile>(`/users/profile/${encodeURIComponent(handle)}`),
+
+  addPortfolioItem: (body: PortfolioItemInput) =>
+    request<PortfolioItem>('/users/me/portfolio', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  /** Partial edit — an empty string clears the field. Owner-scoped server-side. */
+  updatePortfolioItem: (id: string, body: Partial<PortfolioItemInput>) =>
+    request<PortfolioItem>(`/users/me/portfolio/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  deletePortfolioItem: (id: string) =>
+    request<{ deleted: boolean }>(`/users/me/portfolio/${id}`, { method: 'DELETE' }),
+
+  /** One review per author per profile — posting again replaces your previous one. */
+  addReview: (handle: string, body: { rating: number; text: string }) =>
+    request<ProfileReview>(`/users/profile/${encodeURIComponent(handle)}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  deleteReview: (id: string) =>
+    request<{ deleted: boolean }>(`/users/me/reviews/${id}`, { method: 'DELETE' }),
+
+  /**
+   * Uploads one image and returns its stored reference (`/uploads/<uuid>.jpg`)
+   * to save into `avatarUrl` / `coverUrl` / a portfolio item's `imageUrl`.
+   *
+   * Upload and save are separate steps on purpose: the UI can show a preview
+   * from the returned URL before the surrounding form is committed, and the
+   * profile/portfolio endpoints stay plain JSON.
+   */
+  uploadImage: (file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    return request<{ url: string; bytes: number; mime: string }>('/uploads/image', {
+      method: 'POST',
+      body,
+    });
+  },
 };
 
 export { ApiError };

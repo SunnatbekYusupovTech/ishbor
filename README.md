@@ -96,5 +96,33 @@ JWT_SECRET=your_secret docker compose up --build
 ```
 
 - MongoDB with a persistent volume + healthcheck
-- Backend image: multi-stage TypeScript build, runs as non-root
+- Backend image: multi-stage TypeScript build, runs as non-root (via su-exec)
 - Frontend image: Next.js **standalone** output for a minimal runtime
+- Uploaded images persist on the `uploads-data` volume
+
+## Deploying on Railway
+
+Three services: **MongoDB**, **backend**, **frontend**.
+
+### Backend service
+Environment variables:
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `MONGO_URI` | your Mongo connection string | **Non-SRV** connection string (`mongodb://…`), not `mongodb+srv://` |
+| `JWT_SECRET` | a long random secret | required |
+| `CLIENT_ORIGIN` | the frontend's public URL | e.g. `https://ishbor-frontend.up.railway.app`; comma-separate multiple |
+| `NODE_ENV` | `production` | enables `trust proxy`, HSTS |
+
+**Attach a Volume** to the backend service (any mount path, e.g. `/data`).
+That's the whole upload setup — the app reads `RAILWAY_VOLUME_MOUNT_PATH`
+automatically and writes images under `<mount>/uploads`. **Without a volume,
+every uploaded image is wiped on the next deploy** (the container filesystem is
+ephemeral). The container starts as root only long enough to `chown` the volume,
+then drops to the non-root `node` user via `su-exec`.
+
+### Frontend service
+`NEXT_PUBLIC_API_URL` is baked in **at build time**, so set it as a
+**build argument** (not just a runtime variable) to the backend's public URL,
+e.g. `https://ishbor-backend.up.railway.app`. Uploaded images are served from
+the backend origin, so this must be reachable from the browser.

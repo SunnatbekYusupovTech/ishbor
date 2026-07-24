@@ -13,6 +13,7 @@ import {
   Pencil,
   Check,
   AlertTriangle,
+  IdCard,
 } from 'lucide-react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { api, tokenStore, ApiError } from '@/lib/api';
@@ -41,6 +42,7 @@ export default function ProfilePage() {
   const ta = useTranslations('auth');
   const tj = useTranslations('jobs');
   const ts = useTranslations('stacks');
+  const tf = useTranslations('freelancer');
   const router = useRouter();
 
   const [me, setMe] = useState<Me | null>(null);
@@ -208,6 +210,14 @@ export default function ProfilePage() {
       <EditProfileCard me={me} onUpdated={setMe} t={t} ta={ta} />
 
       <div className="flex flex-col gap-2.5 sm:flex-row">
+        <Button asChild variant="outline" className="w-full sm:w-auto">
+          {/* Accounts created before usernames existed fall back to their id —
+              `/u/<handle>` resolves either. */}
+          <Link href={`/u/${me.username ?? me.id}` as '/'}>
+            <IdCard className="h-4 w-4" />
+            {tf('myPublicProfile')}
+          </Link>
+        </Button>
         <Button asChild variant="outline" className="w-full sm:w-auto">
           <Link href="/leaderboard">{t('viewLeaderboard')}</Link>
         </Button>

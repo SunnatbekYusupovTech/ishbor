@@ -5,6 +5,7 @@ import jobRoutes from '@/routes/jobRoutes';
 import userRoutes from '@/routes/userRoutes';
 import adminRoutes from '@/routes/adminRoutes';
 import webhookRoutes from '@/routes/webhookRoutes';
+import uploadRoutes from '@/routes/uploadRoutes';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/jobs', jobRoutes);
 router.use('/users', userRoutes);
 router.use('/admin', adminRoutes);
 router.use('/webhooks', webhookRoutes);
+router.use('/uploads', uploadRoutes);
 
 export default router;

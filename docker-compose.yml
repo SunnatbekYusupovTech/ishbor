@@ -28,6 +28,11 @@ services:
       TEST_DURATION_MINUTES: 30
       HEARTBEAT_TIMEOUT_MS: 15000
       MAX_TAB_SWITCHES: 3
+      # Uploaded images live on a named volume so they survive `docker compose
+      # up --build` — the same persistence a Railway volume gives in prod.
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads-data:/app/uploads
     ports:
       - '5000:5000'
 
@@ -44,3 +49,4 @@ services:
 
 volumes:
   mongo-data:
+  uploads-data:
