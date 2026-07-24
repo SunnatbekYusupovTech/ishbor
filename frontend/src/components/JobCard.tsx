@@ -24,7 +24,7 @@ export function JobCard({ job, onHide }: { job: Job; onHide?: (id: string) => vo
   const format = useFormatter();
   const saved = useIsFavorite(job.id);
   // Stable "now" shared by server/client render — avoids relativeTime hydration mismatch.
-  const now = useNow();
+  const now = useNow();    
 
   const isResume = job.type === 'resume';
   const subtitle = isResume ? job.postedByName : job.company ?? job.postedByName;

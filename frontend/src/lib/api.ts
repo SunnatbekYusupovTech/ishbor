@@ -253,6 +253,15 @@ export const api = {
     request<Me>('/auth/me', {
       method: 'PATCH',
       body: JSON.stringify(body),
+    }).then((me) => {
+      // `SiteNav`'s avatar/name live outside whatever page just called
+      // `updateMe` (profile page, edit dialogs) — without this it only
+      // refreshes on the next route change, so a new avatar wouldn't show
+      // up in the header until the user navigated somewhere.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent<Me>('ishbor:me-updated', { detail: me }));
+      }
+      return me;
     }),
 
   /** Password-confirmed self-deletion — cascades server-side (listings,

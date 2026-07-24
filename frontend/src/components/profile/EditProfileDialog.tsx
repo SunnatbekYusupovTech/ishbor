@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Field, inputCls } from '@/components/form-field';
 import { SOCIAL_META } from '@/components/profile/social-icons';
+import { SOCIAL_HANDLE_CONFIG, buildSocialUrl, extractSocialHandle } from '@/lib/socialHandles';
 import { ImageDropzone } from '@/components/profile/ImageDropzone';
 import {
   Dialog,
@@ -112,7 +113,13 @@ export function EditProfileDialog({
     timezone: profile.timezone ?? '',
   });
   const [skills, setSkills] = useState<string[]>(profile.skills);
-  const [socials, setSocials] = useState<SocialLinks>(profile.socials);
+  // Displayed/edited as bare handles ("@name", "username", …), converted
+  // to full URLs only on submit — see `lib/socialHandles.ts`.
+  const [socials, setSocials] = useState<SocialLinks>(() =>
+    Object.fromEntries(
+      SOCIAL_PLATFORMS.map((p) => [p, extractSocialHandle(p, profile.socials[p])]),
+    ) as SocialLinks,
+  );
   const [skillDraft, setSkillDraft] = useState('');
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -168,7 +175,7 @@ export function EditProfileDialog({
         skills,
         // Every platform is sent, so unchecked/emptied ones clear server-side.
         socials: Object.fromEntries(
-          SOCIAL_PLATFORMS.map((p) => [p, socials[p]?.trim() ?? '']),
+          SOCIAL_PLATFORMS.map((p) => [p, buildSocialUrl(p, socials[p] ?? '')]),
         ) as SocialLinks,
       });
 
@@ -330,21 +337,43 @@ export function EditProfileDialog({
             <div className="grid gap-3 md:grid-cols-2">
               {SOCIAL_PLATFORMS.map((platform) => {
                 const { label, Icon } = SOCIAL_META[platform];
+                // telegram/instagram/github/behance/dribbble: bare handle,
+                // prefixed with "@" or the platform's domain. `website`:
+                // always "https://", the rest is free text. `linkedin` has
+                // no fixed shape — plain URL field, same as before.
+                const handleCfg = SOCIAL_HANDLE_CONFIG[platform];
+                const prefix = platform === 'website' ? 'https://' : handleCfg?.prefix;
                 return (
                   <label key={platform} className="block">
                     <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                       <Icon className="h-3.5 w-3.5" />
                       {label}
                     </span>
-                    <input
-                      type="url"
-                      value={socials[platform] ?? ''}
-                      onChange={(e) =>
-                        setSocials((prev) => ({ ...prev, [platform]: e.target.value }))
-                      }
-                      placeholder="https://…"
-                      className={inputCls}
-                    />
+                    {prefix ? (
+                      <div className="flex items-center rounded-md border bg-background focus-within:ring-1 focus-within:ring-ring">
+                        <span className="shrink-0 select-none py-2 pl-3 text-sm text-muted-foreground">
+                          {prefix}
+                        </span>
+                        <input
+                          value={socials[platform] ?? ''}
+                          onChange={(e) =>
+                            setSocials((prev) => ({ ...prev, [platform]: e.target.value }))
+                          }
+                          placeholder={platform === 'website' ? 'example.com' : 'username'}
+                          className="min-w-0 flex-1 bg-transparent py-2 pr-3 text-sm outline-none"
+                        />
+                      </div>
+                    ) : (
+                      <input
+                        type="url"
+                        value={socials[platform] ?? ''}
+                        onChange={(e) =>
+                          setSocials((prev) => ({ ...prev, [platform]: e.target.value }))
+                        }
+                        placeholder="https://…"
+                        className={inputCls}
+                      />
+                    )}
                   </label>
                 );
               })}

@@ -9,11 +9,13 @@ import {
   Bell,
   Menu,
   X,
-  UserCircle,
+  LayoutGrid,
+  Briefcase,
+  Star,
+  Settings,
   LogOut,
   Mail,
   FlaskConical,
-  IdCard,
 } from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { api, tokenStore } from '@/lib/api';
@@ -73,6 +75,19 @@ export function SiteNav() {
     }
     setMenuOpen(false);
   }, [pathname]);
+
+  // Any successful `api.updateMe` (avatar upload, name change, …) fires this —
+  // without it the header avatar/name would only refresh on the next route
+  // change, since this component doesn't own whatever page made the edit.
+  useEffect(() => {
+    const onMeUpdated = (e: Event) => {
+      const updated = (e as CustomEvent<Me>).detail;
+      setMe(updated);
+      setIsAdmin(updated?.role === 'admin');
+    };
+    window.addEventListener('ishbor:me-updated', onMeUpdated);
+    return () => window.removeEventListener('ishbor:me-updated', onMeUpdated);
+  }, []);
 
   // Lock page scroll while the fullscreen mobile menu is mounted (including
   // the brief exit-animation window after close, so the page doesn't jump).
@@ -288,10 +303,11 @@ function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void
   const th = useTranslations('header');
   const tj = useTranslations('jobs');
   const tp = useTranslations('profile');
-  const tf = useTranslations('freelancer');
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  // `/u/<handle>` is now the single profile page (stacks + portfolio +
+  // reviews + account settings) — these all land there, at a different anchor.
+  const handle = me.username ?? me.id;
 
   useEffect(() => {
     if (!open) return;
@@ -320,7 +336,7 @@ function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void
           open && 'ring-2 ring-ring ring-offset-2 ring-offset-background',
         )}
       >
-        <Avatar name={me.name || '?'} size="sm" />
+        <Avatar name={me.name || '?'} src={me.avatarUrl} size="sm" />
       </button>
 
       <div
@@ -335,7 +351,7 @@ function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void
       >
         {/* Identity card — avatar, name/email, role, and (if any) test result. */}
         <div className="flex items-center gap-3 border-b bg-muted/30 p-3.5">
-          <Avatar name={me.name} size="md" />
+          <Avatar name={me.name} src={me.avatarUrl} size="md" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold">{me.name}</p>
             <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
@@ -364,29 +380,40 @@ function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void
 
         <div className="p-1.5">
           <Link
-            href="/profile"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className={cn(
-              'flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors',
-              pathname === '/profile'
-                ? 'bg-primary/10 text-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-            )}
-          >
-            <UserCircle className="h-4 w-4" />
-            {th('profile')}
-          </Link>
-          {/* Public freelancer page. `username` is optional on legacy accounts,
-              so the id is the fallback handle — `/u/<handle>` accepts both. */}
-          <Link
-            href={`/u/${me.username ?? me.id}` as '/'}
+            href={`/u/${handle}#stacks` as '/'}
             role="menuitem"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <IdCard className="h-4 w-4" />
-            {tf('myPublicProfile')}
+            <LayoutGrid className="h-4 w-4" />
+            {th('myStacks')}
+          </Link>
+          <Link
+            href={`/u/${handle}#portfolio` as '/'}
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Briefcase className="h-4 w-4" />
+            {th('myProjects')}
+          </Link>
+          <Link
+            href={`/u/${handle}#reviews` as '/'}
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Star className="h-4 w-4" />
+            {th('myReviews')}
+          </Link>
+          <Link
+            href={`/u/${handle}#account` as '/'}
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Settings className="h-4 w-4" />
+            {th('accountSettings')}
           </Link>
           <div className="my-1 h-px bg-border" />
           <button

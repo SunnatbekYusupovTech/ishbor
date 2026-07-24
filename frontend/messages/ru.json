@@ -118,6 +118,10 @@
     "noNotifications": "Пока нет уведомлений.",
     "messages": "Сообщения",
     "profile": "Профиль",
+    "myStacks": "Мои стеки",
+    "myProjects": "Мои проекты",
+    "myReviews": "Мои отзывы",
+    "accountSettings": "Настройки аккаунта",
     "menu": "Меню",
     "close": "Закрыть"
   },

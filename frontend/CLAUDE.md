@@ -50,31 +50,48 @@ odatdagi `SiteNav` + `<main>` + footer. `layout.tsx` (ildiz) shu `SiteChrome`ni
   yo'naltiriladi (avval umumiy `/login`ga yuborilardi).
 - `test/page.tsx` — malaka testi (anti-cheat, taymer).
 - `leaderboard/page.tsx` — reyting.
-- `profile/page.tsx` — profil: ism/email/rol, **"Kimligingizni tanlang"**
-  (`primaryDirection` tanlagich — 4 tugma, bosilganda darhol `api.updateMe`
-  bilan saqlanadi, optimistik yangilanadi), har bir yo'nalish uchun
-  `components/DirectionProgress.tsx` progress-bar (6 pog'ona: junior→
-  strong-junior→middle→strong-middle→senior→strong-senior, "siz shu yerdasiz"
-  width-based bar), eng yaxshi natija/urinishlar, `isQaTester` bo'lsa
-  ogohlantirish, test/reyting/chiqish havolalari. `SiteNav`dagi far-right
-  `UserMenu` avatar-dropdown orqali ochiladi (faqat `authed` bo'lsa ko'rinadi).
-  To'liq CRUD: **Update** — `EditProfileCard` (ism/email + ixtiyoriy parol
-  o'zgartirish, `api.updateMe` → `PATCH /auth/me`); **Delete** —
-  `DangerZoneCard` (parol tasdig'i bilan `Dialog`, `api.deleteMe` →
-  `DELETE /auth/me`, muvaffaqiyatda `tokenStore.clear()` + `/`ga yo'naltirish).
-- `u/[handle]/page.tsx` — **ommaviy frilanser profili** (`/u/<username>`, yoki
+- `profile/page.tsx` — **endi faqat redirect**: tizimga kirmagan bo'lsa
+  `/login?next=/profile`ga, kirgan bo'lsa `api.me()` orqali o'z
+  `/u/<username-yoki-id>`iga `router.replace` qiladi. Yagona profil sahifasi
+  endi `u/[handle]/page.tsx` — eski bookmark/havolalar shu orqali ishlayveradi.
+- `u/[handle]/page.tsx` — **yagona profil sahifasi** (`/u/<username>`, yoki
   username tanlamagan eski akkauntlar uchun `/u/<id>` — backend ikkalasini
-  ham hal qiladi). Tizimga kirmasdan ham ochiladi; javobdagi `isOwner`
-  qo'shish/tahrirlash/o'chirish tugmalarini yoqadi (serverda ham egalik
-  qayta tekshiriladi — batafsil `backend/CLAUDE.md` → "Frilanser profili").
-  Tuzilishi: `ProfileHeader` (muqova + avatar + ism/@username + onlayn
-  nuqta + mutaxassislik + ko'nikma teglari) → ikki ustun
-  `lg:grid-cols-[minmax(0,1fr)_300px]` (chapda `AboutSection` +
-  `SocialLinksSection` + `PortfolioSection`, o'ngda sticky `ProfileSidebar`)
-  → pastda to'liq kenglikdagi `ReviewsSection`. `EditProfileDialog` —
-  egasining hamma maydonlarini bitta `PATCH /auth/me`da saqlaydi.
-  Username o'zgarsa sahifa yangi handle'ga `router.replace` qiladi
-  (aks holda URL ishlamay qolardi).
+  ham hal qiladi). Ilgari alohida bo'lgan "shaxsiy" (`/profile`) va "ommaviy"
+  (`/u/[handle]`) sahifalar shu bittasiga birlashtirildi — stacklar, portfolio,
+  sharhlar va hisob sozlamalari bittasida, hammaga ko'rinadigan qilib (egalikka
+  bog'liq bo'limlar bundan mustasno). Tizimga kirmasdan ham ochiladi; javobdagi
+  `isOwner` qo'shish/tahrirlash/o'chirish tugmalarini yoqadi (serverda ham
+  egalik qayta tekshiriladi — batafsil `backend/CLAUDE.md` → "Frilanser profili").
+  Tuzilishi (yuqoridan pastga, har bo'lim `scroll-mt-24` bilan anchor-navigatsiya
+  uchun `id` olib yuradi):
+  1. `ProfileHeader` (muqova + avatar + ism/@username + onlayn nuqta +
+     mutaxassislik + ko'nikma teglari).
+  2. `components/profile/StacksSection.tsx` (`id="stacks"`) — 4 yo'nalish uchun
+     `DirectionProgress` progress-barlar (hammaga ko'rinadi, `GET /users/profile/:handle`
+     javobidagi `verificationLevels`dan — ommaviy javobda allaqachon bor edi),
+     **egasiga** esa qo'shimcha `primaryDirection` tanlagich (4 tugma, `api.updateMe`
+     bilan optimistik saqlanadi) + eng yaxshi natija/urinishlar + "Testni
+     topshirish" tugmasi.
+  3. Ikki ustun `lg:grid-cols-[minmax(0,1fr)_300px]` — chapda `AboutSection` +
+     `SocialLinksSection` + `PortfolioSection` (`id="portfolio"`), o'ngda sticky
+     `ProfileSidebar`.
+  4. `ReviewsSection` (`id="reviews"`, to'liq kenglikda).
+  5. `components/profile/AccountSection.tsx` (`id="account"`, **faqat
+     `profile.isOwner`**) — ism/email/parol (eski `EditProfileCard` mantig'i,
+     `api.updateMe`) + `isQaTester` banneri + `DangerZoneCard` (akkountni
+     o'chirish, `api.deleteMe`). Bu bo'lim uchun kerak `email`/`isQaTester`
+     (ommaviy javobda yo'q) — sahifa `isOwner===true` bo'lganda bitta qo'shimcha
+     `api.me()` chaqiradi.
+  `EditProfileDialog` (ommaviy maydonlar — username/specialization/skills/about/
+  avatar/cover/country/language/timezone/socials) o'zgarishsiz qoladi, hammasi
+  bitta `PATCH /auth/me`da saqlanadi. Username o'zgarsa sahifa yangi handle'ga
+  `router.replace` qiladi (aks holda URL ishlamay qolardi).
+  **`SiteNav`dagi `UserMenu` dropdown** endi bitta "Profile" link o'rniga to'rtta
+  anchor-link: **Mening yo'nalishlarim** (`#stacks`), **Mening loyihalarim**
+  (`#portfolio`), **Mening sharhlarim** (`#reviews`), **Hisob sozlamalari**
+  (`#account`) — barchasi bir xil `/u/<handle>`ga, faqat boshqa anchor bilan
+  (Next.js `Link` bir xil route'da hash bilan navigatsiya qilganda avtomatik
+  scroll qiladi, qo'shimcha JS shart emas).
 - `login/page.tsx` — kirish/ro'yxatdan o'tish.
 - `layout.tsx` — html/body, `ThemeProvider`, `NextIntlClientProvider`, `SiteChrome`.
 

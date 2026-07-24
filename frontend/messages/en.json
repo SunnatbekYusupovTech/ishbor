@@ -118,6 +118,10 @@
     "noNotifications": "No notifications yet.",
     "messages": "Messages",
     "profile": "Profile",
+    "myStacks": "My stacks",
+    "myProjects": "My projects",
+    "myReviews": "My reviews",
+    "accountSettings": "Account settings",
     "menu": "Menu",
     "close": "Close"
   },

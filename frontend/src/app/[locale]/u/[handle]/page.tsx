@@ -6,14 +6,16 @@ import { useTranslations } from 'next-intl';
 import { ArrowLeft, UserX } from 'lucide-react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { api, ApiError } from '@/lib/api';
-import type { FreelancerProfile, PortfolioItem, ProfileReview } from '@/types/domain';
+import type { Direction, FreelancerProfile, PortfolioItem, ProfileReview } from '@/types/domain';
 import { Button } from '@/components/ui/button';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { StacksSection } from '@/components/profile/StacksSection';
 import { AboutSection } from '@/components/profile/AboutSection';
 import { SocialLinksSection } from '@/components/profile/SocialLinksSection';
 import { PortfolioSection } from '@/components/profile/PortfolioSection';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { ReviewsSection } from '@/components/profile/ReviewsSection';
+import { AccountSection } from '@/components/profile/AccountSection';
 import { EditProfileDialog } from '@/components/profile/EditProfileDialog';
 
 /**
@@ -31,6 +33,9 @@ export default function FreelancerProfilePage() {
   const handle = params.handle;
 
   const [profile, setProfile] = useState<FreelancerProfile | null>(null);
+  const [account, setAccount] = useState<{ name: string; email: string; isQaTester?: boolean } | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -41,7 +46,21 @@ export default function FreelancerProfilePage() {
     api
       .getProfile(handle)
       .then((data) => {
-        if (!cancelled) setProfile(data);
+        if (cancelled) return;
+        setProfile(data);
+        // `FreelancerProfile` doesn't carry `email`/`isQaTester` (those are
+        // account-only, not part of the public response) — one extra call,
+        // only for the owner, to feed the account-settings section.
+        if (data.isOwner) {
+          api
+            .me()
+            .then((me) => {
+              if (!cancelled) setAccount({ name: me.name, email: me.email, isQaTester: me.isQaTester });
+            })
+            .catch(() => {
+              /* Account section just won't render if this fails. */
+            });
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof ApiError ? err.message : t('loadError'));
@@ -79,6 +98,27 @@ export default function FreelancerProfilePage() {
         : 0,
     });
 
+  const onPickDirection = (direction: Direction) => {
+    if (!profile || profile.primaryDirection === direction) return;
+    const prev = profile;
+    patchProfile({ primaryDirection: direction }); // optimistic
+    api.updateMe({ primaryDirection: direction }).catch(() => setProfile(prev));
+  };
+
+  // Re-run the hash scroll once loading settles, and again once `account`
+  // arrives: that section (`#account`) mounts a beat later than the rest
+  // (it waits on a second, owner-only `api.me()` call), so the browser's
+  // own on-load hash scroll can fire before it exists in the DOM.
+  useEffect(() => {
+    if (loading) return;
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    const id = requestAnimationFrame(() => {
+      document.getElementById(hash)?.scrollIntoView({ block: 'start' });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [loading, account]);
+
   if (loading) return <ProfileSkeleton />;
 
   if (error || !profile) {
@@ -101,17 +141,21 @@ export default function FreelancerProfilePage() {
     <div className="mx-auto max-w-5xl space-y-5">
       <ProfileHeader profile={profile} onEdit={() => setEditing(true)} />
 
+      <StacksSection profile={profile} onPickDirection={onPickDirection} />
+
       {/* Sidebar first in the DOM on mobile would push the portfolio down, so
           the grid keeps source order and only splits from `lg` up. */}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 space-y-5">
           <AboutSection about={profile.about} isOwner={profile.isOwner} />
           <SocialLinksSection socials={profile.socials} />
-          <PortfolioSection
-            items={profile.portfolio}
-            isOwner={profile.isOwner}
-            onChange={onPortfolioChange}
-          />
+          <div id="portfolio" className="scroll-mt-24">
+            <PortfolioSection
+              items={profile.portfolio}
+              isOwner={profile.isOwner}
+              onChange={onPortfolioChange}
+            />
+          </div>
         </div>
 
         <aside className="lg:row-start-1 lg:col-start-2">
@@ -119,12 +163,26 @@ export default function FreelancerProfilePage() {
         </aside>
       </div>
 
-      <ReviewsSection
-        handle={handle}
-        reviews={profile.reviews}
-        isOwner={profile.isOwner}
-        onChange={onReviewsChange}
-      />
+      <div id="reviews" className="scroll-mt-24">
+        <ReviewsSection
+          handle={handle}
+          reviews={profile.reviews}
+          isOwner={profile.isOwner}
+          onChange={onReviewsChange}
+        />
+      </div>
+
+      {profile.isOwner && account && (
+        <AccountSection
+          name={account.name}
+          email={account.email}
+          isQaTester={account.isQaTester}
+          onUpdated={(patch) => {
+            setAccount((prev) => (prev ? { ...prev, ...patch } : prev));
+            patchProfile({ name: patch.name });
+          }}
+        />
+      )}
 
       {editing && (
         <EditProfileDialog

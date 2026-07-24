@@ -67,6 +67,18 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
+- **Profil sahifalarini birlashtirish (Sardor):** ilgari alohida bo'lgan
+  shaxsiy `/profile` (ism/email/parol, verifikatsiya darajalari, akkountni
+  o'chirish) va ommaviy `/u/[handle]` (about/portfolio/sharhlar) sahifalari
+  bitta **`u/[handle]/page.tsx`**ga birlashtirildi — stacklar (yangi
+  `StacksSection`, hammaga ko'rinadi), portfolio, sharhlar va hisob
+  sozlamalari (yangi `AccountSection`, faqat egasiga) endi bitta sahifada,
+  har biri anchor `id` bilan (`#stacks`/`#portfolio`/`#reviews`/`#account`).
+  `/profile` endi shunchaki `/u/<o'z-handle>`ga yo'naltiruvchi thin redirect
+  (eski havolalar buzilmasin deb). `SiteNav`dagi `UserMenu` dropdown'da yagona
+  "Profile" o'rniga to'rtta anchor-link (Mening yo'nalishlarim/loyihalarim/
+  sharhlarim/Hisob sozlamalari). Backendga tegilmagan — ikkalasi ham bir xil
+  `PATCH /auth/me`ga yozar edi. Batafsil: `frontend/CLAUDE.md` → "Marshrutlar".
 - **Rasm yuklash (drag & drop + kompyuterdan tanlash):** avatar, profil
   muqovasi va portfolio rasmlari endi **URL orqali emas, to'g'ridan-to'g'ri
   kompyuterdan** qo'yiladi — faylni tashlab (drag & drop), bosib tanlab yoki
