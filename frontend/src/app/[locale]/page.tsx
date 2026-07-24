@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Plus,
@@ -9,7 +9,6 @@ import {
   Building2,
   SlidersHorizontal,
   X,
-  Heart,
   EyeOff,
   ShieldCheck,
   Bookmark,
@@ -24,7 +23,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFavorites } from '@/lib/favorites';
 import { hiddenJobs, useHiddenJobs } from '@/lib/hidden';
 import { RegionSelect } from '@/components/region-select';
-import { useAnimatedOverlay } from '@/hooks/useAnimatedOverlay';
+import { useSidebarSlot } from '@/components/dashboard/SidebarSlotContext';
 import { cn } from '@/lib/utils';
 
 const LEVELS: Level[] = ['junior', 'middle', 'senior'];
@@ -62,17 +61,19 @@ export default function JobsPage() {
   const [error, setError] = useState<string | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
   const [authed, setAuthed] = useState(false);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const mobileFiltersRendered = useAnimatedOverlay(mobileFiltersOpen);
+  const setSidebarContent = useSidebarSlot();
 
   const favIds = useFavorites();
   const hiddenIds = useHiddenJobs();
 
-  // Read the "saved" view intent (from the header heart) + auth state on mount.
+  // Read the "saved" view intent (from the sidebar heart) + a `?q=` deep link
+  // (from the header's global search) + auth state, all on mount.
   useEffect(() => {
     setAuthed(!!tokenStore.get());
     const params = new URLSearchParams(window.location.search);
     setSavedOnly(params.get('saved') === '1');
+    const q = params.get('q');
+    if (q) setQuery(q);
   }, []);
 
   const toggleSaved = (val: boolean) => {
@@ -139,22 +140,189 @@ export default function JobsPage() {
   };
   const hideJob = (id: string) => hiddenJobs.hide(id);
 
-  // Lock page scroll while the mobile filters overlay is mounted (including
-  // the brief exit-animation window after close, so the page doesn't jump).
+  // Push this page's sidebar widgets (activity/filters/saved-searches/promo)
+  // into the persistent `LeftSidebar` — same JSX, same state/handlers as
+  // before, just rendered through the shared slot instead of a local
+  // `<aside>` (see `SidebarSlotContext`). Cleared on unmount so navigating
+  // away doesn't leave stale filters showing in the sidebar.
   useEffect(() => {
-    if (!mobileFiltersRendered) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [mobileFiltersRendered]);
+    setSidebarContent(
+      <>
+        {/* Filters */}
+        <div className="space-y-3 rounded-2xl border bg-card p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-sm font-bold">
+              <SlidersHorizontal className="h-4 w-4" />
+              {t('filters')}
+            </span>
+            {hasFilters && (
+              <button
+                onClick={resetFilters}
+                className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+                {t('reset')}
+              </button>
+            )}
+          </div>
+          <FilterGroup
+            label={t('filterStack')}
+            value={stack}
+            options={STACKS}
+            onChange={setStack}
+            render={(v) => ts(v)}
+            allLabel={t('all')}
+          />
+          <FilterGroup
+            label={t('filterLevel')}
+            value={level}
+            options={LEVELS}
+            onChange={setLevel}
+            render={(v) => tl(v)}
+            allLabel={t('all')}
+          />
+
+          {/* Location */}
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('filterLocation')}
+            </span>
+            <RegionSelect
+              value={location}
+              onChange={setLocation}
+              className="mt-2"
+              selectClassName="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+            />
+          </div>
+
+          {/* Salary range */}
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('filterSalary')}
+            </span>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={salaryMin}
+                onChange={(e) => setSalaryMin(e.target.value)}
+                placeholder={t('salaryMinPlaceholder')}
+                className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+              />
+              <span className="text-muted-foreground">–</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={salaryMax}
+                onChange={(e) => setSalaryMax(e.target.value)}
+                placeholder={t('salaryMaxPlaceholder')}
+                className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+              />
+            </div>
+          </div>
+
+          {/* Sort */}
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('sortBy')}
+            </span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortOption)}
+              className="mt-2 h-9 w-full rounded-lg border bg-background px-2 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o} value={o}>
+                  {t(`sort_${o}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Saved searches (presets) */}
+        <div className="rounded-2xl border bg-card p-4 shadow-sm">
+          <h2 className="flex items-center gap-1.5 text-sm font-bold">
+            <Bookmark className="h-4 w-4" />
+            {t('sidebarSearches')}
+          </h2>
+          <div className="mt-3 flex flex-col gap-1.5">
+            {PRESETS.map((p) => (
+              <button
+                key={`${p.stack}-${p.level}`}
+                onClick={() => {
+                  setStack(p.stack);
+                  setLevel(p.level);
+                }}
+                className="flex items-center justify-between rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <span className="font-medium text-foreground">{ts(p.stack)}</span>
+                <span className="text-xs">{tl(p.level)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Verify-skills promo */}
+        <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 p-4 shadow-sm">
+          <ShieldCheck className="h-6 w-6 text-primary" />
+          <h2 className="mt-2 text-sm font-bold">{t('promoTitle')}</h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t('promoBody')}</p>
+          <Button asChild size="sm" className="mt-3 w-full">
+            <Link href="/test">{t('promoCta')}</Link>
+          </Button>
+        </div>
+
+        {/* Guest sign-in nudge */}
+        {!authed && (
+          <div className="rounded-2xl border border-dashed p-4 text-center">
+            <p className="text-xs text-muted-foreground">{t('guestPrompt')}</p>
+            <Button asChild variant="outline" size="sm" className="mt-2.5 w-full">
+              <Link href="/login">
+                <LogIn className="h-4 w-4" />
+                {t('signIn')}
+              </Link>
+            </Button>
+          </div>
+        )}
+      </>,
+    );
+    return () => setSidebarContent(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `setSidebarContent` (useState setter) and the `t`/`ts`/`tl` translators are stable references; only the filter values below should retrigger this.
+  }, [
+    stack,
+    level,
+    location,
+    salaryMin,
+    salaryMax,
+    sort,
+    authed,
+    hasFilters,
+  ]);
 
   const roleTabs: { value: RoleFilter; label: string; icon: React.ReactNode }[] = [
     { value: 'all', label: t('tabAll'), icon: <Users className="h-4 w-4" /> },
     { value: 'vacancy', label: t('tabEmployers'), icon: <Building2 className="h-4 w-4" /> },
     { value: 'resume', label: t('tabSeekers'), icon: <Users className="h-4 w-4" /> },
   ];
+
+  // Sliding-pill indicator for the role tabs — measures the active button's
+  // own position/width and animates a single background block to it, instead
+  // of each button abruptly swapping its own background colour.
+  const tabsRef = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const recompute = () => {
+      const btn = tabsRef.current[role];
+      if (btn) setPill({ left: btn.offsetLeft, width: btn.offsetWidth });
+    };
+    recompute();
+    window.addEventListener('resize', recompute);
+    return () => window.removeEventListener('resize', recompute);
+  }, [role]);
 
   return (
     <div className="space-y-5">
@@ -181,18 +349,27 @@ export default function JobsPage() {
           </Button>
         </div>
 
-        {/* Role segmented control + mobile filters trigger */}
+        {/* Role segmented control — a single pill slides between tabs
+            (measured off the active button) instead of each tab's own
+            background abruptly swapping colour. */}
         <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="inline-flex rounded-xl border bg-card p-1 text-sm font-medium shadow-sm">
+          <div className="relative inline-flex rounded-xl border bg-card p-1 text-sm font-medium shadow-sm">
+            {pill && (
+              <span
+                className="absolute inset-y-1 rounded-lg bg-primary shadow-sm transition-all duration-300 ease-out"
+                style={{ left: pill.left, width: pill.width }}
+              />
+            )}
             {roleTabs.map((tab) => (
               <button
                 key={tab.value}
+                ref={(el) => {
+                  tabsRef.current[tab.value] = el;
+                }}
                 onClick={() => setRole(tab.value)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-lg px-3.5 py-2 transition-all',
-                  role === tab.value
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
+                  'relative z-10 flex items-center gap-1.5 rounded-lg px-3.5 py-2 transition-colors duration-300',
+                  role === tab.value ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {tab.icon}
@@ -200,283 +377,77 @@ export default function JobsPage() {
               </button>
             ))}
           </div>
-
-          <button
-            type="button"
-            onClick={() => setMobileFiltersOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border bg-card px-3.5 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent xl:hidden"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            {t('filters')}
-            {hasFilters && (
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            )}
-          </button>
         </div>
       </section>
 
-      {/* ── Two-column body ─────────────────────────────────────── */}
-      <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
-        {/* Sidebar — a normal sticky column on desktop; a fullscreen (full
-            width + full height) overlay on mobile, toggled by the button
-            above. Stays mounted the whole time (desktop needs it always);
-            `mobileFiltersRendered` only controls the mobile overlay's
-            presence, staying true for `duration-300` after close so the
-            slide/fade-out animation has time to play before it's hidden. */}
-        <aside
-          className={cn(
-            'space-y-4 xl:block xl:h-auto xl:w-auto xl:overflow-visible xl:bg-transparent xl:p-0 xl:sticky xl:top-20 xl:self-start',
-            mobileFiltersRendered
-              ? cn(
-                  'fixed inset-0 z-50 h-dvh w-full overflow-y-auto bg-background p-4 duration-300',
-                  mobileFiltersOpen
-                    ? 'animate-in fade-in slide-in-from-left'
-                    : 'animate-out fade-out slide-out-to-left',
-                )
-              : 'hidden',
+      {/* ── Feed — filters/saved-searches now render in the persistent
+          left sidebar (see the `setSidebarContent` effect above), so this
+          column has the full content width to itself. ────────────────── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          {!loading && !error && (
+            <p className="text-sm font-medium text-muted-foreground">
+              {t('resultsCount', { count: filtered.length })}
+            </p>
           )}
-        >
-          {/* Mobile-only header (title + close) — the desktop column has no need for it. */}
-          <div className="flex items-center justify-between xl:hidden">
-            <h2 className="text-lg font-bold">{t('filters')}</h2>
-            <button
-              type="button"
-              onClick={() => setMobileFiltersOpen(false)}
-              aria-label={t('close')}
-              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Activity / saved */}
-          <div className="rounded-2xl border bg-card p-4 shadow-sm">
-            <h2 className="text-sm font-bold">{t('sidebarTitle')}</h2>
-            <button
-              onClick={() => toggleSaved(!savedOnly)}
-              className={cn(
-                'mt-3 flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-colors',
-                savedOnly ? 'border-primary bg-accent text-accent-foreground' : 'hover:bg-accent',
-              )}
-            >
-              <span className="flex items-center gap-2 font-medium">
-                <Heart className={cn('h-4 w-4', savedOnly && 'fill-current')} />
-                {t('sidebarFavorites')}
-              </span>
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold tabular-nums text-primary">
-                {favIds.length}
-              </span>
-            </button>
-          </div>
-
-          {/* Filters */}
-          <div className="space-y-3 rounded-2xl border bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-sm font-bold">
-                <SlidersHorizontal className="h-4 w-4" />
-                {t('filters')}
-              </span>
-              {hasFilters && (
-                <button
-                  onClick={resetFilters}
-                  className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  {t('reset')}
-                </button>
-              )}
-            </div>
-            <FilterGroup
-              label={t('filterStack')}
-              value={stack}
-              options={STACKS}
-              onChange={setStack}
-              render={(v) => ts(v)}
-              allLabel={t('all')}
-            />
-            <FilterGroup
-              label={t('filterLevel')}
-              value={level}
-              options={LEVELS}
-              onChange={setLevel}
-              render={(v) => tl(v)}
-              allLabel={t('all')}
-            />
-
-            {/* Location */}
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {t('filterLocation')}
-              </span>
-              <RegionSelect
-                value={location}
-                onChange={setLocation}
-                className="mt-2"
-                selectClassName="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
-              />
-            </div>
-
-            {/* Salary range */}
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {t('filterSalary')}
-              </span>
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={salaryMin}
-                  onChange={(e) => setSalaryMin(e.target.value)}
-                  placeholder={t('salaryMinPlaceholder')}
-                  className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
-                />
-                <span className="text-muted-foreground">–</span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={salaryMax}
-                  onChange={(e) => setSalaryMax(e.target.value)}
-                  placeholder={t('salaryMaxPlaceholder')}
-                  className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
-                />
-              </div>
-            </div>
-
-            {/* Sort */}
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {t('sortBy')}
-              </span>
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SortOption)}
-                className="mt-2 h-9 w-full rounded-lg border bg-background px-2 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+          <div className="flex items-center gap-3">
+            {hiddenIds.length > 0 && (
+              <button
+                onClick={() => hiddenJobs.clear()}
+                className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {t(`sort_${o}`)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Saved searches (presets) */}
-          <div className="rounded-2xl border bg-card p-4 shadow-sm">
-            <h2 className="flex items-center gap-1.5 text-sm font-bold">
-              <Bookmark className="h-4 w-4" />
-              {t('sidebarSearches')}
-            </h2>
-            <div className="mt-3 flex flex-col gap-1.5">
-              {PRESETS.map((p) => (
-                <button
-                  key={`${p.stack}-${p.level}`}
-                  onClick={() => {
-                    setStack(p.stack);
-                    setLevel(p.level);
-                  }}
-                  className="flex items-center justify-between rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <span className="font-medium text-foreground">{ts(p.stack)}</span>
-                  <span className="text-xs">{tl(p.level)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Verify-skills promo */}
-          <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 p-4 shadow-sm">
-            <ShieldCheck className="h-6 w-6 text-primary" />
-            <h2 className="mt-2 text-sm font-bold">{t('promoTitle')}</h2>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t('promoBody')}</p>
-            <Button asChild size="sm" className="mt-3 w-full">
-              <Link href="/test">{t('promoCta')}</Link>
-            </Button>
-          </div>
-
-          {/* Guest sign-in nudge */}
-          {!authed && (
-            <div className="rounded-2xl border border-dashed p-4 text-center">
-              <p className="text-xs text-muted-foreground">{t('guestPrompt')}</p>
-              <Button asChild variant="outline" size="sm" className="mt-2.5 w-full">
-                <Link href="/login">
-                  <LogIn className="h-4 w-4" />
-                  {t('signIn')}
-                </Link>
-              </Button>
-            </div>
-          )}
-        </aside>
-
-        {/* Feed */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            {!loading && !error && (
-              <p className="text-sm font-medium text-muted-foreground">
-                {t('resultsCount', { count: filtered.length })}
-              </p>
+                <EyeOff className="h-3.5 w-3.5" />
+                {t('restoreHidden', { count: hiddenIds.length })}
+              </button>
             )}
-            <div className="flex items-center gap-3">
-              {hiddenIds.length > 0 && (
-                <button
-                  onClick={() => hiddenJobs.clear()}
-                  className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <EyeOff className="h-3.5 w-3.5" />
-                  {t('restoreHidden', { count: hiddenIds.length })}
-                </button>
-              )}
-              {savedOnly && (
-                <button
-                  onClick={() => toggleSaved(false)}
-                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  {t('sidebarFavorites')}
-                </button>
-              )}
-            </div>
+            {savedOnly && (
+              <button
+                onClick={() => toggleSaved(false)}
+                className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                <X className="h-3.5 w-3.5" />
+                {t('sidebarFavorites')}
+              </button>
+            )}
           </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {error ? null : loading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-44 animate-pulse rounded-2xl border bg-muted/40" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed bg-card py-20 text-center text-muted-foreground">
-              <Search className="h-10 w-10 opacity-40" />
-              <p>{t('empty')}</p>
-              {(hasFilters || savedOnly) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    resetFilters();
-                    toggleSaved(false);
-                  }}
-                >
-                  {t('reset')}
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filtered.map((job) => (
-                <JobCard key={job.id} job={job} onHide={hideJob} />
-              ))}
-            </div>
-          )}
         </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {error ? null : loading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-44 animate-pulse rounded-2xl border bg-muted/40" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed bg-card py-20 text-center text-muted-foreground">
+            <Search className="h-10 w-10 opacity-40" />
+            <p>{t('empty')}</p>
+            {(hasFilters || savedOnly) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  resetFilters();
+                  toggleSaved(false);
+                }}
+              >
+                {t('reset')}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filtered.map((job) => (
+              <JobCard key={job.id} job={job} onHide={hideJob} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -67,6 +67,19 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
+- **3-ustunli dashboard qobig'i (Sardor):** eski bitta gorizontal `SiteNav`
+  (nav linklar + avatar-dropdown) **chap sticky nav-sidebar** (`LeftSidebar`,
+  mobil'da off-canvas) + **yupqa header** (`TopHeader` — logo/global qidiruv/
+  bildirishnoma/avatar) + **o'ng widget-panel**ga (`RightSidebar` — faqat `/`
+  va `/u/*`da: verifikatsiya xulosasi, saqlangan e'lonlar, tezkor havolalar)
+  bo'lindi. Barchasi `frontend/src/components/dashboard/`da. E'lonlar
+  sahifasining filtr/faoliyat/promo bloklari **`SidebarSlotContext`** orqali
+  (yangi context+hook) `LeftSidebar`ga "push" qilinadi — sahifaning o'zi
+  hech qanday state/hook/API chaqirig'ini yo'qotmadi, faqat render joyi
+  o'zgardi. `api.me()` endi bitta joyda (`hooks/useCurrentUser.ts`) chaqiriladi
+  (avval har komponent alohida so'rov yuborardi). Admin panel bundan tegilmadi
+  (o'zining yalang'och `<main>`i saqlanib qoldi). Batafsil:
+  `frontend/CLAUDE.md` → "Dashboard qobig'i".
 - **Profil sahifalarini birlashtirish (Sardor):** ilgari alohida bo'lgan
   shaxsiy `/profile` (ism/email/parol, verifikatsiya darajalari, akkountni
   o'chirish) va ommaviy `/u/[handle]` (about/portfolio/sharhlar) sahifalari

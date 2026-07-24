@@ -205,15 +205,7 @@ function EditAccountCard({
                 {t('cancelPasswordChange')}
               </button>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={toggleChangePassword}
-              className="text-sm font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {t('changePassword')}
-            </button>
-          )}
+          ) : null}
 
           {error && (
             <Alert variant="destructive">
@@ -227,9 +219,20 @@ function EditAccountCard({
             </Alert>
           )}
 
-          <Button type="submit" disabled={saving} className="w-full sm:w-auto">
-            {saving ? t('saving') : t('save')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-5">
+            {!changingPassword && (
+              <button
+                type="button"
+                onClick={toggleChangePassword}
+                className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {t('changePassword')}
+              </button>
+            )}
+            <Button type="submit" disabled={saving} className="w-full sm:w-auto">
+              {saving ? t('saving') : t('save')}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

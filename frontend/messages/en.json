@@ -447,5 +447,12 @@
     "levelJunior": "Junior Verified",
     "levelMiddle": "Middle Verified",
     "levelSenior": "Senior Verified"
+  },
+  "dashboard": {
+    "statsTitle": "Verification",
+    "savedTitle": "Saved jobs",
+    "quickLinksTitle": "Quick links",
+    "noSaved": "No saved jobs yet.",
+    "moreSaved": "+{count} more"
   }
 }

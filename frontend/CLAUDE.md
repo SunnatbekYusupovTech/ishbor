@@ -21,13 +21,54 @@ Muhit: `frontend/.env.local` → `NEXT_PUBLIC_API_URL` (default `http://localhos
 
 **Fayl tuzilishi tekis** (route group YO'Q — bir marta `(site)`/`admin` route-group
 sinab ko'rilgan edi, lekin Vercel production build'ini buzgan, sababi to'liq
-aniqlanmagan; shu sabab qaytarilgan). Admin panelda header yo'qligi endi
+aniqlanmagan; shu sabab qaytarilgan). Admin panelda chrome yo'qligi endi
 **`components/SiteChrome.tsx`** (client komponent) orqali — `usePathname()`
-`/admin` bilan boshlansa `SiteNav`/footer'siz oddiy `<main>` qaytaradi, aks holda
-odatdagi `SiteNav` + `<main>` + footer. `layout.tsx` (ildiz) shu `SiteChrome`ni
+`/admin` bilan boshlansa yalang'och `<main>` qaytaradi, aks holda pastdagi
+3-ustunli dashboard qobig'i. `layout.tsx` (ildiz) shu `SiteChrome`ni
 `{children}` atrofida o'raydi — boshqa hech qanday layout fayli yo'q.
 
-- `page.tsx` — **e'lonlar sahifasi** (asosiy): rol segmenti, filtrlar, qidiruv, card grid.
+### Dashboard qobig'i (3-ustunli, `components/dashboard/`)
+
+Eski bitta gorizontal `SiteNav` (nav linklar + avatar-dropdown bitta headerda)
+**3-ustunli dashboard** ko'rinishiga almashtirildi — chap doimiy nav-sidebar,
+yupqa header, o'ng widget-panel; markaziy sahifalar (jobs/profil) o'z
+logikasi/state/API chaqiruvlarini **to'liq saqlab qoladi**, faqat joylashuvi
+o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
+
+- **`TopHeader.tsx`** — yupqa, sticky: mobil hamburger, logo, global qidiruv
+  input (`Enter` → `/?q=<so'z>`ga o'tadi; `page.tsx` buni `saved=1` bilan bir
+  xil naqshda o'qib `query` state'ni to'ldiradi), `NotificationsBell` (bo'sh
+  holat popover'i, backend'siz — eski SiteNav'dan ko'chirilgan), avatar (endi
+  dropdown emas — to'g'ridan-to'g'ri `/u/<handle>`ga link, chunki to'liq menyu
+  sidebar'da).
+- **`LeftSidebar.tsx`** — `lg:` va undan yuqorida doimiy/sticky ustun (`lg:w-64`),
+  undan past — header hamburgeri bilan ochiladigan fullscreen off-canvas
+  (`useAnimatedOverlay`, eski mobil-menyu naqshi). Ichki `SidebarNavContent`
+  ikkalasida ham qayta ishlatiladi: asosiy nav (Jobs/Leaderboard/Post a job/
+  Admin), Saqlanganlar qatori (eski header yuragi o'rniga), **sahifa
+  yuboradigan slot-kontent** (pastga qarang — jobs sahifasining filtrlari),
+  profil-menyu qatorlari (My stacks/My projects/My reviews/Account settings —
+  `/u/<handle>#anchor`), til/tema tugmalari, Chiqish (`LogoutDialog` shu yerda).
+- **`RightSidebar.tsx`** — faqat `SiteChrome`da `pathname === '/' ||
+  pathname.startsWith('/u/')` bo'lganda va faqat tizimga kirgan holda
+  (`xl:` va undan yuqorida, `xl:w-72`): verifikatsiya xulosasi + "Testni
+  topshirish" CTA, saqlangan e'lonlar mini-ro'yxati (`useFavorites()` faqat
+  ID beradi — mavjud `api.getJobs()`ni qayta chaqirib ID bo'yicha filtrlaydi,
+  sarlavhalar bilan), tezkor havolalar.
+- **`SidebarSlotContext.tsx`** — `SidebarSlotProvider` + `useSidebarSlot()`.
+  `LeftSidebar` layout darajasida (page'lardan tashqarida) yashagani uchun,
+  jobs sahifasi o'z filter-JSX'ini shu context orqali "push" qiladi
+  (`useEffect`, unmount'da `null`) — **hech qanday state/hook page'dan
+  chiqmaydi**, faqat render joyi o'zgaradi. Hozircha faqat `page.tsx`
+  ishlatadi; yangi sahifa o'z sidebar-vidjetini xohlasa shu naqshni
+  qaytarsin (route-group emas — mavjud pathname-check konvensiyasiga mos).
+- **`hooks/useCurrentUser.ts`** — `api.me()` + `ishbor:me-updated` tinglovchi
+  bitta joyda (`SiteChrome`), natija `TopHeader`/`LeftSidebar`/`RightSidebar`ga
+  prop sifatida uzatiladi — har biri alohida so'rov yubormasin deb.
+
+- `page.tsx` — **e'lonlar sahifasi** (asosiy): rol segmenti, qidiruv, card grid
+  (filtrlar/saqlangan-qidiruvlar endi yuqoridagi `SidebarSlotContext` orqali
+  `LeftSidebar`da ko'rinadi — sahifaning o'zi bitta ustun).
   Kengaytirilgan filtrlar: joylashuv (`RegionSelect`), maosh oralig'i, sort.
 - `jobs/new/page.tsx` — e'lon berish. Seeker uchun daraja **stack-bo'yicha**:
   `verificationLevels[form.stack]` (frontend testidan o'tish backend rezyume
@@ -86,12 +127,12 @@ odatdagi `SiteNav` + `<main>` + footer. `layout.tsx` (ildiz) shu `SiteChrome`ni
   avatar/cover/country/language/timezone/socials) o'zgarishsiz qoladi, hammasi
   bitta `PATCH /auth/me`da saqlanadi. Username o'zgarsa sahifa yangi handle'ga
   `router.replace` qiladi (aks holda URL ishlamay qolardi).
-  **`SiteNav`dagi `UserMenu` dropdown** endi bitta "Profile" link o'rniga to'rtta
-  anchor-link: **Mening yo'nalishlarim** (`#stacks`), **Mening loyihalarim**
-  (`#portfolio`), **Mening sharhlarim** (`#reviews`), **Hisob sozlamalari**
-  (`#account`) — barchasi bir xil `/u/<handle>`ga, faqat boshqa anchor bilan
-  (Next.js `Link` bir xil route'da hash bilan navigatsiya qilganda avtomatik
-  scroll qiladi, qo'shimcha JS shart emas).
+  **`LeftSidebar`dagi profil-menyu qatorlari** (My stacks/My projects/My
+  reviews/Account settings) bitta "Profile" link o'rniga to'rtta anchor-link:
+  `#stacks`, `#portfolio`, `#reviews`, `#account` — barchasi bir xil
+  `/u/<handle>`ga, faqat boshqa anchor bilan (Next.js `Link` bir xil route'da
+  hash bilan navigatsiya qilganda avtomatik scroll qiladi, qo'shimcha JS
+  shart emas).
 - `login/page.tsx` — kirish/ro'yxatdan o'tish.
 - `layout.tsx` — html/body, `ThemeProvider`, `NextIntlClientProvider`, `SiteChrome`.
 
@@ -113,9 +154,9 @@ odatdagi `SiteNav` + `<main>` + footer. `layout.tsx` (ildiz) shu `SiteChrome`ni
   tokenni yangilaydi va so'rovni bir marta qayta yuboradi — controllerlar buni
   bilishi shart emas, shaffof ishlaydi.
 - **Auth token:** `tokenStore` (localStorage `ishbor_token` + `ishbor_refresh_token`,
-  `get`/`set`/`getRefresh`/`setRefresh`/`clear`). Chiqish `SiteNav.tsx`dagi
-  far-right avatar-dropdown (`UserMenu`, Profil + Chiqish) orqali — "Chiqish"
-  bosilganda `LogoutDialog` ochiladi ("Barcha qurilmalardan chiqish" checkbox
+  `get`/`set`/`getRefresh`/`setRefresh`/`clear`). Chiqish `components/dashboard/
+  LeftSidebar.tsx`dagi pastki "Chiqish" qatori orqali — bosilganda
+  `LogoutDialog` ochiladi ("Barcha qurilmalardan chiqish" checkbox
   bilan): belgilansa `api.logoutAllDevices()` (har bir refresh tokenni bekor
   qiladi), aks holda oddiy `api.logout()` (faqat shu qurilma). To'g'ridan-to'g'ri
   `tokenStore.clear()` ishlatma — refresh token DB'da qolib ketadi.
@@ -168,7 +209,7 @@ odatdagi `SiteNav` + `<main>` + footer. `layout.tsx` (ildiz) shu `SiteChrome`ni
 - `badges.tsx` — `LevelBadge`, `StackBadge`, `VerifiedBadge` (7 qiymatli `VerificationLevel`:
   none/junior/strong-junior/middle/strong-middle/senior/strong-senior — `types/domain.ts`).
   `lib/utils.ts#displayTier(verificationLevels, primaryDirection)` — bitta "headline"
-  belgi kerak bo'lgan joyda (`SiteNav` UserMenu, admin/users jadvali): `primaryDirection`
+  belgi kerak bo'lgan joyda (`LeftSidebar` identity kartochkasi, admin/users jadvali): `primaryDirection`
   tanlangan bo'lsa o'sha yo'nalish darajasi, aks holda barcha yo'nalishlar orasidan eng
   yuqorisi. `JobCard`/`JobDetailDialog`dagi `rating.verificationLevel` esa backend
   tomonidan **o'sha e'lonning `stack`iga mos** darajaga oldindan hisoblab beriladi
@@ -192,11 +233,12 @@ odatdagi `SiteNav` + `<main>` + footer. `layout.tsx` (ildiz) shu `SiteChrome`ni
   enum emas). `jobs/new/page.tsx` (e'lon joylashuvi) va asosiy `page.tsx` (sidebar
   joylashuv filtri) da ishlatiladi.
 - **Responsive:** breakpointlar bir bosqichga siljitilgan (`sm→md`, `md→lg`, `lg→xl`) —
-  mobil uslub kengroq ekranlargacha ushlab turadi. `SiteNav` hamburger va
-  e'lonlar sahifasi (`page.tsx`) "Filtrlar" tugmasi ikkalasi ham mobil'da
-  **to'liq ekranli** (full width+height) overlay/sidebar ochadi — chapdan
-  slayd bilan (`animate-in fade-in slide-in-from-left`), yopilganda ham
-  silliq (`animate-out fade-out slide-out-to-left`, `duration-300`).
+  mobil uslub kengroq ekranlargacha ushlab turadi. `TopHeader` hamburgeri
+  bosilganda `LeftSidebar` (nav + jobs-sahifa filtrlari birga, yuqoridagi
+  "Dashboard qobig'i"ga qarang) mobil'da **to'liq ekranli** (full width+height)
+  off-canvas ochadi — chapdan slayd bilan (`animate-in fade-in
+  slide-in-from-left`), yopilganda ham silliq (`animate-out fade-out
+  slide-out-to-left`, `duration-300`).
   Ochish/yopish animatsiyasi `hooks/useAnimatedOverlay.ts` orqali — overlay
   yopilgandan keyin ham `duration-300` davomida DOM'da qoladi, shu payt
   chiqish animatsiyasi o'ynaydi. `JobCard` 320px gacha: sarlavha/kompaniya
@@ -205,7 +247,7 @@ odatdagi `SiteNav` + `<main>` + footer. `layout.tsx` (ildiz) shu `SiteChrome`ni
   formalar `sm:`(→`md:`) da ustunli.
 - `language-selector.tsx` — premium til tanlagich (bayroq + kod, animatsion dropdown,
   klaviatura bilan boshqarish, `lib/locale-preference.ts` orqali localStorage'da saqlash).
-  Bayroqlar `flags.tsx` (SVG — emoji bayroqlar Windows'da harf ko'rinadi). `SiteNav`da ishlatiladi.
+  Bayroqlar `flags.tsx` (SVG — emoji bayroqlar Windows'da harf ko'rinadi). `LeftSidebar`da ishlatiladi.
 
 ### Anti-cheat oqimi (`test/page.tsx`, `phase === 'active'`)
 
@@ -264,13 +306,16 @@ qayta boshlab tez-tez sinash uchun.
   cyrillic), mono = **JetBrains Mono** (taymer, ball, kod). Tailwind: `font-sans`/`font-mono`.
 - Rol aksenti: **ish beruvchi = ko'k (primary)**, **ish qidiruvchi = yashil (success)**.
   Reyting yulduzlari = amber.
-- **Layout (e'lonlar sahifasi):** yuqorida keng qidiruv + rol segmenti; pastda ikki ustun
-  `lg:grid-cols-[300px_minmax(0,1fr)]` — chapda `<aside>` sticky vidjetlar (Faoliyatingiz/
-  Saqlanganlar, Filtrlar, Saqlangan qidiruvlar preset'lari, malaka-promo, mehmon uchun
-  kirish), o'ngda **bitta ustunli** keng karta lentasi.
-- **Header (`SiteNav`):** qizil `ish` logo mark + wordmark, `Toshkent` city pill (`MapPin`),
-  aktiv link ostida ko'k chiziq, o'ngda saqlanganlar (yurak + counter), bildirishnoma
-  qo'ng'irog'i (empty-state popover), locale/theme, ko'k `Kirish`.
+- **Layout (e'lonlar sahifasi):** yuqorida keng qidiruv + rol segmenti; filtrlar/
+  Faoliyatingiz/Saqlangan qidiruvlar/malaka-promo/mehmon-kirish endi sahifaning
+  o'zida emas — `SidebarSlotContext` orqali global `LeftSidebar`da ko'rinadi
+  (yuqoridagi "Dashboard qobig'i"ga qarang). Markaziy ustun **bitta ustunli**
+  keng karta lentasi.
+- **Header (`TopHeader`) + `LeftSidebar` + `RightSidebar`:** qizil `ish` logo
+  mark + wordmark header'da, global qidiruv, o'ngda bildirishnoma qo'ng'irog'i
+  (empty-state popover) + avatar (link). Nav linklar, saqlanganlar, profil-menyu,
+  locale/theme, Kirish/Chiqish — `LeftSidebar`da. O'ng widget-panel faqat
+  `/` va `/u/*`da (`RightSidebar`).
 - **JobCard:** keng "orol" karta — avatar + ko'k `BadgeCheck` (verifikatsiya =
   `rating.verificationLevel !== 'none'`), rol bejlik, sarlavha (dialog ochadi), teglar,
   yashil maosh, tavsif; o'ng-yuqorida `EyeOff` (yashirish) + `Heart` (saqlash); pastda
@@ -291,5 +336,5 @@ uchtala tilga qo'shing. Batafsil qoida: ildiz `/CLAUDE.md` → "Hujjatlarni yang
 
 - **Fazilov** — `components/ui/*`, `rating`, `badges`, `theme`, `layout`, `globals.css`, test UI, i18n.
 - **Hidoyatov** — `page.tsx` (e'lonlar), `jobs/new`, `JobCard`, `JobDetailDialog`,
-  `admin/*` (dashboard, users, jobs, sessions, questions), `SiteNav` (admin link).
+  `admin/*` (dashboard, users, jobs, sessions, questions), `LeftSidebar` (admin link).
 - **Sardor** — `hooks/*` (anti-cheat), `lib/socket.ts`, `AntiCheatBanner`, `ViolationDialog`, login.

@@ -447,5 +447,12 @@
     "levelJunior": "Junior Tasdiqlangan",
     "levelMiddle": "Middle Tasdiqlangan",
     "levelSenior": "Senior Tasdiqlangan"
+  },
+  "dashboard": {
+    "statsTitle": "Verifikatsiya",
+    "savedTitle": "Saqlangan e'lonlar",
+    "quickLinksTitle": "Tezkor havolalar",
+    "noSaved": "Hozircha saqlangan e'lon yo'q.",
+    "moreSaved": "yana +{count}"
   }
 }

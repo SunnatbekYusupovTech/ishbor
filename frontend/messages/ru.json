@@ -447,5 +447,12 @@
     "levelJunior": "Junior подтверждён",
     "levelMiddle": "Middle подтверждён",
     "levelSenior": "Senior подтверждён"
+  },
+  "dashboard": {
+    "statsTitle": "Верификация",
+    "savedTitle": "Сохранённые вакансии",
+    "quickLinksTitle": "Быстрые ссылки",
+    "noSaved": "Пока нет сохранённых вакансий.",
+    "moreSaved": "ещё +{count}"
   }
 }

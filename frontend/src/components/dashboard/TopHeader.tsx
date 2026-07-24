@@ -2,24 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import {
-  Shield,
-  MapPin,
-  Heart,
-  Bell,
-  Menu,
-  X,
-  LayoutGrid,
-  Briefcase,
-  Star,
-  Settings,
-  LogOut,
-  Mail,
-  FlaskConical,
-} from 'lucide-react';
+import { Menu, X, Search, Bell, Mail, FlaskConical, LayoutGrid, Briefcase, Star, Settings, LogOut } from 'lucide-react';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
-import { api, tokenStore } from '@/lib/api';
-import { useFavorites } from '@/lib/favorites';
+import { api } from '@/lib/api';
 import { LanguageSelector } from '@/components/language-selector';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, RatingStars } from '@/components/rating';
@@ -33,90 +18,42 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useAnimatedOverlay } from '@/hooks/useAnimatedOverlay';
 import { cn, displayTier } from '@/lib/utils';
 
-const links = [
-  { href: '/', key: 'jobs' },
-  { href: '/leaderboard', key: 'leaderboard' },
-  { href: '/jobs/new', key: 'post' },
-] as const;
-
-export function SiteNav() {
-  const t = useTranslations('nav');
+/**
+ * Slim top bar — nav links/filters live in `LeftSidebar`, but the avatar
+ * keeps its own dropdown (profile menu + logout) rather than being a plain
+ * link: the sidebar only carries navigation + page widgets now, nothing
+ * account-specific.
+ */
+export function TopHeader({
+  me,
+  authed,
+  menuOpen,
+  onMenuToggle,
+}: {
+  me: Me | null;
+  authed: boolean;
+  menuOpen: boolean;
+  onMenuToggle: () => void;
+}) {
   const th = useTranslations('header');
-  const pathname = usePathname();
+  const t = useTranslations('nav');
   const router = useRouter();
-  const favorites = useFavorites();
-  const [authed, setAuthed] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [me, setMe] = useState<Me | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const menuRendered = useAnimatedOverlay(menuOpen);
+  const [query, setQuery] = useState('');
 
-  // Read auth state on mount + whenever the route changes (login/logout).
-  useEffect(() => {
-    setAuthed(!!tokenStore.get());
-    if (tokenStore.get()) {
-      api
-        .me()
-        .then((p) => {
-          setIsAdmin(p?.role === 'admin');
-          setMe(p);
-        })
-        .catch(() => {
-          setIsAdmin(false);
-          setMe(null);
-        });
-    } else {
-      setIsAdmin(false);
-      setMe(null);
-    }
-    setMenuOpen(false);
-  }, [pathname]);
-
-  // Any successful `api.updateMe` (avatar upload, name change, …) fires this —
-  // without it the header avatar/name would only refresh on the next route
-  // change, since this component doesn't own whatever page made the edit.
-  useEffect(() => {
-    const onMeUpdated = (e: Event) => {
-      const updated = (e as CustomEvent<Me>).detail;
-      setMe(updated);
-      setIsAdmin(updated?.role === 'admin');
-    };
-    window.addEventListener('ishbor:me-updated', onMeUpdated);
-    return () => window.removeEventListener('ishbor:me-updated', onMeUpdated);
-  }, []);
-
-  // Lock page scroll while the fullscreen mobile menu is mounted (including
-  // the brief exit-animation window after close, so the page doesn't jump).
-  useEffect(() => {
-    if (!menuRendered) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [menuRendered]);
-
-  const confirmLogout = (allDevices: boolean) => {
-    // Revoke the refresh token(s) server-side (best-effort) and drop both
-    // local tokens — fire-and-forget so the UI doesn't wait on a round-trip.
-    if (allDevices) void api.logoutAllDevices();
-    else void api.logout();
-    setLogoutDialogOpen(false);
-    setAuthed(false);
-    router.push('/');
+  const onSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    router.push((q ? `/?q=${encodeURIComponent(q)}` : '/') as '/');
   };
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="container flex h-16 items-center gap-1.5 md:gap-5">
-        {/* Mobile menu toggle */}
+      <div className="flex h-16 items-center gap-2 px-4 sm:px-6">
         <button
           type="button"
-          onClick={() => setMenuOpen((v) => !v)}
+          onClick={onMenuToggle}
           aria-label={th('menu')}
           aria-expanded={menuOpen}
           className="-ml-1 shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
@@ -124,7 +61,6 @@ export function SiteNav() {
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
-        {/* Brand mark — red, hh-style */}
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-base font-black leading-none text-brand-foreground shadow-sm">
             ish
@@ -132,181 +68,52 @@ export function SiteNav() {
           <span className="hidden text-lg font-extrabold tracking-tight sm:inline">Ishbor</span>
         </Link>
 
-        {/* City selector — single-market label */}
-        <button
-          type="button"
-          className="hidden items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground lg:inline-flex"
-        >
-          <MapPin className="h-4 w-4 text-primary" />
-          {th('city')}
-        </button>
+        <form onSubmit={onSearchSubmit} className="relative ml-2 min-w-0 max-w-md flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={th('search')}
+            className="h-10 w-full rounded-lg border bg-card pl-9 pr-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+          />
+        </form>
 
-        <nav className="ml-2 mr-auto hidden items-center gap-1 text-sm lg:flex">
-          {links.map((l) => {
-            const active = pathname === l.href;
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={cn(
-                  'relative rounded-md px-2.5 py-1.5 font-medium transition-colors md:px-3',
-                  active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {t(l.key)}
-                {active && (
-                  <span className="absolute inset-x-2.5 -bottom-[9px] h-0.5 rounded-full bg-primary" />
-                )}
-              </Link>
-            );
-          })}
-          {/* Admin-only link — role checked via api.me() */}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className={cn(
-                'relative flex items-center gap-1 rounded-md px-2.5 py-1.5 font-medium transition-colors md:px-3',
-                pathname.startsWith('/admin')
-                  ? 'text-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Shield className="h-3.5 w-3.5" />
-              {t('admin')}
-              {pathname.startsWith('/admin') && (
-                <span className="absolute inset-x-2.5 -bottom-[9px] h-0.5 rounded-full bg-primary" />
-              )}
-            </Link>
-          )}
-        </nav>
-
-        <div className="ml-auto flex items-center gap-0.5 lg:ml-0">
-          {/* Saved listings */}
-          <Link
-            href="/?saved=1"
-            aria-label={th('favorites')}
-            className="relative rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
-          >
-            <Heart className="h-5 w-5" />
-            {favorites.length > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                {favorites.length}
-              </span>
-            )}
-          </Link>
-
-          <div className="hidden md:block">
-            <NotificationsBell label={th('notifications')} />
-          </div>
-
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <LanguageSelector />
           <ThemeToggle />
 
-          {/* Far-right: profile + logout, consolidated into one dropdown. */}
+          <NotificationsBell label={th('notifications')} />
+
           {authed && me ? (
-            <UserMenu me={me} onLogoutRequest={() => setLogoutDialogOpen(true)} />
+            <UserMenu me={me} />
           ) : (
             <Link
               href="/login"
-              className="ml-1 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 md:px-3.5"
+              className="ml-1 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
             >
               {t('login')}
             </Link>
           )}
         </div>
       </div>
-
-      {/* Mobile nav — fullscreen (full width + full height) sidebar, slides
-          in/out from the left, mirrors the jobs-page filters overlay.
-          Stays mounted for `duration-300` after close so the exit
-          animation can play instead of vanishing instantly. */}
-      {menuRendered && (
-        <nav
-          className={cn(
-            'fixed inset-0 z-50 h-dvh w-full overflow-y-auto bg-background p-4 duration-300 lg:hidden',
-            menuOpen ? 'animate-in fade-in slide-in-from-left' : 'animate-out fade-out slide-out-to-left',
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">{th('menu')}</h2>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(false)}
-              aria-label={th('close')}
-              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="mt-4 flex flex-col py-2">
-            <button
-              type="button"
-              className="flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground"
-            >
-              <MapPin className="h-4 w-4 text-primary" />
-              {th('city')}
-            </button>
-            {links.map((l) => {
-              const active = pathname === l.href;
-              return (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={cn(
-                    'rounded-md px-2 py-2 text-sm font-medium transition-colors',
-                    active ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent',
-                  )}
-                >
-                  {t(l.key)}
-                </Link>
-              );
-            })}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                onClick={() => setMenuOpen(false)}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium transition-colors',
-                  pathname.startsWith('/admin')
-                    ? 'bg-accent text-foreground'
-                    : 'text-muted-foreground hover:bg-accent',
-                )}
-              >
-                <Shield className="h-3.5 w-3.5" />
-                {t('admin')}
-              </Link>
-            )}
-          </div>
-        </nav>
-      )}
-
-      <LogoutDialog
-        open={logoutDialogOpen}
-        onOpenChange={setLogoutDialogOpen}
-        onConfirm={confirmLogout}
-      />
     </header>
   );
 }
 
 /**
- * Far-right, avatar-triggered dropdown consolidating profile + logout — the
- * previous separate profile icon and two logout/logout-all buttons are now
- * one menu, ending with logout at the bottom. Opens on a small identity
- * card (avatar, name, email, verification + rating) so the trigger doubles
- * as an at-a-glance account summary, not just a navigation shortcut.
+ * Far-right, avatar-triggered dropdown — profile menu + logout, nothing
+ * account-specific lives outside it (the sidebar is nav/widgets only).
  */
-function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void }) {
-  const t = useTranslations('nav');
+function UserMenu({ me }: { me: Me }) {
   const th = useTranslations('header');
   const tj = useTranslations('jobs');
   const tp = useTranslations('profile');
+  const t = useTranslations('nav');
+  const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  // `/u/<handle>` is now the single profile page (stacks + portfolio +
-  // reviews + account settings) — these all land there, at a different anchor.
   const handle = me.username ?? me.id;
 
   useEffect(() => {
@@ -322,6 +129,19 @@ function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void
       document.removeEventListener('keydown', onEsc);
     };
   }, [open]);
+
+  // Close the dropdown on route change (e.g. clicking one of its own links).
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  const confirmLogout = (allDevices: boolean) => {
+    if (allDevices) void api.logoutAllDevices();
+    else void api.logout();
+    setLogoutDialogOpen(false);
+    setOpen(false);
+    router.push('/');
+  };
 
   return (
     <div ref={ref} className="relative ml-1">
@@ -421,7 +241,7 @@ function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void
             role="menuitem"
             onClick={() => {
               setOpen(false);
-              onLogoutRequest();
+              setLogoutDialogOpen(true);
             }}
             className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
           >
@@ -430,6 +250,12 @@ function UserMenu({ me, onLogoutRequest }: { me: Me; onLogoutRequest: () => void
           </button>
         </div>
       </div>
+
+      <LogoutDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
+        onConfirm={confirmLogout}
+      />
     </div>
   );
 }
@@ -447,7 +273,6 @@ function LogoutDialog({
   const t = useTranslations('nav');
   const [allDevices, setAllDevices] = useState(false);
 
-  // Reset the checkbox each time the dialog is (re)opened.
   useEffect(() => {
     if (open) setAllDevices(false);
   }, [open]);
@@ -467,9 +292,7 @@ function LogoutDialog({
           />
           <span>
             <span className="block font-medium">{t('logoutAllDevicesLabel')}</span>
-            <span className="block text-xs text-muted-foreground">
-              {t('logoutAllDevicesHint')}
-            </span>
+            <span className="block text-xs text-muted-foreground">{t('logoutAllDevicesHint')}</span>
           </span>
         </label>
         <DialogFooter>

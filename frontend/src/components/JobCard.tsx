@@ -17,7 +17,7 @@ import { LevelBadge, StackBadge } from '@/components/badges';
 import { RatingStars, Avatar } from '@/components/rating';
 import { JobDetailDialog } from '@/components/JobDetailDialog';
 import { favorites, useIsFavorite } from '@/lib/favorites';
-import { cn } from '@/lib/utils';
+import { cn, handleSpotlightMove } from '@/lib/utils';
 
 export function JobCard({ job, onHide }: { job: Job; onHide?: (id: string) => void }) {
   const t = useTranslations('jobs');
@@ -36,10 +36,8 @@ export function JobCard({ job, onHide }: { job: Job; onHide?: (id: string) => vo
   return (
     <JobDetailDialog job={job}>
       <article
-        className={cn(
-          'group relative rounded-2xl border bg-card p-4 shadow-sm transition-all duration-200 md:p-5',
-          'hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5',
-        )}
+        onMouseMove={handleSpotlightMove}
+        className={cn('spotlight group relative rounded-2xl border bg-card p-4 shadow-sm md:p-5')}
       >
         {/* Top-right actions — hide + save (hh eye + heart) */}
         <div className="absolute right-2.5 top-2.5 flex items-center gap-0.5">
