@@ -67,6 +67,34 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
+- **Rasm yuklash Cloudinary'ga ko'chirildi (Sardor):** avval avatar/muqova/
+  portfolio rasmlari backend konteynerining o'z diskiga (`/uploads`)
+  yozilardi — Railway/Vercel fayl tizimi efemer bo'lgani uchun Volume
+  ulanmagan bo'lsa har restart/deploy'da barcha rasmlar yo'qolardi. Endi
+  `services/imageStorage.ts` rasmlarni tashqi, doimiy xotiraga —
+  Cloudinary'ga — yuklaydi; bazada endi to'liq (absolyut) Cloudinary URL'i
+  saqlanadi, `/uploads` statik marshruti va Railway Volume/entrypoint
+  murakkabligi butunlay olib tashlandi. Yangi env: `CLOUDINARY_CLOUD_NAME`,
+  `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (`groqApiKey` kabi ixtiyoriy
+  — sozlanmasa faqat yuklash endpointi ishlamaydi, qolgan API buzilmaydi).
+  Orfan-yuklamalarni tozalash sweeperi endi Cloudinary Admin API orqali
+  ishlaydi. Batafsil: `backend/CLAUDE.md` → "Rasm yuklash (upload) — Cloudinary".
+- **Auth tokenlar localStorage'dan httpOnly cookie'ga ko'chirildi:** access
+  (`ishbor_token`) va refresh (`ishbor_refresh_token`) tokenlar endi backend
+  tomonidan `Set-Cookie` bilan `HttpOnly` + (prodda) `Secure` +
+  `SameSite=Lax/None` sifatida o'rnatiladi — frontend JS ularni umuman
+  o'qimaydi/yozmaydi (XSS orqali token o'g'irlash imkoni yo'qoladi).
+  `register`/`login`/`refresh` javob body'sidan `token`/`refreshToken`
+  maydonlari olib tashlandi. Backend: `utils/cookies.ts` (yangi), `app.ts`
+  (`cookie-parser`), `authenticate`/`optionalAuthenticate` va
+  `sockets/antiCheat.ts` endi cookie'dan o'qiydi (socket — xom `Cookie`
+  header, `cookie` npm paketi bilan parse). Frontend: `lib/api.ts` har bir
+  `fetch`da `credentials: 'include'`; `tokenStore` endi haqiqiy token emas —
+  faqat `js-cookie` bilan yozilgan, httpOnly BO'LMAGAN `ishbor_authed` UI
+  belgisi (sinxron "loginmi-yo'qmi" tekshiruvi uchun, xavfsizlik uchun emas);
+  `lib/socket.ts#createAntiCheatSocket` endi token emas, faqat `sessionId`
+  qabul qiladi (`withCredentials: true`). Batafsil: `backend/CLAUDE.md` →
+  "Auth tokenlar — httpOnly cookie'da", `frontend/CLAUDE.md` → "Auth token".
 - **3-ustunli dashboard qobig'i (Sardor):** eski bitta gorizontal `SiteNav`
   (nav linklar + avatar-dropdown) **chap sticky nav-sidebar** (`LeftSidebar`,
   mobil'da off-canvas) + **yupqa header** (`TopHeader` — logo/global qidiruv/

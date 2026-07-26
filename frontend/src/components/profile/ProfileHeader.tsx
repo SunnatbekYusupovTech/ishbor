@@ -26,7 +26,7 @@ export function ProfileHeader({
   const t = useTranslations('freelancer');
   const [coverFailed, setCoverFailed] = useState(false);
   const tier = displayTier(profile.verificationLevels, profile.primaryDirection);
-  // Uploaded covers are stored origin-less (`/uploads/…`); external ones pass through.
+  // Both uploaded (Cloudinary) and pasted URLs are already absolute.
   const coverSrc = resolveImageUrl(profile.coverUrl);
   const showCover = !!coverSrc && !coverFailed;
 

@@ -152,14 +152,36 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   > Mos kelmasa **hamma** so'rov bloklanadi.
   Har qanday so'rov 401 qaytarsa, `request()` avtomatik `POST /auth/refresh` chaqirib
   tokenni yangilaydi va so'rovni bir marta qayta yuboradi — controllerlar buni
-  bilishi shart emas, shaffof ishlaydi.
-- **Auth token:** `tokenStore` (localStorage `ishbor_token` + `ishbor_refresh_token`,
-  `get`/`set`/`getRefresh`/`setRefresh`/`clear`). Chiqish `components/dashboard/
-  LeftSidebar.tsx`dagi pastki "Chiqish" qatori orqali — bosilganda
-  `LogoutDialog` ochiladi ("Barcha qurilmalardan chiqish" checkbox
-  bilan): belgilansa `api.logoutAllDevices()` (har bir refresh tokenni bekor
-  qiladi), aks holda oddiy `api.logout()` (faqat shu qurilma). To'g'ridan-to'g'ri
-  `tokenStore.clear()` ishlatma — refresh token DB'da qolib ketadi.
+  bilishi shart emas, shaffof ishlaydi. Har bir `fetch` `credentials: 'include'`
+  bilan yuboriladi (frontend :3000 / backend :5000 turli origin bo'lgani uchun
+  shart) — buni olib tashlama, aks holda brauzer cookie'larni umuman
+  jo'natmaydi/qabul qilmaydi.
+- **Auth token — endi httpOnly cookie'da, localStorage'da EMAS:** haqiqiy
+  access/refresh tokenlarni backend `Set-Cookie` (`HttpOnly`+`Secure`(prod)+
+  `SameSite`) orqali o'rnatadi/tozalaydi — frontend kodi ularni **hech qachon
+  o'qimaydi/yozmaydi**, shunchaki `credentials: 'include'` bilan so'rov
+  yuboradi, brauzer qolganini o'zi qiladi (batafsil: `backend/CLAUDE.md` →
+  "Auth tokenlar — httpOnly cookie'da"). `lib/api.ts`dagi `tokenStore` shu
+  sabab **haqiqiy token emas** — faqat `js-cookie` bilan yozilgan, httpOnly
+  BO'LMAGAN kichik `ishbor_authed` belgi-cookie atrofidagi yordamchi
+  (`get(): boolean` — "oxirgi urinish muvaffaqiyatli edi"), sinxron UI
+  tekshiruvlari uchun (masalan sahifa `useEffect`da darhol `/login`ga
+  yo'naltirish, `api.me()` javobini kutmasdan). Haqiqiy avtorizatsiya har doim
+  serverda, httpOnly cookie orqali tekshiriladi — bu belgi buzilsa/qo'lda
+  o'zgartirilsa ham hech narsani ochmaydi. `tokenStore.markAuthed()` —
+  `api.login`/`api.register`/muvaffaqiyatli refresh ichida avtomatik
+  chaqiriladi (alohida chaqirish shart emas); `tokenStore.clear()` —
+  `api.logout`/`logoutAllDevices` ichida. Socket.io ham xuddi shunday:
+  `lib/socket.ts#createAntiCheatSocket(sessionId)` endi token qabul qilmaydi
+  — `withCredentials: true` orqali cookie avtomatik boradi.
+  Chiqish `components/dashboard/LeftSidebar.tsx`dagi pastki "Chiqish" qatori
+  orqali — bosilganda `LogoutDialog` ochiladi ("Barcha qurilmalardan chiqish"
+  checkbox bilan): belgilansa `api.logoutAllDevices()` (har bir refresh
+  tokenni bekor qiladi + cookie'larni tozalaydi), aks holda oddiy
+  `api.logout()` (faqat shu qurilma). To'g'ridan-to'g'ri `tokenStore.clear()`
+  ishlatma (haqiqiy sessiyani yopmaydi, faqat mahalliy belgini) — server
+  tomonidagi haqiqiy revoke uchun doim `api.logout()`/`logoutAllDevices()`ni
+  chaqir.
 - **i18n:** har matn **uz/ru/en** `messages/*.json` ga qo'shiladi; komponentda `useTranslations('namespace')`, sana uchun `useFormatter`.
 - **Navigatsiya:** `@/i18n/navigation` dan `Link`, `useRouter`, `usePathname` (lokalizatsiyalangan).
 - **Uslub:** Tailwind + `cn()` (`lib/utils`). shadcn `components/ui/*` — asosiy primitivlar.

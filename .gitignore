@@ -32,7 +32,3 @@ coverage/
 .claude/
 
 .vercel
-
-# User-uploaded images (avatars, covers, portfolio previews).
-# Runtime data, never source — see backend/src/services/imageStorage.ts.
-backend/uploads/

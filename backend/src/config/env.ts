@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import ms from 'ms';
 
 dotenv.config();
 
@@ -37,8 +38,30 @@ export const env = {
   // Auth token lifetimes
   /** Short-lived access token — sent on every request. */
   accessTokenTtl: process.env.ACCESS_TOKEN_TTL ?? '15m',
+  /** Same lifetime as `accessTokenTtl`, pre-parsed to milliseconds for the
+   *  access-token cookie's `maxAge` (cookies don't accept `ms`-style strings). */
+  get accessTokenTtlMs(): number {
+    return ms(this.accessTokenTtl as ms.StringValue);
+  },
   /** Long-lived refresh token — only sent to POST /auth/refresh. */
   refreshTokenTtlDays: numberFromEnv('REFRESH_TOKEN_TTL_DAYS', 30),
+
+  /**
+   * Cookie attributes for the httpOnly auth cookies (`utils/cookies.ts`).
+   * Cross-site in production (separate frontend/backend domains, e.g. Vercel
+   * + Railway) requires `SameSite=None` + `Secure`; locally both apps share
+   * the `localhost` site (only the port differs) so `Lax` + non-Secure works
+   * over plain http. `COOKIE_SAMESITE`/`COOKIE_SECURE` let this be overridden
+   * explicitly (e.g. a same-domain production deploy that wants `Lax`).
+   */
+  cookieSameSite: (process.env.COOKIE_SAMESITE ?? undefined) as
+    | 'lax'
+    | 'strict'
+    | 'none'
+    | undefined,
+  cookieSecure: process.env.COOKIE_SECURE
+    ? process.env.COOKIE_SECURE === 'true'
+    : undefined,
 
   // Assessment tuning
   testDurationMinutes: numberFromEnv('TEST_DURATION_MINUTES', 30),
@@ -95,27 +118,23 @@ export const env = {
   maxAccountsPerIp: numberFromEnv('MAX_ACCOUNTS_PER_IP', 2),
 
   /**
-   * Where user-uploaded images (avatars, profile covers, portfolio previews)
-   * are written, and the ceiling on a single upload. The directory is served
-   * read-only at `/uploads` (see `app.ts`) and created on first write.
+   * User-uploaded images (avatars, profile covers, portfolio previews) are
+   * stored on Cloudinary rather than the container's own disk — Railway's
+   * (and Vercel's) filesystem is ephemeral, so anything written locally is
+   * gone on the next deploy/restart.
    *
-   * Resolution order:
-   *   1. `UPLOAD_DIR` — explicit override, wins everywhere.
-   *   2. `RAILWAY_VOLUME_MOUNT_PATH/uploads` — Railway injects this variable
-   *      automatically whenever a volume is attached, so on Railway you just
-   *      add a volume and uploads land on it (surviving redeploys) with no
-   *      extra configuration.
-   *   3. `uploads` — relative to CWD, for local dev.
-   *
-   * The container's filesystem is ephemeral on Railway: WITHOUT a volume,
-   * every uploaded image is wiped on the next deploy. See `backend/Dockerfile`
-   * + the deploy notes in `backend/CLAUDE.md`.
+   * Deliberately optional here (unlike most secrets) so the server still
+   * boots — and every OTHER endpoint keeps working — for anyone who hasn't
+   * set up a Cloudinary account yet. `services/imageStorage.ts` throws a
+   * clear, specific error only when an upload is actually attempted without
+   * these configured.
    */
-  uploadDir:
-    process.env.UPLOAD_DIR ??
-    (process.env.RAILWAY_VOLUME_MOUNT_PATH
-      ? `${process.env.RAILWAY_VOLUME_MOUNT_PATH.replace(/\/+$/, '')}/uploads`
-      : 'uploads'),
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY,
+    apiSecret: process.env.CLOUDINARY_API_SECRET,
+  },
+  /** Ceiling on a single upload, enforced before the bytes ever leave this process. */
   maxUploadBytes: numberFromEnv('MAX_UPLOAD_BYTES', 5 * 1024 * 1024),
 } as const;
 

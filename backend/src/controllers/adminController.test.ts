@@ -6,6 +6,7 @@ import { createApp } from '@/app';
 import { User } from '@/models/User';
 import { Session } from '@/models/Session';
 import { signAuthToken } from '@/utils/jwt';
+import { ACCESS_COOKIE } from '@/utils/cookies';
 
 describe('GET /api/admin/violations', () => {
   let mongo: MongoMemoryServer;
@@ -41,7 +42,7 @@ describe('GET /api/admin/violations', () => {
     const { token } = await createUser('seeker');
     const res = await request(app)
       .get('/api/admin/violations')
-      .set('Authorization', `Bearer ${token}`);
+      .set('Cookie', `${ACCESS_COOKIE}=${token}`);
     expect(res.status).toBe(403);
   });
 
@@ -49,7 +50,7 @@ describe('GET /api/admin/violations', () => {
     const { token } = await createUser('employer');
     const res = await request(app)
       .get('/api/admin/violations')
-      .set('Authorization', `Bearer ${token}`);
+      .set('Cookie', `${ACCESS_COOKIE}=${token}`);
     expect(res.status).toBe(403);
   });
 
@@ -89,7 +90,7 @@ describe('GET /api/admin/violations', () => {
 
     const res = await request(app)
       .get('/api/admin/violations')
-      .set('Authorization', `Bearer ${adminToken}`);
+      .set('Cookie', `${ACCESS_COOKIE}=${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
 

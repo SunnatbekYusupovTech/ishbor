@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from '@/i18n/navigation';
-import { api, tokenStore, ApiError } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -71,12 +71,9 @@ function LoginForm() {
     setErrors({});
     setLoading(true);
     try {
-      const res =
-        mode === 'register'
-          ? await api.register({ name, email, password, role })
-          : await api.login({ email, password });
-      tokenStore.set(res.token);
-      tokenStore.setRefresh(res.refreshToken);
+      mode === 'register'
+        ? await api.register({ name, email, password, role })
+        : await api.login({ email, password });
       // `next` is a locale-agnostic internal path (e.g. /jobs/new).
       router.push(next as '/');
     } catch (err) {

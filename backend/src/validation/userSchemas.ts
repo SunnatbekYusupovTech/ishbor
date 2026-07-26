@@ -28,13 +28,15 @@ const linkField = (max = 300) =>
 const textField = (max: number) => z.string().trim().max(max).optional();
 
 /**
- * An image reference: either an external URL the user pasted, or an internal
- * `/uploads/<uuid>.<ext>` path produced by `POST /uploads/image`.
+ * An image reference: either an external URL the user pasted, or one of our
+ * own Cloudinary uploads (`https://res.cloudinary.com/.../ishbor-uploads/
+ * <uuid>.<ext>`) produced by `POST /uploads/image`.
  *
- * The internal branch is matched against `INTERNAL_UPLOAD_RE` rather than a
- * loose `startsWith('/uploads/')` so a client can't store a traversal string
- * (`/uploads/../../etc/passwd`) that later gets turned back into a
- * filesystem path by `deleteImage`.
+ * The internal branch is matched against `INTERNAL_UPLOAD_RE` — our exact
+ * folder + naming convention — rather than a loose Cloudinary-domain check,
+ * so a client can't submit an arbitrary Cloudinary asset (someone else's,
+ * from a different folder) and have `deleteImage` later treat it as ours to
+ * delete.
  */
 const imageRefField = (max = 500) =>
   z

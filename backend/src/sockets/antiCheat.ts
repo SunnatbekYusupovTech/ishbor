@@ -1,9 +1,11 @@
 import type { Server as HttpServer } from 'node:http';
 import { Server, type Socket } from 'socket.io';
+import { parse as parseCookieHeader } from 'cookie';
 import { verifyAuthToken, type AuthTokenPayload } from '@/utils/jwt';
 import { Session } from '@/models/Session';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
+import { ACCESS_COOKIE } from '@/utils/cookies';
 
 /**
  * Real-time anti-cheat monitor.
@@ -37,16 +39,19 @@ async function terminateSession(sessionId: string, userId: string, reason: strin
 
 export function initAntiCheatSocket(httpServer: HttpServer): Server {
   const io = new Server(httpServer, {
-    cors: { origin: env.clientOrigins, methods: ['GET', 'POST'] },
+    cors: { origin: env.clientOrigins, methods: ['GET', 'POST'], credentials: true },
     pingTimeout: 20_000,
   });
 
   // --- Handshake authentication: reject unauthenticated sockets. ---
+  // The access token lives in an httpOnly cookie now, so client JS never
+  // sees it — the browser attaches it to the handshake request automatically
+  // (client connects with `withCredentials: true`); we read it straight off
+  // the raw `Cookie` header instead of `handshake.auth.token`.
   io.use((socket, next) => {
-    const { token, sessionId } = socket.handshake.auth as {
-      token?: string;
-      sessionId?: string;
-    };
+    const { sessionId } = socket.handshake.auth as { sessionId?: string };
+    const cookieHeader = socket.handshake.headers.cookie;
+    const token = cookieHeader ? parseCookieHeader(cookieHeader)[ACCESS_COOKIE] : undefined;
 
     if (!token || !sessionId) {
       return next(new Error('Missing auth token or sessionId'));

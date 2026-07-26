@@ -130,7 +130,7 @@ function PortfolioCard({
 }) {
   const t = useTranslations('freelancer');
   const [imageFailed, setImageFailed] = useState(false);
-  // Internal uploads are stored origin-less (`/uploads/…`) — reattach the API base.
+  // Both uploaded (Cloudinary) and pasted URLs are already absolute.
   const imageSrc = resolveImageUrl(item.imageUrl);
   const showImage = !!imageSrc && !imageFailed;
 

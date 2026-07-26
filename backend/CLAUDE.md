@@ -31,16 +31,41 @@ npm run typecheck -w backend  # tsc --noEmit
   fetch qiladi), HSTS faqat `env.isProduction`da (lokal http'da o'chirilgan).
 - **Auth:** `middleware/authenticate` JWT ni tekshiradi, `req.user` ni to'ldiradi
   (`types/express.d.ts`). Token `utils/jwt`.
-- **Access + refresh token:** access token qisqa muddatli (`env.accessTokenTtl`,
-  default 15m). Refresh token **JWT emas** — opaque random (`generateRefreshToken`),
-  faqat SHA-256 hash'i `models/RefreshToken.ts`da saqlanadi (TTL index, `env.refreshTokenTtlDays`,
-  default 30 kun). `POST /auth/refresh` — rotatsiya bilan (eski token darhol bekor
-  qilinadi, yangisi qaytariladi); `POST /auth/logout` — bitta refresh tokenni bekor
-  qiladi. Barcha qurilmalardan chiqish (hali yozilmagan) shu modelning `userId`
-  bo'yicha ko'p yozuvni bekor qilishi kifoya — bu allaqachon `POST /auth/logout-all`
-  sifatida amalga oshirilgan (authenticated, `RefreshToken.userId`ga `updateMany`).
-  Bilingan chegara: access token o'zining 15 daqiqalik muddati tugagunga qadar
-  boshqa qurilmada ishlayveradi (stateless JWT, denylist qilinmagan — ataylab).
+- **Auth tokenlar — httpOnly cookie'da (localStorage/Bearer header emas):**
+  ikkala token ham (`ishbor_token` — access, `ishbor_refresh_token` — refresh)
+  `Set-Cookie` orqali `HttpOnly` + (prodda) `Secure` + `SameSite` bilan
+  yuboriladi (`utils/cookies.ts#setAuthCookies`/`clearAuthCookies`) — client JS
+  hech qachon xom tokenni ko'rmaydi/o'qimaydi, shuning uchun XSS orqali token
+  o'g'irlash imkoni yo'q. `register`/`login`/`refresh` javob body'sida endi
+  faqat `{ user }` (yoki `refresh`da `{ refreshed: true }`) bor — `token`/
+  `refreshToken` maydonlari **olib tashlangan**. `middleware/authenticate` +
+  `optionalAuthenticate` endi `Authorization: Bearer` o'rniga
+  `req.cookies[ACCESS_COOKIE]`ni o'qiydi (`cookie-parser`, `app.ts`da global
+  ulangan). Socket.io handshake ham xuddi shunday — `sockets/antiCheat.ts`
+  `handshake.auth.token`ni emas, xom `Cookie` header'ini (`cookie` npm paketi
+  bilan) parse qilib access-cookie'ni oladi; klient socket
+  `withCredentials: true` bilan ulanadi (`frontend/src/lib/socket.ts`).
+  **`SameSite`/`Secure`:** dev'da front+back ikkalasi ham `localhost` (faqat
+  port farq qiladi) — bir xil "site", shuning uchun `Lax` + Secure'siz http
+  orqali ishlaydi. Prodda (masalan Vercel front + Railway back) domenlar
+  butunlay boshqa — **cross-site** — shu holat uchun `SameSite=None` +
+  `Secure` shart (`env.isProduction` bo'yicha avtomatik tanlanadi,
+  `COOKIE_SAMESITE`/`COOKIE_SECURE` bilan override qilsa bo'ladi).
+  CORS `credentials: true` + aniq origin ro'yxati (`env.clientOrigins`, hech
+  qachon `*`) — cookie'li cross-origin so'rov faqat shunday ishlaydi.
+- **Access + refresh token (muddat/rotatsiya):** access token qisqa muddatli
+  (`env.accessTokenTtl`, default 15m). Refresh token **JWT emas** — opaque
+  random (`generateRefreshToken`), faqat SHA-256 hash'i `models/RefreshToken.ts`da
+  saqlanadi (TTL index, `env.refreshTokenTtlDays`, default 30 kun).
+  `POST /auth/refresh` — rotatsiya bilan (eski token darhol bekor qilinadi,
+  yangisi qaytariladi, ikkalasi ham yangi cookie sifatida); `POST /auth/logout`
+  — bitta refresh tokenni bekor qiladi + ikkala cookie'ni tozalaydi
+  (`clearAuthCookies`). Barcha qurilmalardan chiqish `POST /auth/logout-all`
+  (authenticated, `RefreshToken.userId`ga `updateMany` + shu qurilmaning
+  cookie'lari ham tozalanadi). `DELETE /auth/me` (`deleteMe`) ham hisobni
+  o'chirgandan keyin cookie'larni tozalaydi. Bilingan chegara: access token
+  o'zining 15 daqiqalik muddati tugagunga qadar boshqa qurilmada ishlayveradi
+  (stateless JWT, denylist qilinmagan — ataylab).
 - **Parol siyosati:** `authController.ts`dagi `passwordPolicy` (kamida 8 belgi +
   katta/kichik harf + raqam + belgi) faqat `registerSchema`da ishlaydi.
   `loginSchema` — parolni murakkablikka tekshirmaydi (istalgan bo'sh bo'lmagan
@@ -277,79 +302,71 @@ npm run typecheck -w backend  # tsc --noEmit
   email/hash sizib chiqmasligi, begona portfolio/sharhni tahrirlab
   bo'lmasligi, bo'sh-satr tozalash, username validatsiya/409/rename.
 
-## Rasm yuklash (upload)
+## Rasm yuklash (upload) — Cloudinary
+
+> **2026-07-26 o'zgarish:** ilgari rasmlar backend konteynerining o'z diskiga
+> (`/uploads`) yozilardi — Railway/Vercel fayl tizimi **efemer** bo'lgani
+> uchun har restart/deploy'da barcha rasmlar batamom yo'qolardi (Volume
+> ulanmagan bo'lsa). Endi rasmlar **Cloudinary**ga (tashqi, doimiy xotira)
+> yuklanadi — bu muammoni butunlay, konfiguratsiyasiz hal qiladi.
 
 `POST /api/uploads/image` (`authenticate` + `uploadRateLimiter`) →
-`{ url: '/uploads/<uuid>.<ext>', bytes, mime }`. Fayllar `env.uploadDir`
-(default `backend/uploads/`, `.gitignore`da) ichiga yoziladi va `app.ts`da
-`/uploads` ostida **faqat o'qish uchun** (`express.static`) beriladi.
-Servis: `services/imageStorage.ts`.
+`{ url: 'https://res.cloudinary.com/<cloud>/image/upload/v.../ishbor-uploads/<uuid>.<ext>', bytes, mime }`.
+Servis: `services/imageStorage.ts`. Kerakli env: `CLOUDINARY_CLOUD_NAME`,
+`CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (bepul hisob, cloudinary.com) —
+sozlanmagan bo'lsa `POST /uploads/image` aniq xato xabari bilan 500 qaytaradi,
+lekin **boshqa hech qanday endpoint buzilmaydi** (`env.ts`da ataylab
+ixtiyoriy, `groqApiKey` bilan bir xil pattern).
 
 - **Nega alohida endpoint:** klient avval rasmni yuklaydi, keyin qaytgan
   URL'ni forma bilan birga saqlaydi. Shu sabab profil/portfolio endpointlari
   toza JSON bo'lib qoladi va UI hali saqlanmagan rasmni ham ko'rsata oladi.
-- **URL bazada origin'siz saqlanadi** (`/uploads/...`, `http://host` emas) —
-  API boshqa domenga ko'chsa, eski rasmlar o'lik hostga ishora qilib
-  qolmaydi. Origin'ni klient qayta ulaydi (`frontend/src/lib/images.ts`).
-- **Xavfsizlik (asosiy qarorlar):**
+- **URL to'liq (absolyut) holda saqlanadi** — avvalgi origin'siz
+  `/uploads/...` konventsiyasidan farqli, Cloudinary URL'i o'zi bilan
+  origin'ni olib yuradi. `frontend/src/lib/images.ts#resolveImageUrl` endi
+  shunchaki identity funksiya (o'zgarishsiz qaytaradi) — kelajakda yana
+  o'zgarsa, shu bitta joy kifoya.
+- **Xavfsizlik (asosiy qarorlar) — o'zgarishsiz qoldi:**
   - **Magic-byte tekshiruvi** (`detectImageFormat`) — `Content-Type` ham,
     fayl nomi ham **klient nazoratida**, shuning uchun formatni faqat
-    faylning o'z baytlari hal qiladi. `image/png` deb belgilangan HTML
+    faylning o'z baytlari hal qiladi (Cloudinary'ga yuborishdan **oldin**,
+    hali shu jarayon xotirasida). `image/png` deb belgilangan HTML
     rad etiladi (test bilan qoplangan).
   - **SVG ataylab qo'llab-quvvatlanmaydi** — SVG bu rasm emas, hujjat:
-    ichida `<script>` bo'lishi mumkin va rasm URL'ini to'g'ridan-to'g'ri
-    ochgan foydalanuvchida shu origin'da bajarilardi.
-  - **Fayl nomi hech qachon klientdan olinmaydi** — `crypto.randomUUID()`.
-    Aks holda `../` bilan yo'lni tanlash yoki birovning faylini bosib
-    ketish mumkin bo'lardi.
-  - `multer.memoryStorage()` — baytlar tekshirilmaguncha diskka hech narsa
-    tushmaydi; `limits.fileSize` (`MAX_UPLOAD_BYTES`, default 5 MB) oqimni
-    yarmida uzadi, ya'ni yolg'on `Content-Length` bilan katta allocation
-    qildirib bo'lmaydi.
-  - Statik `/uploads` **`/api`dan tashqarida** va `globalRateLimiter`dan
-    oldin ulangan: bitta profil ko'rinishi avatar + muqova + har bir
-    portfolio rasmini tortadi, ularni 200/min API budjetiga qo'shish oddiy
-    ko'rishni rate-limit qilib qo'yardi. `nosniff` + `Content-Disposition:
-    inline` alohida o'rnatiladi.
-- **Railway deploy (postoyanniy disk):** Railway konteyner fayl tizimi
-  **efemer** — har deploy'da yuklangan rasmlar yo'qoladi. Yechim: Railway
-  **Volume** ulash. `env.uploadDir` `RAILWAY_VOLUME_MOUNT_PATH`ni avtomatik
-  o'qiydi (Railway uni volume ulanganda o'zi beradi) → `${mount}/uploads`,
-  ya'ni Railway'da faqat volume qo'shish kifoya, boshqa sozlash shart emas.
-  Ikki tuzoq hal qilingan:
-  1. **Yozish huquqi:** Railway volume `root`ники bo'lib ulanadi, jarayon
-     esa `node` ostida ishlaydi → EACCES. `backend/docker-entrypoint.sh`
-     root sifatida boshlanadi, faqat volume'ni `chown node`, keyin
-     `su-exec` bilan `node`ga tushib jarayonni ishga tushiradi (Node hech
-     qachon root ostida ishlamaydi). Shuning uchun `Dockerfile`da `USER node`
-     yo'q — entrypoint o'zi tushiradi.
-  2. **Kross-domen `<img>`:** front va backend Railway'da alohida domenlar.
-     `/uploads` statikasi `Cross-Origin-Resource-Policy: cross-origin` bilan
-     beriladi (helmet global), shuning uchun rasm boshqa domendagi frontga
-     joylashadi. `.sh` fayllar `.gitattributes` bilan LF'da saqlanadi (CRLF
-     shebang Alpine'da ishlamaydi).
-  > Frontend Railway servisiga `NEXT_PUBLIC_API_URL` **build-arg** sifatida
-  > backend'ning ommaviy URL'i beriladi (Dockerfile'da ARG), va backend'ning
-  > `CLIENT_ORIGIN`iga front domeni qo'shiladi — aks holda CORS bloklaydi.
-- **Bazada saqlanadigan qiymat** `INTERNAL_UPLOAD_RE` (`/uploads/<uuid>.<ext>`,
-  anchored) bilan tekshiriladi — `startsWith('/uploads/')` yetarli emas edi:
-  `deleteImage` keyinchalik shu qiymatni fayl yo'liga aylantiradi, ya'ni
-  traversal satri saqlanib qolsa xavfli bo'lardi.
-- **Orfan fayllarni tozalash — ikki qatlam:**
+    ichida `<script>` bo'lishi mumkin.
+  - **Fayl nomi hech qachon klientdan olinmaydi** — Cloudinary `public_id`
+    sifatida `crypto.randomUUID()` beriladi (`ishbor-uploads/<uuid>` papkada).
+  - `multer.memoryStorage()` — baytlar tekshirilmaguncha hech qayerga
+    yozilmaydi; `limits.fileSize` (`MAX_UPLOAD_BYTES`, default 5 MB) oqimni
+    yarmida uzadi.
+- **Bazada saqlanadigan qiymat** `INTERNAL_UPLOAD_RE` bilan tekshiriladi —
+  aynan bizning `ishbor-uploads/<uuid>.<ext>` papka+nom konventsiyasiga mos
+  Cloudinary URL'i, anchored. Faqat `res.cloudinary.com` domenini tekshirish
+  yetarli emas edi: boshqa papkadagi/hisobdagi Cloudinary asseti ham shu
+  tekshiruvdan o'tib, `deleteImage`ga "bizniki" sifatida uzatilishi mumkin edi.
+- **Railway/Vercel deploy:** hech qanday Volume, `RAILWAY_VOLUME_MOUNT_PATH`
+  yoki kross-domen static-serving sozlamasi endi kerak emas — shu bilan
+  Dockerfile'dagi root→`su-exec`→`node` tushish zanjiri ham olib tashlandi
+  (`docker-entrypoint.sh` o'chirildi, `Dockerfile`da endi to'g'ridan-to'g'ri
+  `USER node`). Kerak bo'lgan yagona narsa uchta `CLOUDINARY_*` env
+  o'zgaruvchi.
+- **Orfan yuklamalarni tozalash — ikki qatlam, ikkalasi ham saqlanib qoldi,
+  endi Cloudinary Admin API orqali:**
   1. **Darhol:** avatar/muqova/portfolio rasmi almashtirilganda yoki yozuv
-     o'chirilganda eski fayl darhol o'chiriladi (`userController`,
-     `profileController`); `deleteMe` esa akkauntning barcha rasmlarini
-     (hujjatlar o'chishidan **oldin** yig'ib olib) tozalaydi.
-  2. **Davriy:** `services/uploadCleanup.ts` — birgina holatni birinchi
-     qatlam qoplay olmaydi: foydalanuvchi tahrirlash oynasida rasm yuklaydi
-     (preview ko'rsatish uchun u darhol saqlanadi), keyin **saqlamasdan
-     oynani yopadi**. Bu faylga hech kim ishora qilmaydi. Shuning uchun
-     sweeper katalogni ko'rib chiqadi va **24 soatdan eski** hamda hech
-     qayerda ishlatilmagan fayllarni o'chiradi. Grace period muhim: hozirgina
-     yuklangan fayl ta'rifiga ko'ra "ishlatilmagan" bo'ladi, faqat
-     "ishlatilmagan" bo'yicha o'chirish foydalanuvchining saqlashi bilan
-     poyga qilardi. `index.ts`da rejalashtiriladi (boot'dan 60s keyin, so'ng
-     har 6 soatda; timerlar `unref()`).
+     o'chirilganda eski asset darhol o'chiriladi (`userController`,
+     `profileController`, `cloudinary.uploader.destroy`); `deleteMe` esa
+     akkauntning barcha rasmlarini (hujjatlar o'chishidan **oldin** yig'ib
+     olib) tozalaydi.
+  2. **Davriy:** `services/uploadCleanup.ts` — foydalanuvchi tahrirlash
+     oynasida rasm yuklaydi (preview uchun u darhol Cloudinary'ga tushadi),
+     keyin **saqlamasdan oynani yopadi** — hech kim bu assetga ishora
+     qilmaydi. Sweeper `cloudinary.api.resources({ prefix: 'ishbor-uploads/' })`
+     bilan butun papkani ro'yxatlab, bazadagi referenslar bilan taqqoslaydi
+     va **24 soatdan eski** hamda hech qayerda ishlatilmagan assetlarni
+     `cloudinary.api.delete_resources` bilan (100talik partiyalarda)
+     o'chiradi. Grace period sababi avvalgidek: hozirgina yuklangan asset
+     ta'rifiga ko'ra "ishlatilmagan" bo'ladi. `index.ts`da rejalashtiriladi
+     (boot'dan 60s keyin, so'ng har 6 soatda; timerlar `unref()`).
 
 ## Endpointlar (`/api`)
 

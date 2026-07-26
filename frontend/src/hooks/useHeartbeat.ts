@@ -36,10 +36,12 @@ export function useHeartbeat({
 
   useEffect(() => {
     if (!enabled) return;
-    const token = tokenStore.get();
-    if (!token) return;
+    if (!tokenStore.get()) return;
 
-    const socket = createAntiCheatSocket(token, sessionId);
+    // The access token itself is an httpOnly cookie sent automatically by
+    // the browser (`withCredentials: true` in `createAntiCheatSocket`) — the
+    // socket only needs to know which session to attach to.
+    const socket = createAntiCheatSocket(sessionId);
     socketRef.current = socket;
     force((n) => n + 1); // expose the socket to consumers on next render
 

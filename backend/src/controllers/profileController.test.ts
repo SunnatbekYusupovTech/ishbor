@@ -7,6 +7,7 @@ import { User } from '@/models/User';
 import { PortfolioItem } from '@/models/PortfolioItem';
 import { Review } from '@/models/Review';
 import { signAuthToken } from '@/utils/jwt';
+import { ACCESS_COOKIE } from '@/utils/cookies';
 
 /**
  * Covers the public freelancer profile: what an anonymous visitor sees, what
@@ -100,7 +101,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('sets isOwner when the owner reads their own profile', async () => {
       const res = await request(app)
         .get('/api/users/profile/aziz_dev')
-        .set('Authorization', `Bearer ${ownerToken}`);
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`);
 
       expect(res.body.data.isOwner).toBe(true);
     });
@@ -108,7 +109,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('treats an invalid token as an anonymous visitor rather than 401-ing', async () => {
       const res = await request(app)
         .get('/api/users/profile/aziz_dev')
-        .set('Authorization', 'Bearer garbage.token.value');
+        .set('Cookie', `${ACCESS_COOKIE}=garbage.token.value`);
 
       expect(res.status).toBe(200);
       expect(res.body.data.isOwner).toBe(false);
@@ -131,7 +132,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('lets the owner add a work, which then shows on the public profile', async () => {
       const created = await request(app)
         .post('/api/users/me/portfolio')
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({
           title: 'Ishbor redesign',
           category: 'Web',
@@ -151,7 +152,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
       for (let i = 0; i < 12; i++) {
         const res = await request(app)
           .post('/api/users/me/portfolio')
-          .set('Authorization', `Bearer ${ownerToken}`)
+          .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
           .send({ title: `Work ${i}` });
         expect(res.status).toBe(201);
       }
@@ -163,7 +164,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('treats an empty string as "clear this field" on edit', async () => {
       const res = await request(app)
         .patch(`/api/users/me/portfolio/${itemId}`)
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({ title: 'Ishbor redesign v2', imageUrl: '' });
 
       expect(res.status).toBe(200);
@@ -174,7 +175,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it("refuses to edit another user's work", async () => {
       const res = await request(app)
         .patch(`/api/users/me/portfolio/${itemId}`)
-        .set('Authorization', `Bearer ${visitorToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${visitorToken}`)
         .send({ title: 'Hijacked' });
 
       expect(res.status).toBe(404);
@@ -185,7 +186,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it("refuses to delete another user's work", async () => {
       const res = await request(app)
         .delete(`/api/users/me/portfolio/${itemId}`)
-        .set('Authorization', `Bearer ${visitorToken}`);
+        .set('Cookie', `${ACCESS_COOKIE}=${visitorToken}`);
 
       expect(res.status).toBe(404);
       expect(await PortfolioItem.findById(itemId)).not.toBeNull();
@@ -194,7 +195,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('lets the owner delete their own work', async () => {
       const res = await request(app)
         .delete(`/api/users/me/portfolio/${itemId}`)
-        .set('Authorization', `Bearer ${ownerToken}`);
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`);
 
       expect(res.status).toBe(200);
       expect(await PortfolioItem.findById(itemId)).toBeNull();
@@ -212,7 +213,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('rejects reviewing your own profile', async () => {
       const res = await request(app)
         .post('/api/users/profile/aziz_dev/reviews')
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({ rating: 5, text: 'I am great' });
 
       expect(res.status).toBe(403);
@@ -221,7 +222,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('rejects an out-of-range rating', async () => {
       const res = await request(app)
         .post('/api/users/profile/aziz_dev/reviews')
-        .set('Authorization', `Bearer ${visitorToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${visitorToken}`)
         .send({ rating: 9, text: 'Off the scale' });
 
       expect(res.status).toBe(400);
@@ -230,7 +231,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('lets another user leave a review', async () => {
       const res = await request(app)
         .post('/api/users/profile/aziz_dev/reviews')
-        .set('Authorization', `Bearer ${visitorToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${visitorToken}`)
         .send({ rating: 5, text: 'Great work, fast delivery.' });
 
       expect(res.status).toBe(201);
@@ -244,7 +245,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('replaces the previous review instead of stacking a second one', async () => {
       const res = await request(app)
         .post('/api/users/profile/aziz_dev/reviews')
-        .set('Authorization', `Bearer ${visitorToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${visitorToken}`)
         .send({ rating: 3, text: 'On reflection, average.' });
 
       expect(res.status).toBe(201);
@@ -257,12 +258,12 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('marks isMine only for the review the viewer wrote', async () => {
       const asAuthor = await request(app)
         .get('/api/users/profile/aziz_dev')
-        .set('Authorization', `Bearer ${visitorToken}`);
+        .set('Cookie', `${ACCESS_COOKIE}=${visitorToken}`);
       expect(asAuthor.body.data.reviews[0].isMine).toBe(true);
 
       const asOwner = await request(app)
         .get('/api/users/profile/aziz_dev')
-        .set('Authorization', `Bearer ${ownerToken}`);
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`);
       expect(asOwner.body.data.reviews[0].isMine).toBe(false);
     });
 
@@ -271,12 +272,12 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
 
       const byOwner = await request(app)
         .delete(`/api/users/me/reviews/${review!._id.toString()}`)
-        .set('Authorization', `Bearer ${ownerToken}`);
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`);
       expect(byOwner.status).toBe(404);
 
       const byAuthor = await request(app)
         .delete(`/api/users/me/reviews/${review!._id.toString()}`)
-        .set('Authorization', `Bearer ${visitorToken}`);
+        .set('Cookie', `${ACCESS_COOKIE}=${visitorToken}`);
       expect(byAuthor.status).toBe(200);
     });
   });
@@ -285,7 +286,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('updates the freelancer fields and de-duplicates skills', async () => {
       const res = await request(app)
         .patch('/api/auth/me')
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({
           specialization: 'UI/UX Designer',
           skills: ['Figma', 'figma', 'Photoshop'],
@@ -301,7 +302,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('clears a field when sent an empty string', async () => {
       const res = await request(app)
         .patch('/api/auth/me')
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({ about: '' });
 
       expect(res.status).toBe(200);
@@ -311,7 +312,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('adds and removes individual social links', async () => {
       const added = await request(app)
         .patch('/api/auth/me')
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({ socials: { github: 'https://github.com/aziz', telegram: '' } });
 
       expect(added.status).toBe(200);
@@ -322,7 +323,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('rejects a non-URL social link', async () => {
       const res = await request(app)
         .patch('/api/auth/me')
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({ socials: { github: 'not-a-url' } });
 
       expect(res.status).toBe(400);
@@ -331,7 +332,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('rejects a username with illegal characters', async () => {
       const res = await request(app)
         .patch('/api/auth/me')
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({ username: 'Aziz Dev!' });
 
       expect(res.status).toBe(400);
@@ -340,7 +341,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('409s on a username already taken by someone else', async () => {
       const res = await request(app)
         .patch('/api/auth/me')
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({ username: 'visitor1' });
 
       expect(res.status).toBe(409);
@@ -349,7 +350,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
     it('renames the handle, and the profile is then reachable under it', async () => {
       const res = await request(app)
         .patch('/api/auth/me')
-        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({ username: 'aziz_ui' });
 
       expect(res.status).toBe(200);

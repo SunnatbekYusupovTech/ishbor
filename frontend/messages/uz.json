@@ -3,6 +3,11 @@
     "title": "Ishbor — Tasdiqlangan malaka va ish e'lonlari",
     "description": "Xavfsiz malaka testidan o'ting, tasdiqlangan daraja oling va ish toping. Ish beruvchilar uchun: tasdiqlangan mutaxassislarni ishga oling."
   },
+  "notFound": {
+    "title": "Sahifa topilmadi",
+    "description": "Siz qidirayotgan sahifa mavjud emas, ko'chirilgan yoki havola noto'g'ri.",
+    "backHome": "Bosh sahifaga qaytish"
+  },
   "common": {
     "appName": "Ishbor Portal",
     "footer": "Ishbor — Malaka tasdiqlash platformasi",

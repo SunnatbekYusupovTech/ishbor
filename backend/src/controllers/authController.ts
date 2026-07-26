@@ -8,6 +8,7 @@ import { passwordPolicy } from '@/validation/userSchemas';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { env } from '@/config/env';
+import { setAuthCookies, clearAuthCookies, REFRESH_COOKIE } from '@/utils/cookies';
 
 /**
  * Lightweight auth to make the assessment flow runnable end-to-end.
@@ -25,10 +26,6 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1).max(128),
-});
-
-const refreshSchema = z.object({
-  refreshToken: z.string().min(20),
 });
 
 /**
@@ -83,12 +80,11 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 
   const token = signAuthToken({ userId: user._id.toString(), email: user.email });
   const refreshToken = await issueRefreshToken(user._id.toString());
+  setAuthCookies(res, token, refreshToken);
 
   res.status(201).json({
     success: true,
     data: {
-      token,
-      refreshToken,
       user: {
         id: user._id.toString(),
         name: user.name,
@@ -117,12 +113,11 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
   const token = signAuthToken({ userId: user._id.toString(), email: user.email });
   const refreshToken = await issueRefreshToken(user._id.toString());
+  setAuthCookies(res, token, refreshToken);
 
   res.status(200).json({
     success: true,
     data: {
-      token,
-      refreshToken,
       user: {
         id: user._id.toString(),
         name: user.name,
@@ -143,27 +138,30 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
  * which is a detectable signal of theft even though we don't act on it here.
  */
 export const refreshAuthToken = asyncHandler(async (req: Request, res: Response) => {
-  const { refreshToken } = refreshSchema.parse(req.body);
+  const refreshToken = req.cookies?.[REFRESH_COOKIE];
+  if (!refreshToken) throw ApiError.unauthorized('Invalid or expired refresh token.');
   const tokenHash = hashRefreshToken(refreshToken);
 
   const stored = await RefreshToken.findOne({ tokenHash });
   if (!stored || stored.revokedAt || stored.expiresAt.getTime() < Date.now()) {
+    clearAuthCookies(res);
     throw ApiError.unauthorized('Invalid or expired refresh token.');
   }
 
   const user = await User.findById(stored.userId);
-  if (!user) throw ApiError.unauthorized('Invalid or expired refresh token.');
+  if (!user) {
+    clearAuthCookies(res);
+    throw ApiError.unauthorized('Invalid or expired refresh token.');
+  }
 
   stored.revokedAt = new Date();
   await stored.save();
 
   const token = signAuthToken({ userId: user._id.toString(), email: user.email });
   const newRefreshToken = await issueRefreshToken(user._id.toString());
+  setAuthCookies(res, token, newRefreshToken);
 
-  res.status(200).json({
-    success: true,
-    data: { token, refreshToken: newRefreshToken },
-  });
+  res.status(200).json({ success: true, data: { refreshed: true } });
 });
 
 /**
@@ -173,14 +171,16 @@ export const refreshAuthToken = asyncHandler(async (req: Request, res: Response)
  * larger feature (see docs/workspace/SardorTasks.md, task 9).
  */
 export const logout = asyncHandler(async (req: Request, res: Response) => {
-  const { refreshToken } = refreshSchema.parse(req.body);
-  const tokenHash = hashRefreshToken(refreshToken);
+  const refreshToken = req.cookies?.[REFRESH_COOKIE];
+  if (refreshToken) {
+    const tokenHash = hashRefreshToken(refreshToken);
+    await RefreshToken.updateOne(
+      { tokenHash, revokedAt: { $exists: false } },
+      { $set: { revokedAt: new Date() } },
+    );
+  }
 
-  await RefreshToken.updateOne(
-    { tokenHash, revokedAt: { $exists: false } },
-    { $set: { revokedAt: new Date() } },
-  );
-
+  clearAuthCookies(res);
   res.status(200).json({ success: true, data: { loggedOut: true } });
 });
 
@@ -205,6 +205,8 @@ export const logoutAll = asyncHandler(async (req: Request, res: Response) => {
     { userId, revokedAt: { $exists: false } },
     { $set: { revokedAt: new Date() } },
   );
+
+  clearAuthCookies(res);
 
   res.status(200).json({
     success: true,

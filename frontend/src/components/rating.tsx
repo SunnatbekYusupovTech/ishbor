@@ -104,7 +104,7 @@ export function Avatar({
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
-  // Uploaded avatars are stored origin-less (`/uploads/…`); external ones pass through.
+  // Both uploaded (Cloudinary) and pasted URLs are already absolute.
   const resolved = resolveImageUrl(src);
   const showImage = !!resolved && !failed;
 

@@ -28,11 +28,12 @@ services:
       TEST_DURATION_MINUTES: 30
       HEARTBEAT_TIMEOUT_MS: 15000
       MAX_TAB_SWITCHES: 3
-      # Uploaded images live on a named volume so they survive `docker compose
-      # up --build` — the same persistence a Railway volume gives in prod.
-      UPLOAD_DIR: /app/uploads
-    volumes:
-      - uploads-data:/app/uploads
+      # Uploaded images go to Cloudinary (external, persistent) rather than
+      # this container's own disk — set your own values, or POST
+      # /uploads/image 500s while every other endpoint keeps working.
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     ports:
       - '5000:5000'
 
@@ -49,4 +50,3 @@ services:
 
 volumes:
   mongo-data:
-  uploads-data:

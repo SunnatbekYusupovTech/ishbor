@@ -6,6 +6,7 @@ import { createApp } from '@/app';
 import { User } from '@/models/User';
 import { RefreshToken } from '@/models/RefreshToken';
 import { signAuthToken, generateRefreshToken, hashRefreshToken } from '@/utils/jwt';
+import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/utils/cookies';
 
 describe('POST /api/auth/logout-all', () => {
   let mongo: MongoMemoryServer;
@@ -54,14 +55,14 @@ describe('POST /api/auth/logout-all', () => {
 
     const res = await request(app)
       .post('/api/auth/logout-all')
-      .set('Authorization', `Bearer ${accessToken}`);
+      .set('Cookie', `${ACCESS_COOKIE}=${accessToken}`);
     expect(res.status).toBe(200);
     expect(res.body.data.revokedCount).toBe(3);
 
     for (const raw of [deviceA, deviceB, deviceC]) {
       const refreshAttempt = await request(app)
         .post('/api/auth/refresh')
-        .send({ refreshToken: raw });
+        .set('Cookie', `${REFRESH_COOKIE}=${raw}`);
       expect(refreshAttempt.status).toBe(401);
     }
   });
@@ -82,21 +83,21 @@ describe('POST /api/auth/logout-all', () => {
 
     const res = await request(app)
       .post('/api/auth/logout-all')
-      .set('Authorization', `Bearer ${accessToken}`);
+      .set('Cookie', `${ACCESS_COOKIE}=${accessToken}`);
     expect(res.status).toBe(200);
     // Only this user's tokens are affected — the other user's is untouched.
     expect(res.body.data.revokedCount).toBe(0);
 
     const stillValid = await request(app)
       .post('/api/auth/refresh')
-      .send({ refreshToken: otherRaw });
+      .set('Cookie', `${REFRESH_COOKIE}=${otherRaw}`);
     expect(stillValid.status).toBe(200);
   });
 
   it('is idempotent — calling it again with nothing left to revoke is a harmless no-op', async () => {
     const res = await request(app)
       .post('/api/auth/logout-all')
-      .set('Authorization', `Bearer ${accessToken}`);
+      .set('Cookie', `${ACCESS_COOKIE}=${accessToken}`);
     expect(res.status).toBe(200);
     expect(res.body.data.revokedCount).toBe(0);
   });

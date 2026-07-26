@@ -7,6 +7,7 @@ import { User } from '@/models/User';
 import { Session } from '@/models/Session';
 import { signAuthToken } from '@/utils/jwt';
 import { env } from '@/config/env';
+import { ACCESS_COOKIE } from '@/utils/cookies';
 
 describe('POST /api/test/violation', () => {
   let mongo: MongoMemoryServer;
@@ -52,7 +53,7 @@ describe('POST /api/test/violation', () => {
     for (let i = 0; i < env.maxViolations; i++) {
       const res = await request(app)
         .post('/api/test/violation')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${token}`)
         .send({ sessionId, type: 'copy-paste' });
       expect(res.status).toBe(200);
       lastBody = res.body.data;
@@ -62,7 +63,7 @@ describe('POST /api/test/violation', () => {
 
     const overLimit = await request(app)
       .post('/api/test/violation')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', `${ACCESS_COOKIE}=${token}`)
       .send({ sessionId, type: 'copy-paste' });
     expect(overLimit.status).toBe(200);
     expect(overLimit.body.data.terminated).toBe(true);
@@ -79,7 +80,7 @@ describe('POST /api/test/violation', () => {
 
     const res = await request(app)
       .post('/api/test/violation')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', `${ACCESS_COOKIE}=${token}`)
       .send({ sessionId, type: 'copy-paste' });
 
     expect(res.status).toBe(409);
@@ -99,7 +100,7 @@ describe('POST /api/test/violation', () => {
       const { token, sessionId } = await createInProgressSession();
       const res = await request(app)
         .post('/api/test/violation')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Cookie', `${ACCESS_COOKIE}=${token}`)
         .send({ sessionId, type });
       expect(res.status).toBe(200);
       expect(res.body.data.violationCount).toBe(1);
@@ -110,7 +111,7 @@ describe('POST /api/test/violation', () => {
     const { token, sessionId } = await createInProgressSession();
     const res = await request(app)
       .post('/api/test/violation')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', `${ACCESS_COOKIE}=${token}`)
       .send({ sessionId, type: 'not-a-real-type' });
     expect(res.status).toBe(400);
   });

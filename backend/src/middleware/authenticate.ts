@@ -1,20 +1,20 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifyAuthToken } from '@/utils/jwt';
 import { ApiError } from '@/utils/ApiError';
+import { ACCESS_COOKIE } from '@/utils/cookies';
 
 /**
- * Verifies the Bearer JWT and attaches the decoded payload to `req.user`.
- * All assessment endpoints are behind this — an anonymous client can never
- * start, mutate, or submit a session.
+ * Verifies the access-token JWT (sent as an httpOnly cookie, never read by
+ * client JS) and attaches the decoded payload to `req.user`. All assessment
+ * endpoints are behind this — an anonymous client can never start, mutate,
+ * or submit a session.
  */
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
-  const header = req.headers.authorization;
+  const token = req.cookies?.[ACCESS_COOKIE];
 
-  if (!header || !header.startsWith('Bearer ')) {
-    throw ApiError.unauthorized('Missing or malformed Authorization header');
+  if (!token) {
+    throw ApiError.unauthorized('Missing or expired session');
   }
-
-  const token = header.slice('Bearer '.length).trim();
 
   try {
     req.user = verifyAuthToken(token);

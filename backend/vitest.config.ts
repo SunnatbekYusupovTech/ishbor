@@ -17,6 +17,12 @@ export default defineConfig({
       NODE_ENV: 'test',
       MONGO_URI: 'mongodb://127.0.0.1:27017/ishbor_test_stub',
       JWT_SECRET: 'test-secret-not-for-production',
+      // The `cloudinary` package itself is mocked in upload-related tests, but
+      // imageStorage.ts's ensureConfigured() still checks these are non-empty
+      // before ever calling it — stub values so that check passes.
+      CLOUDINARY_CLOUD_NAME: 'test-cloud',
+      CLOUDINARY_API_KEY: 'test-key',
+      CLOUDINARY_API_SECRET: 'test-secret',
     },
     coverage: {
       provider: 'v8',

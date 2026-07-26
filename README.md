@@ -96,9 +96,9 @@ JWT_SECRET=your_secret docker compose up --build
 ```
 
 - MongoDB with a persistent volume + healthcheck
-- Backend image: multi-stage TypeScript build, runs as non-root (via su-exec)
+- Backend image: multi-stage TypeScript build, runs as non-root `node` user
 - Frontend image: Next.js **standalone** output for a minimal runtime
-- Uploaded images persist on the `uploads-data` volume
+- Uploaded images go to Cloudinary (set `CLOUDINARY_*` — see below), not the container's disk
 
 ## Deploying on Railway
 
@@ -113,16 +113,16 @@ Environment variables:
 | `JWT_SECRET` | a long random secret | required |
 | `CLIENT_ORIGIN` | the frontend's public URL | e.g. `https://ishbor-frontend.up.railway.app`; comma-separate multiple |
 | `NODE_ENV` | `production` | enables `trust proxy`, HSTS |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | from your Cloudinary dashboard | required for `POST /uploads/image` — see below |
 
-**Attach a Volume** to the backend service (any mount path, e.g. `/data`).
-That's the whole upload setup — the app reads `RAILWAY_VOLUME_MOUNT_PATH`
-automatically and writes images under `<mount>/uploads`. **Without a volume,
-every uploaded image is wiped on the next deploy** (the container filesystem is
-ephemeral). The container starts as root only long enough to `chown` the volume,
-then drops to the non-root `node` user via `su-exec`.
+**No Volume needed.** Uploaded images (avatars, covers, portfolio previews)
+go straight to Cloudinary rather than the container's own disk, so they
+survive every redeploy with zero storage configuration on Railway's side.
+Create a free account at [cloudinary.com](https://cloudinary.com) and copy
+the three values from its dashboard home page into the variables above —
+without them, every other endpoint still works, but image uploads 500.
 
 ### Frontend service
 `NEXT_PUBLIC_API_URL` is baked in **at build time**, so set it as a
 **build argument** (not just a runtime variable) to the backend's public URL,
-e.g. `https://ishbor-backend.up.railway.app`. Uploaded images are served from
-the backend origin, so this must be reachable from the browser.
+e.g. `https://ishbor-backend.up.railway.app`.

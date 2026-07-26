@@ -1,3 +1,4 @@
+import Cookies from 'js-cookie';
 import type {
   StartTestResponse,
   SubmitTestResponse,
@@ -21,20 +22,24 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
 
-const TOKEN_KEY = 'ishbor_token';
-const REFRESH_TOKEN_KEY = 'ishbor_refresh_token';
+/**
+ * The real access/refresh tokens live in httpOnly cookies set by the backend
+ * (`Set-Cookie`, `HttpOnly` + `Secure` in prod + `SameSite`) — client JS never
+ * reads or writes them, and every `fetch` below sends `credentials: 'include'`
+ * so the browser attaches them automatically. `AUTHED_MARKER` is a separate,
+ * **non**-httpOnly cookie (readable via `js-cookie`) that only records "was
+ * the last auth call successful" — a cheap synchronous hint for pages that
+ * want to redirect before the async `api.me()` round-trip resolves. It is
+ * never sent to the server and carries no security weight; the real gate on
+ * every request is still the httpOnly cookie the browser sends on its own.
+ */
+const AUTHED_MARKER = 'ishbor_authed';
 
 export const tokenStore = {
-  get: (): string | null =>
-    typeof window === 'undefined' ? null : window.localStorage.getItem(TOKEN_KEY),
-  set: (token: string) => window.localStorage.setItem(TOKEN_KEY, token),
-  getRefresh: (): string | null =>
-    typeof window === 'undefined' ? null : window.localStorage.getItem(REFRESH_TOKEN_KEY),
-  setRefresh: (refreshToken: string) => window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken),
-  clear: () => {
-    window.localStorage.removeItem(TOKEN_KEY);
-    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-  },
+  /** Synchronous, best-effort "looks logged in" hint — see `AUTHED_MARKER` above. */
+  get: (): boolean => Cookies.get(AUTHED_MARKER) === '1',
+  markAuthed: () => Cookies.set(AUTHED_MARKER, '1', { expires: 30, sameSite: 'lax' }),
+  clear: () => Cookies.remove(AUTHED_MARKER),
 };
 
 class ApiError extends Error {
@@ -54,21 +59,19 @@ const NO_REFRESH_PATHS = new Set(['/auth/login', '/auth/register', '/auth/refres
 let refreshPromise: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
-  const refreshToken = tokenStore.getRefresh();
-  if (!refreshToken) return false;
-
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
+        // No body needed — the refresh token travels as an httpOnly cookie
+        // scoped to `/api/auth`; `credentials: 'include'` is what makes the
+        // browser attach it cross-origin.
         const res = await fetch(`${API_URL}/api/auth/refresh`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
+          credentials: 'include',
         });
         const payload = await res.json().catch(() => ({}));
         if (!res.ok || payload?.success === false) return false;
-        tokenStore.set(payload.data.token);
-        tokenStore.setRefresh(payload.data.refreshToken);
+        tokenStore.markAuthed();
         return true;
       } catch {
         return false;
@@ -81,7 +84,6 @@ async function refreshAccessToken(): Promise<boolean> {
 }
 
 async function request<T>(path: string, options: RequestInit = {}, _isRetry = false): Promise<T> {
-  const token = tokenStore.get();
   // A multipart upload must NOT carry an explicit Content-Type — the browser
   // has to set it itself so it can append the boundary parameter. Everything
   // else on this API is JSON.
@@ -91,9 +93,14 @@ async function request<T>(path: string, options: RequestInit = {}, _isRetry = fa
   try {
     res = await fetch(`${API_URL}/api${path}`, {
       ...options,
+      // Sends the httpOnly access/refresh cookies with every request (and
+      // lets the browser store the ones the server sets via `Set-Cookie`) —
+      // required since the frontend (3000) and backend (5000) are different
+      // origins. The server's CORS `credentials: true` + explicit origin
+      // allow-list (never `*`) is what makes this legal cross-origin.
+      credentials: 'include',
       headers: {
         ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
     });
@@ -138,38 +145,36 @@ export function apiRequest<T>(path: string, options: RequestInit = {}): Promise<
 
 export const api = {
   // --- Auth (dev-friendly helpers) ---
+  // Tokens never appear in these response bodies — the server sets them as
+  // httpOnly `Set-Cookie` headers directly (see `lib/api.ts` module docblock).
   register: (body: { name?: string; email: string; password: string; role?: string }) =>
     request<{
-      token: string;
-      refreshToken: string;
       user: { id: string; email: string; role: string };
     }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(body),
+    }).then((data) => {
+      tokenStore.markAuthed();
+      return data;
     }),
 
   login: (body: { email: string; password: string }) =>
     request<{
-      token: string;
-      refreshToken: string;
       user: { id: string; email: string };
     }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(body),
+    }).then((data) => {
+      tokenStore.markAuthed();
+      return data;
     }),
 
   /** Logs out this device only — revokes just the locally-held refresh token. */
   logout: async (): Promise<void> => {
-    const refreshToken = tokenStore.getRefresh();
-    if (refreshToken) {
-      await request('/auth/logout', {
-        method: 'POST',
-        body: JSON.stringify({ refreshToken }),
-      }).catch(() => {
-        // Best-effort: even if the server call fails (offline, token already
-        // gone), we still want to drop the local tokens below.
-      });
-    }
+    await request('/auth/logout', { method: 'POST' }).catch(() => {
+      // Best-effort: even if the server call fails (offline, cookie already
+      // gone), we still want to drop the local auth marker below.
+    });
     tokenStore.clear();
   },
 
@@ -340,8 +345,8 @@ export const api = {
     request<{ deleted: boolean }>(`/users/me/reviews/${id}`, { method: 'DELETE' }),
 
   /**
-   * Uploads one image and returns its stored reference (`/uploads/<uuid>.jpg`)
-   * to save into `avatarUrl` / `coverUrl` / a portfolio item's `imageUrl`.
+   * Uploads one image to Cloudinary and returns its full URL to save into
+   * `avatarUrl` / `coverUrl` / a portfolio item's `imageUrl`.
    *
    * Upload and save are separate steps on purpose: the UI can show a preview
    * from the returned URL before the surrounding form is committed, and the

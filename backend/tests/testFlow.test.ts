@@ -7,6 +7,7 @@ import { Question } from '@/models/Question';
 import { Session } from '@/models/Session';
 import { User } from '@/models/User';
 import { signAuthToken } from '@/utils/jwt';
+import { ACCESS_COOKIE } from '@/utils/cookies';
 
 /**
  * End-to-end integration test of the secure assessment flow against a real
@@ -76,7 +77,7 @@ afterAll(async () => {
 async function startSession() {
   return request(app)
     .post('/api/test/start')
-    .set('Authorization', `Bearer ${token}`)
+    .set('Cookie', `${ACCESS_COOKIE}=${token}`)
     .send({ direction: 'frontend', technologies: ['javascript'] });
 }
 
@@ -130,7 +131,7 @@ describe('assessment flow', () => {
 
     const submit = await request(app)
       .post('/api/test/submit')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', `${ACCESS_COOKIE}=${token}`)
       .send({ sessionId, answers });
 
     expect(submit.status).toBe(200);
@@ -151,7 +152,7 @@ describe('assessment flow', () => {
 
     const submit = await request(app)
       .post('/api/test/submit')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', `${ACCESS_COOKIE}=${token}`)
       .send({ sessionId, answers: forged });
 
     expect(submit.status).toBe(200);

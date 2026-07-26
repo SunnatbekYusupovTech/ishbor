@@ -1,20 +1,29 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
-
 /**
  * Turns a stored image reference into something an `<img src>` can load.
  *
- * Images come in two flavours and both are stored in the same field:
- *   - an external URL the user pasted (`https://…`) — used as-is;
- *   - an internal upload (`/uploads/<uuid>.jpg`) — needs the API origin
- *     prepended, since the frontend is served from a different origin.
- *
- * The origin is deliberately NOT stored in the database (see
- * `backend/src/services/imageStorage.ts`): re-attaching it here means moving
- * the API to a new domain doesn't strand every previously-uploaded image.
+ * Images come in two flavours, both stored as a plain string in the same
+ * field: an external URL the user pasted, or one of our own Cloudinary
+ * uploads (see `backend/src/services/imageStorage.ts`). Both are already
+ * full, absolute URLs, so there is nothing to resolve — this exists mainly
+ * as the one place that decision would live if that ever changed again.
  */
 export function resolveImageUrl(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return value.startsWith('/uploads/') ? `${API_URL}${value}` : value;
+  return value || null;
+}
+
+/**
+ * True for a value this app itself uploaded to Cloudinary (as opposed to an
+ * external URL the user pasted in). Mirrors the backend's `INTERNAL_UPLOAD_RE`
+ * — same folder, same `<uuid>.<ext>` naming — so the UI can tell them apart
+ * (e.g. to leave the "paste a URL" field empty for our own uploads).
+ */
+export function isInternalUploadUrl(value: string | null | undefined): boolean {
+  return (
+    !!value &&
+    /^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/v\d+\/ishbor-uploads\/[a-f0-9-]{36}\.(jpg|png|gif|webp|avif)$/.test(
+      value,
+    )
+  );
 }
 
 /** Formats a byte count for upload errors/hints ("4.2 MB"). */

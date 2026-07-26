@@ -39,7 +39,8 @@ describe('password policy', () => {
       .post('/api/auth/register')
       .send({ email: 'strong-password@example.com', password: 'Str0ng!Pass' });
     expect(res.status).toBe(201);
-    expect(res.body.data.token).toBeTruthy();
+    expect(res.body.data.user).toBeTruthy();
+    expect(res.headers['set-cookie']).toBeDefined();
   });
 
   it('does NOT enforce the policy on login — a legacy weak password still works', async () => {
@@ -59,6 +60,7 @@ describe('password policy', () => {
       .post('/api/auth/login')
       .send({ email: 'legacy-weak-password@example.com', password: 'password123' });
     expect(res.status).toBe(200);
-    expect(res.body.data.token).toBeTruthy();
+    expect(res.body.data.user).toBeTruthy();
+    expect(res.headers['set-cookie']).toBeDefined();
   });
 });

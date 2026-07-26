@@ -9,6 +9,7 @@ import {
   ACCEPTED_IMAGE_TYPES,
   MAX_UPLOAD_BYTES,
   formatBytes,
+  isInternalUploadUrl,
   resolveImageUrl,
 } from '@/lib/images';
 import { inputCls } from '@/components/form-field';
@@ -227,7 +228,7 @@ export function ImageDropzone({
       {showUrlInput && (
         <input
           type="url"
-          value={value.startsWith('/uploads/') ? '' : value}
+          value={isInternalUploadUrl(value) ? '' : value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="https://…"
           className={cn(inputCls, 'mt-1.5')}

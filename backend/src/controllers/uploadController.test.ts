@@ -1,21 +1,39 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import { createApp } from '@/app';
 import { User } from '@/models/User';
 import { signAuthToken } from '@/utils/jwt';
-import { uploadDir, detectImageFormat, isInternalUpload } from '@/services/imageStorage';
+import { ACCESS_COOKIE } from '@/utils/cookies';
+import { detectImageFormat, isInternalUpload } from '@/services/imageStorage';
 
 /**
  * Image uploads. The interesting cases here are the security ones: what the
  * request CLAIMS about a file (its mimetype, its filename) is attacker
  * controlled, so the tests assert the server decides from the bytes instead.
+ *
+ * The `cloudinary` package is mocked so these tests never touch a real
+ * account — `saveImage` still runs its own magic-byte validation and public
+ * `public_id` generation, only the network call is faked.
  */
+vi.mock('cloudinary', () => {
+  const uploader = {
+    upload_stream: (
+      options: { folder: string; public_id: string; format: string },
+      callback: (err: unknown, result: { secure_url: string } | undefined) => void,
+    ) => ({
+      end: () => {
+        callback(null, {
+          secure_url: `https://res.cloudinary.com/demo/image/upload/v1700000000/${options.folder}/${options.public_id}.${options.format}`,
+        });
+      },
+    }),
+    destroy: vi.fn(async () => ({ result: 'ok' })),
+  };
+  return { v2: { config: vi.fn(), uploader } };
+});
 
-/** Smallest valid headers for each format — enough for magic-byte detection. */
 const PNG = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
   Buffer.alloc(32),
@@ -31,11 +49,12 @@ const WEBP = Buffer.concat([
 const HTML = Buffer.from('<html><script>alert(1)</script></html>', 'utf8');
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>', 'utf8');
 
+const CLOUDINARY_URL_RE = /^https:\/\/res\.cloudinary\.com\/.+\/ishbor-uploads\/[a-f0-9-]{36}\.png$/;
+
 describe('POST /api/uploads/image', () => {
   let mongo: MongoMemoryServer;
   const app = createApp();
   let token: string;
-  const written: string[] = [];
 
   beforeAll(async () => {
     mongo = await MongoMemoryServer.create();
@@ -52,17 +71,11 @@ describe('POST /api/uploads/image', () => {
   });
 
   afterAll(async () => {
-    // Clean up anything these tests wrote to the real upload directory.
-    await Promise.all(
-      written.map((url) =>
-        fs.unlink(path.join(uploadDir(), path.basename(url))).catch(() => undefined),
-      ),
-    );
     await mongoose.disconnect();
     await mongo.stop();
   });
 
-  const post = () => request(app).post('/api/uploads/image').set('Authorization', `Bearer ${token}`);
+  const post = () => request(app).post('/api/uploads/image').set('Cookie', `${ACCESS_COOKIE}=${token}`);
 
   it('rejects an unauthenticated upload', async () => {
     const res = await request(app)
@@ -72,37 +85,23 @@ describe('POST /api/uploads/image', () => {
     expect(res.status).toBe(401);
   });
 
-  it('stores a PNG and returns a relative /uploads path', async () => {
+  it('stores a PNG on Cloudinary and returns its URL', async () => {
     const res = await post().attach('file', PNG, { filename: 'a.png', contentType: 'image/png' });
 
     expect(res.status).toBe(201);
-    expect(res.body.data.url).toMatch(/^\/uploads\/[a-f0-9-]{36}\.png$/);
+    expect(res.body.data.url).toMatch(CLOUDINARY_URL_RE);
     expect(res.body.data.mime).toBe('image/png');
-    written.push(res.body.data.url);
-  });
-
-  it('serves the stored file back with nosniff', async () => {
-    const upload = await post().attach('file', JPEG, {
-      filename: 'b.jpg',
-      contentType: 'image/jpeg',
-    });
-    written.push(upload.body.data.url);
-
-    const res = await request(app).get(upload.body.data.url);
-    expect(res.status).toBe(200);
-    expect(res.headers['content-type']).toContain('image/jpeg');
-    expect(res.headers['x-content-type-options']).toBe('nosniff');
   });
 
   it('accepts every supported format', async () => {
     for (const [buffer, mime] of [
       [GIF, 'image/gif'],
       [WEBP, 'image/webp'],
+      [JPEG, 'image/jpeg'],
     ] as const) {
       const res = await post().attach('file', buffer, { filename: 'x', contentType: mime });
       expect(res.status).toBe(201);
       expect(res.body.data.mime).toBe(mime);
-      written.push(res.body.data.url);
     }
   });
 
@@ -137,10 +136,9 @@ describe('POST /api/uploads/image', () => {
     });
 
     expect(res.status).toBe(201);
-    expect(res.body.data.url).toMatch(/^\/uploads\/[a-f0-9-]{36}\.png$/);
+    expect(res.body.data.url).toMatch(CLOUDINARY_URL_RE);
     expect(res.body.data.url).not.toContain('passwd');
     expect(res.body.data.url).not.toContain('..');
-    written.push(res.body.data.url);
   });
 
   describe('detectImageFormat', () => {
@@ -159,16 +157,25 @@ describe('POST /api/uploads/image', () => {
   });
 
   describe('isInternalUpload', () => {
-    it('accepts only our own generated paths', () => {
-      expect(isInternalUpload('/uploads/0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0.png')).toBe(true);
+    it('accepts only our own Cloudinary folder + naming convention', () => {
+      expect(
+        isInternalUpload(
+          'https://res.cloudinary.com/demo/image/upload/v1700000000/ishbor-uploads/0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0.png',
+        ),
+      ).toBe(true);
       expect(isInternalUpload('https://example.com/a.png')).toBe(false);
       expect(isInternalUpload(null)).toBe(false);
     });
 
-    it('rejects traversal attempts that merely start with the prefix', () => {
-      expect(isInternalUpload('/uploads/../../../etc/passwd')).toBe(false);
-      expect(isInternalUpload('/uploads/subdir/a.png')).toBe(false);
-      expect(isInternalUpload('/uploads/a.png')).toBe(false); // not a UUID name
+    it('rejects a Cloudinary URL from a different folder or account structure', () => {
+      expect(
+        isInternalUpload(
+          'https://res.cloudinary.com/demo/image/upload/v1700000000/someone-elses-folder/0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0.png',
+        ),
+      ).toBe(false);
+      expect(
+        isInternalUpload('https://res.cloudinary.com/demo/image/upload/ishbor-uploads/a.png'),
+      ).toBe(false); // not a UUID name, no version segment
     });
   });
 });

@@ -11,6 +11,7 @@ import { TIER_RANK } from '@/services/scoringService';
 import { DIRECTIONS, type Direction } from '@/config/catalog';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
+import { clearAuthCookies } from '@/utils/cookies';
 
 /**
  * The tier shown as a user's single headline badge (leaderboard, job posts):
@@ -296,5 +297,6 @@ export const deleteMe = asyncHandler(async (req: Request, res: Response) => {
   await user.deleteOne();
   await Promise.all(ownedImages.map((image) => deleteImage(image)));
 
+  clearAuthCookies(res);
   res.status(200).json({ success: true, data: { deleted: true } });
 });

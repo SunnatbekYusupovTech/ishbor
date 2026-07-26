@@ -99,15 +99,13 @@ export default function AdminLoginPage() {
     setErrors({});
     setLoading(true);
     try {
-      const res = await api.login({ email: email.trim(), password });
-      tokenStore.set(res.token);
-      tokenStore.setRefresh(res.refreshToken);
+      await api.login({ email: email.trim(), password });
 
       // The login endpoint itself doesn't check role — re-verify via /me
-      // and reject (dropping the token again) if this isn't an admin.
+      // and reject (revoking the session again) if this isn't an admin.
       const me = await api.me();
       if (me.role !== 'admin') {
-        tokenStore.clear();
+        await api.logout();
         registerFailure(t('notAdmin'));
         return;
       }
