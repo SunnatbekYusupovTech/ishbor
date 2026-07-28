@@ -67,6 +67,24 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
+- **Parolni tiklash (forgot/reset password) — Gmail SMTP orqali (Sardor):**
+  login sahifasidagi "Parolni unutdingizmi?" endi ishlaydi — yangi ikki bosqichli
+  sahifa `frontend/src/app/[locale]/forgot-password/page.tsx` (email → 6 xonali
+  kod + yangi parol). Backend: `PasswordResetCode` modeli (kod faqat SHA-256
+  hash holida saqlanadi), `utils/otp.ts`, `utils/mailer.ts` (nodemailer + Gmail
+  SMTP App Password — domen tasdiqlash shart emas), `POST /auth/forgot-password`
+  / `POST /auth/reset-password` (`authController.ts`, generic javob — email
+  enumeration'dan himoya, `passwordResetRateLimiter` 5/15min). Yangi env:
+  `SMTP_USER`, `SMTP_APP_PASSWORD`, `SMTP_FROM_NAME` (ixtiyoriy — sozlanmasa
+  faqat shu ikki endpoint ishlamaydi, qolgan API buzilmaydi — `groqApiKey`/
+  `cloudinary` bilan bir xil naqsh). Shu jarayonda topilgan haqiqiy bug:
+  `login/page.tsx` "Kirish" (login) rejimida `Link` komponentini ishlatardi,
+  lekin import qilmagan edi — TypeScript buni ushlamadi (Next dev-server
+  type-check qilmasdan transpile qiladi), shuning uchun faqat foydalanuvchi
+  "Kirish" tabini bosganda (ro'yxatdan o'tishda emas) `ReferenceError: Link
+  is not defined` bilan komponent qulab tushardi — aynan "sign in
+  ishlamayapti" bugi shu edi. Tuzatildi (`Link` endi `@/i18n/navigation`dan
+  import qilinadi). Batafsil: `backend/CLAUDE.md` → "Parolni tiklash".
 - **Rasm yuklash Cloudinary'ga ko'chirildi (Sardor):** avval avatar/muqova/
   portfolio rasmlari backend konteynerining o'z diskiga (`/uploads`)
   yozilardi — Railway/Vercel fayl tizimi efemer bo'lgani uchun Volume

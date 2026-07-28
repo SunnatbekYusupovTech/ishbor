@@ -35,12 +35,31 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
  */
 const AUTHED_MARKER = 'ishbor_authed';
 
+/**
+ * Fired synchronously whenever `markAuthed`/`clear` run, so `useCurrentUser`
+ * can refetch/clear immediately instead of waiting for a `pathname` change.
+ * That wait was the actual bug behind "logout/login needs 2-3 tries": e.g.
+ * confirming logout while already on `/` calls `router.push('/')`, which is
+ * a no-op for Next's `usePathname` (same string in, same string out) — the
+ * pathname-keyed effect never re-ran, so the header kept showing the old
+ * session until an unrelated navigation happened to change the pathname.
+ */
+const AUTH_CHANGED_EVENT = 'ishbor:authed-changed';
+
 export const tokenStore = {
   /** Synchronous, best-effort "looks logged in" hint — see `AUTHED_MARKER` above. */
   get: (): boolean => Cookies.get(AUTHED_MARKER) === '1',
-  markAuthed: () => Cookies.set(AUTHED_MARKER, '1', { expires: 30, sameSite: 'lax' }),
-  clear: () => Cookies.remove(AUTHED_MARKER),
+  markAuthed: () => {
+    Cookies.set(AUTHED_MARKER, '1', { expires: 30, sameSite: 'lax' });
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+  },
+  clear: () => {
+    Cookies.remove(AUTHED_MARKER);
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+  },
 };
+
+export { AUTH_CHANGED_EVENT };
 
 class ApiError extends Error {
   constructor(
@@ -177,6 +196,20 @@ export const api = {
     });
     tokenStore.clear();
   },
+
+  /** Always resolves (never reveals whether the email is registered — see backend). */
+  forgotPassword: (email: string) =>
+    request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  /** Verifies the emailed code and sets `newPassword`; also revokes every session on the account. */
+  resetPassword: (body: { email: string; code: string; newPassword: string }) =>
+    request<{ reset: boolean }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 
   /**
    * Signs out of EVERY device: revokes every refresh token this account

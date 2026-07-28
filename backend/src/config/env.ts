@@ -136,6 +136,24 @@ export const env = {
   },
   /** Ceiling on a single upload, enforced before the bytes ever leave this process. */
   maxUploadBytes: numberFromEnv('MAX_UPLOAD_BYTES', 5 * 1024 * 1024),
+
+  /**
+   * Password-reset codes are emailed via plain Gmail SMTP (`utils/mailer.ts`)
+   * rather than a transactional-email provider — no domain verification
+   * needed, works for any recipient immediately. Optional, same pattern as
+   * `cloudinary`/`groqApiKey`: the server still boots and every other
+   * endpoint keeps working without it, `POST /auth/forgot-password` just
+   * 503s with a clear message until it's configured.
+   */
+  smtp: {
+    user: process.env.SMTP_USER,
+    appPassword: process.env.SMTP_APP_PASSWORD,
+    fromName: process.env.SMTP_FROM_NAME ?? 'Ishbor',
+  },
+  /** Minutes a password-reset code stays valid after being emailed. */
+  passwordResetCodeTtlMinutes: numberFromEnv('PASSWORD_RESET_CODE_TTL_MINUTES', 15),
+  /** Wrong-code guesses allowed against one code before it's invalidated. */
+  passwordResetMaxAttempts: numberFromEnv('PASSWORD_RESET_MAX_ATTEMPTS', 5),
 } as const;
 
 export type Env = typeof env;

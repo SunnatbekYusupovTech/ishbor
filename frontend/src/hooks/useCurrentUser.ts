@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { usePathname } from '@/i18n/navigation';
-import { api, tokenStore } from '@/lib/api';
+import { api, tokenStore, AUTH_CHANGED_EVENT } from '@/lib/api';
 import type { Me } from '@/types/domain';
 
 /**
@@ -10,9 +10,13 @@ import type { Me } from '@/types/domain';
  * `LeftSidebar` and `RightSidebar` — without this each would call `api.me()`
  * independently (3x the requests) and go stale relative to each other.
  *
- * Refetches on route change (covers login/logout navigations) and on every
- * successful `api.updateMe` (avatar/name/tier changes), via the
- * `ishbor:me-updated` event dispatched from `lib/api.ts`.
+ * Refetches on route change (covers login/logout navigations that land on a
+ * *different* pathname) AND on the `ishbor:authed-changed` event (covers the
+ * same-pathname case, e.g. logging out while already on `/` — `router.push`
+ * to the current path is a no-op for `usePathname`, so the pathname effect
+ * alone would never re-fire there; see `lib/api.ts#tokenStore`). Also
+ * refetches on every successful `api.updateMe` (avatar/name/tier changes)
+ * via the `ishbor:me-updated` event.
  */
 export function useCurrentUser() {
   const pathname = usePathname();
@@ -20,9 +24,10 @@ export function useCurrentUser() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
 
-  useEffect(() => {
-    setAuthed(!!tokenStore.get());
-    if (tokenStore.get()) {
+  const refresh = useCallback(() => {
+    const isAuthed = !!tokenStore.get();
+    setAuthed(isAuthed);
+    if (isAuthed) {
       api
         .me()
         .then((p) => {
@@ -37,7 +42,16 @@ export function useCurrentUser() {
       setIsAdmin(false);
       setMe(null);
     }
-  }, [pathname]);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [pathname, refresh]);
+
+  useEffect(() => {
+    window.addEventListener(AUTH_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(AUTH_CHANGED_EVENT, refresh);
+  }, [refresh]);
 
   useEffect(() => {
     const onMeUpdated = (e: Event) => {

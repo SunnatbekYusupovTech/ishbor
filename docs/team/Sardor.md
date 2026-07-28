@@ -64,6 +64,16 @@ Autentifikatsiya, xavfsizlik, anti-cheat tizimi va backend infratuzilmasi. Foyda
 - [x] Anti-cheat hodisalarini loglash va admin panelga uzatish — `GET /api/admin/violations`
       kod tomoni tayyor (taklif qilingan formatda, `admin` roli bilan himoyalangan)
       (2026-07-19). ⚠️ Hidoyatov formatni hali tasdiqlamagan — batafsili notepadda.
+- [x] **Parolni tiklash (forgot/reset password)** — `PasswordResetCode` modeli,
+      `utils/otp.ts`/`utils/mailer.ts` (Gmail SMTP, App Password — bepul tier,
+      domen tasdiqlash shart emas), `POST /auth/{forgot,reset}-password`
+      (`passwordResetRateLimiter` 5/15min), frontend `forgot-password/page.tsx`
+      (2026-07-28). Shu jarayonda `login/page.tsx`dagi haqiqiy bug ham topildi/
+      tuzatildi: "Kirish" rejimida ishlatilgan `Link` importi yo'q edi —
+      foydalanuvchi login tabini bosganda sahifa `ReferenceError` bilan
+      qulardi (root-CLAUDE.md → "Yaqinda qilingan ishlar"da batafsil).
+      Hali qolgan: avtomatlashtirilgan test yo'q (`authController.test.ts`
+      umuman mavjud emas — login/register ham qamrovsiz).
 
 > Batafsil, bosqichma-bosqich checklist: [`docs/workspace/SardorTasks.md`](../workspace/SardorTasks.md)
 
