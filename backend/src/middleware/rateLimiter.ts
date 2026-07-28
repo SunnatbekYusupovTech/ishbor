@@ -62,6 +62,24 @@ export const uploadRateLimiter = rateLimit({
   },
 });
 
+/**
+ * Guards `/auth/forgot-password` and `/auth/reset-password`. Tighter than
+ * `authRateLimiter`: forgot-password sends a real email (abuse = spamming a
+ * stranger's inbox and burning the Gmail daily send limit) and
+ * reset-password lets a caller guess a 6-digit code (1 in a million per
+ * try — this plus `env.passwordResetMaxAttempts` on the code itself is what
+ * keeps that from being brute-forceable).
+ */
+export const passwordResetRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, _res, next) => {
+    next(ApiError.tooManyRequests('Too many attempts. Please try again in a few minutes.'));
+  },
+});
+
 export const testRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,

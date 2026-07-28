@@ -75,6 +75,28 @@ npm run typecheck -w backend  # tsc --noEmit
 - **Rate-limiting:** `middleware/rateLimiter.ts` (`authRateLimiter`) — `/auth/login`
   va `/auth/register` uchun 15 daqiqada 10 urinish, oshsa `429 Too Many Requests`
   (`ApiError.tooManyRequests`). Boshqa endpoint qo'shsang shu paterndan foydalan.
+- **Parolni tiklash (forgot/reset password):** `POST /auth/forgot-password`
+  (`{ email }`) → `PasswordResetCode` (yangi model, 6 xonali kod, faqat SHA-256
+  hash'i saqlanadi — `utils/otp.ts`, `RefreshToken` bilan bir xil naqsh) yaratadi
+  va `utils/mailer.ts` orqali Gmail SMTP bilan emailga yuboradi. Har doim bir xil
+  generic javob (email ro'yxatdan o'tganmi-yo'qmi bildirmaydi — email enumeration
+  himoyasi); haqiqiy himoya `passwordResetRateLimiter` (5/15min, IP bo'yicha) +
+  60s resend-cooldown (foydalanuvchi bo'yicha, kod jadvalidagi `createdAt`dan).
+  `POST /auth/reset-password` (`{ email, code, newPassword }`) kodni tekshiradi
+  (`env.passwordResetMaxAttempts` — default 5 — noto'g'ri urinishdan keyin kod
+  butunlay bekor qilinadi), parolni yangilaydi va **shu akkauntning barcha
+  refresh tokenlarini bekor qiladi** (eski, ehtimol buzilgan parol bilan ochilgan
+  sessiyalar ham yopiladi). `isMailerConfigured()` — `SMTP_USER`/`SMTP_APP_PASSWORD`
+  sozlanmagan bo'lsa `forgot-password` aniq xato bilan darhol rad etadi (boshqa
+  hech qanday endpoint buzilmaydi, `cloudinary`/`groqApiKey` bilan bir xil
+  ixtiyoriy-env naqshi). **Nega Gmail SMTP, tranzaktsion provider emas:**
+  Resend/SendGrid/Brevo kabi xizmatlar ixtiyoriy alıcıga yetkazish uchun
+  domenni oldindan tasdiqlashni talab qiladi — bu loyihada yo'q. Oddiy Gmail
+  hisobida 2-bosqichli tasdiqlash + App Password (myaccount.google.com/apppasswords)
+  bilan darhol, domen sozlamasiz ishlaydi; Google'ning kunlik limiti (~500 xat/kun)
+  bu ko'lamdagi loyiha uchun yetarli. Frontend: `app/[locale]/forgot-password/page.tsx`
+  (ikki bosqich — email → kod+yangi parol; `login/page.tsx`dagi "Parolni unutdingizmi?"
+  havolasi shu yerga olib boradi).
 - **Anti-cheat violations (non-tab-switch):** `Session.violationCount` — copy/paste,
   right-click, devtools va h.k. uchun umumiy sanoq. `POST /api/test/violation`
   (`{ sessionId, type }`, `type` — `validation/testSchemas.ts` dagi `VIOLATION_TYPES`
@@ -370,7 +392,8 @@ ixtiyoriy, `groqApiKey` bilan bir xil pattern).
 
 ## Endpointlar (`/api`)
 
-`/health` · `/auth` (register, login, refresh, logout, logout-all, me [GET/PATCH/DELETE]) ·
+`/health` · `/auth` (register, login, refresh, logout, logout-all, forgot-password,
+reset-password, me [GET/PATCH/DELETE]) ·
 `/test` (catalog, start, submit, auto-complete [QA-tester only], tab-switch, violation) · `/jobs`
 (GET list `?type=&level=&stack=&keyword=&location=&salaryMin=&salaryMax=&sort=`, POST create) ·
 `/users` (leaderboard · GET `profile/:handle` [ommaviy, `optionalAuthenticate`] ·

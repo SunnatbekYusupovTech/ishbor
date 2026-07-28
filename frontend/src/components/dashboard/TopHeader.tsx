@@ -135,11 +135,17 @@ function UserMenu({ me }: { me: Me }) {
     setOpen(false);
   }, [pathname]);
 
-  const confirmLogout = (allDevices: boolean) => {
-    if (allDevices) void api.logoutAllDevices();
-    else void api.logout();
+  const confirmLogout = async (allDevices: boolean) => {
     setLogoutDialogOpen(false);
     setOpen(false);
+    // Must be awaited: `api.logout()` clears the httpOnly cookie server-side
+    // AND the local `ishbor_authed` marker. If we navigate before it
+    // resolves, `useCurrentUser`'s pathname-triggered refetch can land
+    // between "cookie still valid" and "cookie cleared" and re-hydrate the
+    // UI as still logged in — the user then has to click logout 2-3 times
+    // before it visibly sticks.
+    if (allDevices) await api.logoutAllDevices();
+    else await api.logout();
     router.push('/');
   };
 

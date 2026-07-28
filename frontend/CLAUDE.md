@@ -133,7 +133,16 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   `/u/<handle>`ga, faqat boshqa anchor bilan (Next.js `Link` bir xil route'da
   hash bilan navigatsiya qilganda avtomatik scroll qiladi, qo'shimcha JS
   shart emas).
-- `login/page.tsx` — kirish/ro'yxatdan o'tish.
+- `login/page.tsx` — kirish/ro'yxatdan o'tish. "Parolni unutdingizmi?" (faqat
+  login rejimida) → `forgot-password/page.tsx`.
+- `forgot-password/page.tsx` — parolni tiklash, ikki bosqich (bitta sahifa,
+  `step` state bilan): email kiritish → `api.forgotPassword` (60s cosmetic
+  resend-cooldown, haqiqiy limit backendda) → 6 xonali kod + yangi parol →
+  `api.resetPassword` → muvaffaqiyat, `login/page.tsx`ga qaytish. Backend
+  har doim bir xil generic javob qaytaradi (email ro'yxatdan o'tganmi-yo'qmi
+  bildirmaydi) — sahifa shuning uchun "email topilmadi" holatini alohida
+  ko'rsatmaydi, doim "kod yuborildi" bosqichiga o'tadi. Batafsil:
+  `backend/CLAUDE.md` → "Parolni tiklash".
 - `layout.tsx` — html/body, `ThemeProvider`, `NextIntlClientProvider`, `SiteChrome`.
 
 ## Muhim konvensiyalar

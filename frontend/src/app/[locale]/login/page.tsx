@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { useRouter } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { api, ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,8 +21,11 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/';
+  // Arriving here straight after a password reset should land on the "log in"
+  // tab, not the default "register" one — see `forgot-password/page.tsx`.
+  const initialMode: Mode = searchParams.get('mode') === 'login' ? 'login' : 'register';
 
-  const [mode, setMode] = useState<Mode>('register');
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [role, setRole] = useState<'seeker' | 'employer'>('seeker');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -177,6 +180,13 @@ function LoginForm() {
               />
               {mode === 'register' && (
                 <p className="mt-1 text-xs text-muted-foreground">{t('passwordPolicyHint')}</p>
+              )}
+              {mode === 'login' && (
+                <div className="mt-1 text-right">
+                  <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                    {t('forgotPasswordLink')}
+                  </Link>
+                </div>
               )}
             </Field>
 

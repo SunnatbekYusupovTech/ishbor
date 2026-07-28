@@ -2,8 +2,11 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { User } from '@/models/User';
 import { RefreshToken } from '@/models/RefreshToken';
+import { PasswordResetCode } from '@/models/PasswordResetCode';
 import { signAuthToken, generateRefreshToken, hashRefreshToken } from '@/utils/jwt';
 import { hashPassword, verifyPassword } from '@/utils/password';
+import { generateResetCode, hashResetCode } from '@/utils/otp';
+import { isMailerConfigured, sendPasswordResetEmail } from '@/utils/mailer';
 import { passwordPolicy } from '@/validation/userSchemas';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
@@ -26,6 +29,16 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1).max(128),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+});
+
+const resetPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  code: z.string().trim().regex(/^\d{6}$/, 'Code must be 6 digits.'),
+  newPassword: passwordPolicy,
 });
 
 /**
@@ -212,4 +225,88 @@ export const logoutAll = asyncHandler(async (req: Request, res: Response) => {
     success: true,
     data: { loggedOut: true, revokedCount: result.modifiedCount },
   });
+});
+
+/**
+ * POST /api/auth/forgot-password
+ * Always responds with the same generic success message regardless of
+ * whether the email is registered — the alternative (404 for unknown
+ * emails) lets an attacker enumerate which addresses have accounts.
+ * `passwordResetRateLimiter` (5/15min per IP) is the real defense against
+ * this being used to spam an inbox or burn the mailer's daily send limit.
+ */
+export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = forgotPasswordSchema.parse(req.body);
+
+  if (!isMailerConfigured()) {
+    throw ApiError.internal('Password reset is not configured on this server yet.');
+  }
+
+  const genericResponse = () => {
+    res.status(200).json({
+      success: true,
+      data: { message: 'If that email is registered, a reset code has been sent.' },
+    });
+  };
+
+  const user = await User.findOne({ email });
+  if (!user) return genericResponse();
+
+  // Cheap resend-cooldown: refuse a new code inside 60s of the last one
+  // rather than firing a fresh email (and DB write) on every impatient
+  // double-click of "resend" — still returns the same generic response so
+  // it isn't a distinguishable signal from the outside.
+  const recent = await PasswordResetCode.findOne({ userId: user._id }).sort({ createdAt: -1 });
+  if (recent && Date.now() - recent.createdAt.getTime() < 60_000) return genericResponse();
+
+  const code = generateResetCode();
+  await PasswordResetCode.deleteMany({ userId: user._id });
+  await PasswordResetCode.create({
+    userId: user._id,
+    codeHash: hashResetCode(code),
+    expiresAt: new Date(Date.now() + env.passwordResetCodeTtlMinutes * 60 * 1000),
+  });
+
+  await sendPasswordResetEmail(user.email, code);
+  genericResponse();
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Verifying the code also fully logs the account out everywhere (every
+ * refresh token revoked) — whoever just proved control of the inbox is
+ * trusted with the new password, but any session opened before that (e.g.
+ * by whoever had the OLD, presumably-compromised password) should not
+ * silently keep working.
+ */
+export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { email, code, newPassword } = resetPasswordSchema.parse(req.body);
+
+  const user = await User.findOne({ email });
+  if (!user) throw ApiError.badRequest('Invalid or expired code.');
+
+  const resetCode = await PasswordResetCode.findOne({ userId: user._id });
+  if (!resetCode || resetCode.expiresAt.getTime() < Date.now()) {
+    throw ApiError.badRequest('Invalid or expired code.');
+  }
+  if (resetCode.attempts >= env.passwordResetMaxAttempts) {
+    await resetCode.deleteOne();
+    throw ApiError.badRequest('Too many incorrect attempts. Please request a new code.');
+  }
+  if (resetCode.codeHash !== hashResetCode(code)) {
+    resetCode.attempts += 1;
+    await resetCode.save();
+    throw ApiError.badRequest('Invalid or expired code.');
+  }
+
+  user.passwordHash = hashPassword(newPassword);
+  await user.save();
+
+  await resetCode.deleteOne();
+  await RefreshToken.updateMany(
+    { userId: user._id, revokedAt: { $exists: false } },
+    { $set: { revokedAt: new Date() } },
+  );
+
+  res.status(200).json({ success: true, data: { reset: true } });
 });
