@@ -2,7 +2,8 @@ import { Router } from 'express';
 import {
   register,
   login,
-  googleLogin,
+  googleAuthStart,
+  googleAuthCallback,
   refreshAuthToken,
   logout,
   logoutAll,
@@ -26,7 +27,8 @@ const router = Router();
 
 router.post('/register', authRateLimiter, register);
 router.post('/login', authRateLimiter, login);
-router.post('/google', authRateLimiter, googleLogin);
+router.get('/google', authRateLimiter, googleAuthStart);
+router.get('/google/callback', authRateLimiter, googleAuthCallback);
 router.post('/refresh', authRateLimiter, refreshAuthToken);
 router.post('/logout', logout);
 router.post('/logout-all', authenticate, logoutAll);

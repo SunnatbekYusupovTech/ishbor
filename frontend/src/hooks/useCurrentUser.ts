@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { usePathname } from '@/i18n/navigation';
+import { usePathname, useRouter } from '@/i18n/navigation';
 import { api, tokenStore, AUTH_CHANGED_EVENT } from '@/lib/api';
 import type { Me } from '@/types/domain';
 
@@ -20,6 +20,7 @@ import type { Me } from '@/types/domain';
  */
 export function useCurrentUser() {
   const pathname = usePathname();
+  const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
@@ -61,6 +62,24 @@ export function useCurrentUser() {
     };
     window.addEventListener('ishbor:me-updated', onMeUpdated);
     return () => window.removeEventListener('ishbor:me-updated', onMeUpdated);
+  }, []);
+
+  // "Continue with Google" lands the browser back here via a plain server
+  // redirect (`GET /auth/google/callback`) rather than a `fetch()` call, so
+  // it never runs through `lib/api.ts#request()` and never calls
+  // `tokenStore.markAuthed()` — the auth cookies are set, but the
+  // non-httpOnly UI marker isn't. `?googleAuth=1` on the success redirect
+  // makes this the one place that catches it: set the marker (dispatches
+  // `AUTH_CHANGED_EVENT`, which the listener above is already attached for
+  // by this point, triggering an immediate `refresh()`) then strip the
+  // param so it doesn't linger in the URL/browser history.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('googleAuth') !== '1') return;
+    tokenStore.markAuthed();
+    params.delete('googleAuth');
+    router.replace((pathname + (params.toString() ? `?${params}` : '')) as '/', { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { authed, isAdmin, me };

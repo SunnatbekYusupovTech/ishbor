@@ -47,9 +47,10 @@ export interface IUser extends Document {
   name: string;
   email: string;
   /**
-   * Optional: accounts created via `POST /auth/google` never set a password
-   * (`authController.googleLogin`) — they authenticate solely by Google ID
-   * token, so there is nothing to hash. `login`'s `verifyPassword` handles a
+   * Optional: accounts created via the Google OAuth redirect flow
+   * (`authController.googleAuthCallback`) never set a password — they
+   * authenticate solely by Google ID token, so there is nothing to hash.
+   * `login`'s `verifyPassword` handles a
    * missing hash as "no password set" (always rejects), never as a crash;
    * such an account can still get a password later via `resetPassword`.
    */
@@ -97,13 +98,13 @@ export interface IUser extends Document {
   emailVerified?: boolean;
 
   /**
-   * Set only for accounts that signed in via `POST /auth/google` (the
+   * Set only for accounts that signed in via "Continue with Google" (the
    * Google account's stable `sub` claim). `sparse`-unique: the vast
    * majority of accounts (plain email/password) never set this at all, so
    * it must not collide on `null` in the unique index. An existing
    * email/password account signing in with Google for the first time gets
    * this backfilled onto its existing document rather than creating a
-   * duplicate — see `authController.googleLogin`.
+   * duplicate — see `authController.findOrCreateGoogleUser`.
    */
   googleId?: string;
 

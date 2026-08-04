@@ -135,12 +135,23 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   shart emas).
 - `login/page.tsx` — kirish/ro'yxatdan o'tish. "Parolni unutdingizmi?" (faqat
   login rejimida) → `forgot-password/page.tsx`. Forma ostida "yoki" ajratuvchi +
-  `components/GoogleSignInButton.tsx` ("Continue with Google", Google Identity
-  Services) — ID tokenni to'g'ridan-to'g'ri `api.googleLogin` (`POST /auth/google`)ga
-  yuboradi, login/register rejimidan mustaqil ishlaydi (bir bosishda mavjud
-  hisobga kiradi yoki yangisini yaratadi). `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
-  sozlanmagan bo'lsa komponent hech narsa render qilmaydi. Batafsil:
-  `backend/CLAUDE.md` → "Continue with Google".
+  `components/GoogleSignInButton.tsx` ("Continue with Google") — **oddiy
+  `<a>` havola**, `${NEXT_PUBLIC_API_URL}/api/auth/google`ga to'liq sahifa
+  navigatsiyasi (Google Identity Services skripti/iframe'i **emas** — butun
+  OAuth redirect oqimi backendda, batafsil `backend/CLAUDE.md` → "Continue
+  with Google"). Muvaffaqiyatli bo'lsa backend brauzerni bevosita `/` ga
+  (`?googleAuth=1` bilan) qaytaradi; xato bo'lsa `/login?googleError=<reason>`ga
+  — `login/page.tsx` shu query-parametrni `useEffect`da o'qib `t('googleError')`
+  xabarini ko'rsatadi va parametrni URL'dan tozalaydi (bu JS `catch` bloki
+  emas, chunki bu to'liq sahifa redirect). `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+  sozlanmagan bo'lsa komponent hech narsa render qilmaydi (faqat tugmani
+  ko'rsatish/yashirish uchun ishlatiladi — haqiqiy OAuth almashinuvida
+  frontend hech qanday Google qiymatidan foydalanmaydi).
+  **`hooks/useCurrentUser.ts`** — `?googleAuth=1` query-parametrini bitta
+  marta ushlab, `tokenStore.markAuthed()`ni chaqiradi va parametrni URL'dan
+  tozalaydi: bu redirect `lib/api.ts#request()` orqali o'tmagani uchun (oddiy
+  server redirect, `fetch` emas) hech kim boshqa joyda bu belgi-cookie'ni
+  o'rnatmaydi.
 - `forgot-password/page.tsx` — parolni tiklash, ikki bosqich (bitta sahifa,
   `step` state bilan): email kiritish → `api.forgotPassword` (60s cosmetic
   resend-cooldown, haqiqiy limit backendda) → 6 xonali kod + yangi parol →

@@ -9,8 +9,10 @@ import { env } from '@/config/env';
  */
 export const ACCESS_COOKIE = 'ishbor_token';
 export const REFRESH_COOKIE = 'ishbor_refresh_token';
+export const GOOGLE_STATE_COOKIE = 'ishbor_google_oauth_state';
 
 const REFRESH_COOKIE_PATH = '/api/auth';
+const GOOGLE_OAUTH_PATH = '/api/auth/google';
 
 function cookieOptions(maxAge: number, path: string) {
   return {
@@ -20,6 +22,22 @@ function cookieOptions(maxAge: number, path: string) {
     maxAge,
     path,
   };
+}
+
+/**
+ * CSRF guard for the Google OAuth redirect handshake: `GET /auth/google`
+ * mints a random `state`, stores it here (short-lived, scoped to the
+ * `/auth/google*` path pair), and the callback rejects unless the `state`
+ * query param it receives matches this cookie — otherwise an attacker could
+ * trick a victim into completing an OAuth flow the attacker initiated
+ * (login CSRF), or replay a stale authorization response.
+ */
+export function setGoogleOAuthStateCookie(res: Response, state: string): void {
+  res.cookie(GOOGLE_STATE_COOKIE, state, cookieOptions(5 * 60 * 1000, GOOGLE_OAUTH_PATH));
+}
+
+export function clearGoogleOAuthStateCookie(res: Response): void {
+  res.clearCookie(GOOGLE_STATE_COOKIE, { path: GOOGLE_OAUTH_PATH });
 }
 
 export function setAuthCookies(res: Response, token: string, refreshToken: string): void {

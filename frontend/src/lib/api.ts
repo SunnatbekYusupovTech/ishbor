@@ -222,23 +222,6 @@ export const api = {
       return data;
     }),
 
-  /**
-   * "Continue with Google": `credential` is the signed ID token handed to us
-   * by the Google Identity Services button callback. Logs an existing
-   * account in or creates a new one (always `seeker`) in one step — the
-   * server has already verified the token proves control of the email.
-   */
-  googleLogin: (credential: string) =>
-    request<{
-      user: { id: string; email: string };
-    }>('/auth/google', {
-      method: 'POST',
-      body: JSON.stringify({ credential }),
-    }).then((data) => {
-      tokenStore.markAuthed();
-      return data;
-    }),
-
   /** Logs out this device only — revokes just the locally-held refresh token. */
   logout: async (): Promise<void> => {
     await request('/auth/logout', { method: 'POST' }).catch(() => {

@@ -75,23 +75,50 @@ npm run typecheck -w backend  # tsc --noEmit
 - **Rate-limiting:** `middleware/rateLimiter.ts` (`authRateLimiter`) — `/auth/login`
   va `/auth/register` uchun 15 daqiqada 10 urinish, oshsa `429 Too Many Requests`
   (`ApiError.tooManyRequests`). Boshqa endpoint qo'shsang shu paterndan foydalan.
-- **"Continue with Google" (`POST /auth/google`):** frontend Google Identity
-  Services tugmasi (`components/GoogleSignInButton.tsx`) orqali olingan signed
-  ID token (`{ credential }`) `google-auth-library`ning `OAuth2Client#verifyIdToken`
-  bilan tekshiriladi (imzo + `aud === GOOGLE_CLIENT_ID`) — klient aytgan hech
-  narsaga ishonilmaydi. Token haqiqiy bo'lsa: `googleId` yoki `email` bo'yicha
-  mavjud userni topadi; topilmasa **darhol yangi hisob yaratadi** (`role: 'seeker'`,
-  parolsiz, `emailVerified: true` — Google email'ni allaqachon tasdiqlagan,
-  shuning uchun emailed-code bosqichi shart emas); mavjud email/parol hisobi
-  birinchi marta Google bilan kirsa, `googleId` o'sha hujjatga bog'lanadi
-  (dublikat hisob yaratilmaydi). Muvaffaqiyatli bo'lsa oddiy `login` bilan bir
-  xil cookie'lar o'rnatiladi. `User.passwordHash` endi **ixtiyoriy** (faqat
-  Google orqali yaratilgan hisoblarda yo'q) — `utils/password.ts#verifyPassword`
-  `undefined` hash'ni har doim rad etadi (parolli kirish bloklanadi, lekin
-  keyinchalik `reset-password` orqali parol o'rnatilishi mumkin). `GOOGLE_CLIENT_ID`
-  ixtiyoriy env (`cloudinary`/`groqApiKey` bilan bir xil naqsh) — sozlanmagan
-  bo'lsa faqat shu endpoint 500 qaytaradi, boshqa hech narsa buzilmaydi. Frontend
-  qiymati bir xil bo'lishi shart: `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+- **"Continue with Google" (`GET /auth/google` → `GET /auth/google/callback`):**
+  to'liq OAuth 2.0 **authorization-code redirect flow** — Google Identity
+  Services tugma/One-Tap credential oqimi **emas**. Sabab: GIS button ba'zi
+  brauzer/embedded-webview'larda (third-party cookie cheklovlari, script
+  render bo'lmasligi) ishlamay qolishi mumkin — redirect flow bunday
+  cheklovlarga bog'liq emas.
+  - `GET /auth/google` — tasodifiy `state` yaratadi (CSRF himoyasi), uni
+    qisqa muddatli httpOnly cookie'ga (`GOOGLE_STATE_COOKIE`,
+    `utils/cookies.ts#setGoogleOAuthStateCookie`, 5 daqiqa, `/api/auth/google`
+    yo'liga scoped) yozadi, brauzerni Google'ning consent screeniga
+    redirect qiladi (`GOOGLE_CLIENT_ID` + `GOOGLE_REDIRECT_URI` + `state`).
+  - `GET /auth/google/callback` — Google `?code=&state=` bilan qaytaradi.
+    `state` cookie'dagi qiymat bilan solishtiriladi (mos kelmasa/yo'q bo'lsa
+    rad etiladi); `code` **server-to-server** `POST https://oauth2.googleapis.com/token`ga
+    (`GOOGLE_CLIENT_SECRET` bilan — bu haqiqiy sir, hech qachon frontendga
+    chiqmaydi) almashtiriladi, qaytgan `id_token` xuddi eski oqimdagidek
+    `google-auth-library`ning `OAuth2Client#verifyIdToken` bilan tekshiriladi
+    (imzo + `aud === GOOGLE_CLIENT_ID`).
+  - Token haqiqiy bo'lsa (`authController.findOrCreateGoogleUser`): `googleId`
+    yoki `email` bo'yicha mavjud userni topadi; topilmasa **darhol yangi hisob
+    yaratadi** (`role: 'seeker'`, parolsiz, `emailVerified: true` — Google
+    email'ni allaqachon tasdiqlagan); mavjud email/parol hisobi birinchi
+    marta Google bilan kirsa, `googleId` o'sha hujjatga bog'lanadi (dublikat
+    hisob yaratilmaydi).
+  - Muvaffaqiyatli bo'lsa oddiy `login` bilan bir xil cookie'lar o'rnatiladi,
+    so'ng brauzer frontend origin'iga (`env.clientOrigins[0]`) `?googleAuth=1`
+    bilan redirect qilinadi — bu **oddiy server redirect**, `lib/api.ts`
+    orqali o'tmaydi, shuning uchun `tokenStore.markAuthed()` alohida
+    (`frontend/hooks/useCurrentUser.ts`da, quyiga qarang) chaqiriladi. Xato
+    bo'lsa (`state` mos kelmasa, foydalanuvchi rad etsa, token almashinuvi
+    muvaffaqiyatsiz bo'lsa) `/login?googleError=<reason>`ga redirect qilinadi
+    — bu to'liq sahifa navigatsiyasi, JS `catch` bloki emas, shuning uchun
+    frontend buni `login/page.tsx`da query-parametr sifatida o'qiydi.
+  - `User.passwordHash` endi **ixtiyoriy** (faqat Google orqali yaratilgan
+    hisoblarda yo'q) — `utils/password.ts#verifyPassword` `undefined` hash'ni
+    har doim rad etadi (parolli kirish bloklanadi, lekin keyinchalik
+    `reset-password` orqali parol o'rnatilishi mumkin).
+  - Kerakli env: `GOOGLE_CLIENT_ID` (public, frontend'dagi
+    `NEXT_PUBLIC_GOOGLE_CLIENT_ID` bilan bir xil), `GOOGLE_CLIENT_SECRET`
+    (**sir**, faqat backend), `GOOGLE_REDIRECT_URI` (aynan shu API'ning
+    `/api/auth/google/callback`si, Google Cloud Console'da "Authorized
+    redirect URIs"ga bayt-bayt mos qo'shilgan bo'lishi shart). Ixtiyoriy env
+    (`cloudinary`/`groqApiKey` bilan bir xil naqsh) — sozlanmagan bo'lsa
+    faqat `GET /auth/google` 500 qaytaradi, boshqa hech narsa buzilmaydi.
 - **Parolni tiklash (forgot/reset password):** `POST /auth/forgot-password`
   (`{ email }`) → `PasswordResetCode` (yangi model, 6 xonali kod, faqat SHA-256
   hash'i saqlanadi — `utils/otp.ts`, `RefreshToken` bilan bir xil naqsh) yaratadi
@@ -411,7 +438,8 @@ ixtiyoriy, `groqApiKey` bilan bir xil pattern).
 
 ## Endpointlar (`/api`)
 
-`/health` · `/auth` (register, login, google, refresh, logout, logout-all, forgot-password,
+`/health` · `/auth` (register, login, google [GET, redirect], google/callback [GET, redirect],
+refresh, logout, logout-all, forgot-password,
 reset-password, me [GET/PATCH/DELETE]) ·
 `/test` (catalog, start, submit, auto-complete [QA-tester only], tab-switch, violation) · `/jobs`
 (GET list `?type=&level=&stack=&keyword=&location=&salaryMin=&salaryMax=&sort=`, POST create) ·
