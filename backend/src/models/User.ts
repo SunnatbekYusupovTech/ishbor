@@ -46,7 +46,14 @@ export interface IUser extends Document {
   _id: Types.ObjectId;
   name: string;
   email: string;
-  passwordHash: string;
+  /**
+   * Optional: accounts created via `POST /auth/google` never set a password
+   * (`authController.googleLogin`) — they authenticate solely by Google ID
+   * token, so there is nothing to hash. `login`'s `verifyPassword` handles a
+   * missing hash as "no password set" (always rejects), never as a crash;
+   * such an account can still get a password later via `resetPassword`.
+   */
+  passwordHash?: string;
   /** 'employer' posts vacancies; 'seeker' posts a resume after passing the test. */
   role: UserRole;
   /**
@@ -78,6 +85,27 @@ export interface IUser extends Document {
    * through 5 real questions every time.
    */
   isQaTester: boolean;
+  /**
+   * Gates login until the registrant proves control of their inbox (a code
+   * emailed via `utils/mailer.ts`, verified through `POST /auth/verify-email`).
+   * Deliberately `undefined`-permissive: accounts created before this field
+   * existed (or via `seed.ts`/direct DB insert) have no value here at all —
+   * `authController.login` only blocks when this is explicitly `false`, so
+   * every pre-existing account keeps working unaffected. New registrations
+   * set it to `false` explicitly; it's never user-settable via `PATCH /auth/me`.
+   */
+  emailVerified?: boolean;
+
+  /**
+   * Set only for accounts that signed in via `POST /auth/google` (the
+   * Google account's stable `sub` claim). `sparse`-unique: the vast
+   * majority of accounts (plain email/password) never set this at all, so
+   * it must not collide on `null` in the unique index. An existing
+   * email/password account signing in with Google for the first time gets
+   * this backfilled onto its existing document rather than creating a
+   * duplicate — see `authController.googleLogin`.
+   */
+  googleId?: string;
 
   /* ---------------- Public freelancer profile (`/u/<handle>`) ---------------- */
 
@@ -126,7 +154,7 @@ const userSchema = new Schema<IUser>(
       trim: true,
       index: true,
     },
-    passwordHash: { type: String, required: true, select: false },
+    passwordHash: { type: String, select: false },
     role: {
       type: String,
       enum: USER_ROLES,
@@ -144,6 +172,8 @@ const userSchema = new Schema<IUser>(
     attempts: { type: Number, default: 0, min: 0 },
     registrationIp: { type: String, index: true },
     isQaTester: { type: Boolean, default: false },
+    emailVerified: { type: Boolean },
+    googleId: { type: String, unique: true, sparse: true },
 
     // --- Public freelancer profile ---
     username: {

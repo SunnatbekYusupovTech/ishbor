@@ -134,7 +134,13 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   hash bilan navigatsiya qilganda avtomatik scroll qiladi, qo'shimcha JS
   shart emas).
 - `login/page.tsx` — kirish/ro'yxatdan o'tish. "Parolni unutdingizmi?" (faqat
-  login rejimida) → `forgot-password/page.tsx`.
+  login rejimida) → `forgot-password/page.tsx`. Forma ostida "yoki" ajratuvchi +
+  `components/GoogleSignInButton.tsx` ("Continue with Google", Google Identity
+  Services) — ID tokenni to'g'ridan-to'g'ri `api.googleLogin` (`POST /auth/google`)ga
+  yuboradi, login/register rejimidan mustaqil ishlaydi (bir bosishda mavjud
+  hisobga kiradi yoki yangisini yaratadi). `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+  sozlanmagan bo'lsa komponent hech narsa render qilmaydi. Batafsil:
+  `backend/CLAUDE.md` → "Continue with Google".
 - `forgot-password/page.tsx` — parolni tiklash, ikki bosqich (bitta sahifa,
   `step` state bilan): email kiritish → `api.forgotPassword` (60s cosmetic
   resend-cooldown, haqiqiy limit backendda) → 6 xonali kod + yangi parol →

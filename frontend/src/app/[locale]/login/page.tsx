@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { useCallback, useEffect, Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { Link, useRouter } from '@/i18n/navigation';
@@ -9,12 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Field, PasswordField, inputCls, isPasswordStrongEnough, EMAIL_RE } from '@/components/form-field';
+import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 import { cn } from '@/lib/utils';
 
 type Mode = 'login' | 'register';
 type FieldErrors = Partial<Record<'name' | 'email' | 'password' | 'confirm', string>>;
+type CodeFieldErrors = Partial<Record<'code', string>>;
 
 const MIN_PASSWORD = 8;
+/** Mirrors the backend's own 60s resend-cooldown (`authController.issueVerificationCode`). */
+const RESEND_COOLDOWN_SECONDS = 60;
 
 function LoginForm() {
   const t = useTranslations('auth');
@@ -36,6 +40,19 @@ function LoginForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Set once registration returns `requiresVerification` (or login fails with
+  // `EMAIL_NOT_VERIFIED`) — switches the whole card into the code-entry step.
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [codeErrors, setCodeErrors] = useState<CodeFieldErrors>({});
+  const [resendIn, setResendIn] = useState(0);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setInterval(() => setResendIn((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [resendIn]);
 
   const clearFieldError = (field: keyof FieldErrors) =>
     setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
@@ -74,10 +91,41 @@ function LoginForm() {
     setErrors({});
     setLoading(true);
     try {
-      mode === 'register'
-        ? await api.register({ name, email, password, role })
-        : await api.login({ email, password });
+      if (mode === 'register') {
+        const data = await api.register({ name, email, password, role });
+        if ('requiresVerification' in data) {
+          setPendingEmail(data.email);
+          setResendIn(RESEND_COOLDOWN_SECONDS);
+          return;
+        }
+      } else {
+        await api.login({ email, password });
+      }
       // `next` is a locale-agnostic internal path (e.g. /jobs/new).
+      router.push(next as '/');
+    } catch (err) {
+      if (err instanceof ApiError && err.details && typeof err.details === 'object' && 'code' in err.details && err.details.code === 'EMAIL_NOT_VERIFIED') {
+        setPendingEmail(email.trim());
+        setResendIn(RESEND_COOLDOWN_SECONDS);
+        return;
+      }
+      setError(err instanceof ApiError ? err.message : t('genericError'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!/^\d{6}$/.test(code.trim())) {
+      setCodeErrors({ code: t(code.trim() ? 'errCodeFormat' : 'errCodeRequired') });
+      return;
+    }
+    setCodeErrors({});
+    setLoading(true);
+    try {
+      await api.verifyEmail({ email: pendingEmail!, code: code.trim() });
       router.push(next as '/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('genericError'));
@@ -85,6 +133,107 @@ function LoginForm() {
       setLoading(false);
     }
   };
+
+  const handleGoogleCredential = useCallback(
+    async (credential: string) => {
+      setError(null);
+      setLoading(true);
+      try {
+        await api.googleLogin(credential);
+        router.push(next as '/');
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : t('googleError'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [router, next, t],
+  );
+
+  const resendCode = async () => {
+    if (resendIn > 0 || loading || !pendingEmail) return;
+    setError(null);
+    setLoading(true);
+    try {
+      await api.resendVerification(pendingEmail);
+      setResendIn(RESEND_COOLDOWN_SECONDS);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('genericError'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (pendingEmail) {
+    return (
+      <div className="mx-auto flex max-w-md flex-col justify-center">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">{t('verifyEmailTitle')}</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {t('verifyEmailSubtitle', { email: pendingEmail })}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={verifySubmit} noValidate className="space-y-4">
+              <Field label={t('code')} error={codeErrors.code}>
+                <input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => {
+                    setCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                    setCodeErrors({});
+                  }}
+                  aria-invalid={!!codeErrors.code}
+                  autoFocus
+                  className={cn(
+                    inputCls,
+                    'tracking-[0.5em]',
+                    codeErrors.code ? 'border-destructive' : 'border-input',
+                  )}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">{t('codeHint')}</p>
+              </Field>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? t('pleaseWait') : t('verifyEmailButton')}
+              </Button>
+
+              <button
+                type="button"
+                onClick={resendCode}
+                disabled={resendIn > 0 || loading}
+                className="w-full text-center text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+              >
+                {resendIn > 0 ? t('resendCodeIn', { seconds: resendIn }) : t('resendCode')}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingEmail(null);
+                  setCode('');
+                  setCodeErrors({});
+                  setError(null);
+                }}
+                className="w-full text-center text-sm text-muted-foreground hover:underline"
+              >
+                {t('useAnotherEmail')}
+              </button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex max-w-md flex-col justify-center">
@@ -217,6 +366,14 @@ function LoginForm() {
               {loading ? t('pleaseWait') : mode === 'register' ? t('createAccount') : t('logIn')}
             </Button>
           </form>
+
+          <div className="my-4 flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs uppercase text-muted-foreground">{t('orDivider')}</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <GoogleSignInButton onCredential={handleGoogleCredential} />
         </CardContent>
       </Card>
     </div>

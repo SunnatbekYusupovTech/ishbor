@@ -74,7 +74,14 @@
     "errCodeFormat": "Kod 6 xonali raqamdan iborat bo'lishi kerak",
     "resetSuccessTitle": "Parol muvaffaqiyatli yangilandi",
     "resetSuccessBody": "Endi yangi parolingiz bilan tizimga kirishingiz mumkin.",
-    "goToLogin": "Kirish"
+    "goToLogin": "Kirish",
+    "verifyEmailTitle": "Emailni tasdiqlang",
+    "verifyEmailSubtitle": "{email} manziliga 6 xonali kod yubordik. Ro'yxatdan o'tishni yakunlash uchun kodni kiriting.",
+    "verifyEmailButton": "Tasdiqlash va davom etish",
+    "useAnotherEmail": "Boshqa email ishlatish",
+    "orDivider": "yoki",
+    "continueWithGoogle": "Google orqali davom etish",
+    "googleError": "Google orqali kirish amalga oshmadi. Qayta urinib ko'ring."
   },
   "jobs": {
     "title": "Ish e'lonlari",
@@ -477,6 +484,13 @@
     "savedTitle": "Saqlangan e'lonlar",
     "quickLinksTitle": "Tezkor havolalar",
     "noSaved": "Hozircha saqlangan e'lon yo'q.",
-    "moreSaved": "yana +{count}"
+    "moreSaved": "yana +{count}",
+    "guestTitle": "Malakangizni tasdiqlang",
+    "guestBody": "Bepul ro'yxatdan o'ting, malaka testidan o'ting va ish beruvchilar ishonadigan tasdiqlangan belgi oling.",
+    "guestCta": "Ro'yxatdan o'tish",
+    "guestLoginHint": "Hisobingiz bormi?",
+    "guestLoginCta": "Kirish",
+    "guestJobsTitle": "Nega Ishbor?",
+    "guestJobsBody": "Har bir nomzodning darajasi nazorat ostidagi test bilan tasdiqlangan — endi rezyumeга qarab taxmin qilish shart emas."
   }
 }

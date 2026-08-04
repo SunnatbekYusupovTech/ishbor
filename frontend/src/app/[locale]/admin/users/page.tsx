@@ -23,6 +23,14 @@ interface AdminUser {
   createdAt: string;
 }
 
+const ROLES = ['seeker', 'employer', 'admin'] as const;
+
+function roleLabelKey(role: string): 'roleSeeker' | 'roleEmployer' | 'roleAdmin' {
+  if (role === 'employer') return 'roleEmployer';
+  if (role === 'admin') return 'roleAdmin';
+  return 'roleSeeker';
+}
+
 interface PageData {
   users: AdminUser[];
   total: number;
@@ -56,6 +64,8 @@ export default function AdminUsersPage() {
     return () => { cancelled = true; };
   }, [ready, page, search]);
 
+  const [roleSaving, setRoleSaving] = useState<string | null>(null);
+
   const deleteUser = async (id: string) => {
     if (!confirm(t('confirmDeleteUser'))) return;
     try {
@@ -63,6 +73,27 @@ export default function AdminUsersPage() {
       setData((prev) => prev ? { ...prev, users: prev.users.filter((u) => u.id !== id), total: prev.total - 1 } : prev);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error'));
+    }
+  };
+
+  const changeRole = async (user: AdminUser, role: string) => {
+    if (role === user.role) return;
+    if (!confirm(t('confirmRoleChange', { name: user.name, role: t(roleLabelKey(role)) }))) return;
+    setRoleSaving(user.id);
+    try {
+      await adminFetch(`/admin/users/${user.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+      });
+      setData((prev) =>
+        prev
+          ? { ...prev, users: prev.users.map((u) => (u.id === user.id ? { ...u, role } : u)) }
+          : prev,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('error'));
+    } finally {
+      setRoleSaving(null);
     }
   };
 
@@ -120,14 +151,23 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-3 font-medium">{user.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
                       <td className="px-4 py-3">
-                        <span className={cn(
-                          'rounded-full px-2 py-0.5 text-xs font-medium',
-                          user.role === 'admin' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
-                          user.role === 'employer' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' :
-                          'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        )}>
-                          {user.role}
-                        </span>
+                        <select
+                          value={user.role}
+                          disabled={roleSaving === user.id}
+                          onChange={(e) => changeRole(user, e.target.value)}
+                          className={cn(
+                            'rounded-full border-none px-2 py-0.5 text-xs font-medium outline-none disabled:opacity-50',
+                            user.role === 'admin' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
+                            user.role === 'employer' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' :
+                            'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          )}
+                        >
+                          {ROLES.map((r) => (
+                            <option key={r} value={r} className="bg-background text-foreground">
+                              {t(roleLabelKey(r))}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-4 py-3 capitalize text-muted-foreground">
                         {displayTier(user.verificationLevels, user.primaryDirection)}

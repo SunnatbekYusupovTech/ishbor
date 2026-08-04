@@ -4,6 +4,10 @@ import { User, TIERS, type Tier } from '@/models/User';
 import { Job } from '@/models/Job';
 import { Session } from '@/models/Session';
 import { Question } from '@/models/Question';
+import { RefreshToken } from '@/models/RefreshToken';
+import { PortfolioItem } from '@/models/PortfolioItem';
+import { Review } from '@/models/Review';
+import { deleteImage } from '@/services/imageStorage';
 import { DIRECTIONS, type Direction } from '@/config/catalog';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
@@ -223,17 +227,40 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
  * DELETE /api/admin/users/:id
  * ADMIN — permanently delete a user account.
  */
+/**
+ * DELETE /api/admin/users/:id
+ * ADMIN — full cascade delete, same shape as a user deleting themselves
+ * (`userController.deleteMe`): jobs, sessions, refresh tokens, portfolio
+ * items and reviews (both directions — reviews the account received AND
+ * ones it wrote elsewhere) all go with it, plus any Cloudinary images it
+ * owned. Without this an admin-initiated delete left orphaned rows behind
+ * (a deleted user's portfolio/reviews kept existing, still pointing at a
+ * `userId` that no longer resolves).
+ */
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const user = await User.findByIdAndDelete(id);
+  const user = await User.findById(id);
   if (!user) throw ApiError.notFound('User not found.');
 
-  // Also clean up their jobs and sessions.
+  // Collect owned images BEFORE the documents pointing at them are gone.
+  const ownedImages = [
+    user.avatarUrl,
+    user.coverUrl,
+    ...(await PortfolioItem.find({ userId: user._id }).select('imageUrl').lean()).map(
+      (item) => item.imageUrl,
+    ),
+  ];
+
   await Promise.all([
     Job.deleteMany({ postedBy: id }),
     Session.deleteMany({ userId: id }),
+    RefreshToken.deleteMany({ userId: id }),
+    PortfolioItem.deleteMany({ userId: id }),
+    Review.deleteMany({ $or: [{ targetUserId: id }, { authorId: id }] }),
   ]);
+  await user.deleteOne();
+  await Promise.all(ownedImages.map((image) => deleteImage(image)));
 
   res.status(200).json({ success: true, data: { message: 'User deleted.' } });
 });

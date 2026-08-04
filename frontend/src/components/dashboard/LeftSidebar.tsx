@@ -52,7 +52,10 @@ export function LeftSidebar({
           `sticky`+scrollable, bounded to the viewport so long nav content
           scrolls independently instead of pushing the header down. */}
       <aside className="hidden shrink-0 lg:block lg:w-64 lg:border-r lg:bg-background">
-        <div className="scrollbar-hide flex h-full flex-col p-4 lg:sticky lg:top-16 lg:max-h-[calc(100dvh-4rem)] lg:overflow-y-auto">
+        <div
+          data-lenis-prevent
+          className="scrollbar-hide flex h-full flex-col p-4 lg:sticky lg:top-16 lg:max-h-[calc(100dvh-4rem)] lg:overflow-y-auto"
+        >
           <SidebarNavContent isAdmin={isAdmin} />
         </div>
       </aside>
@@ -61,6 +64,7 @@ export function LeftSidebar({
           old `SiteNav` mobile menu used. */}
       {mobileRendered && (
         <nav
+          data-lenis-prevent
           className={cn(
             'scrollbar-hide fixed inset-0 z-50 h-dvh w-full overflow-y-auto bg-background p-4 duration-300 lg:hidden',
             mobileOpen

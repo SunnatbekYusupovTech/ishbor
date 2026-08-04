@@ -16,7 +16,7 @@ import {
 } from '@/components/form-field';
 import { cn } from '@/lib/utils';
 
-type Step = 'email' | 'code' | 'success';
+type Step = 'email' | 'code' | 'password' | 'success';
 type FieldErrors = Partial<Record<'email' | 'code' | 'password' | 'confirm', string>>;
 
 /** Mirrors the backend's own 60s resend-cooldown (`authController.forgotPassword`) —
@@ -61,6 +61,9 @@ export default function ForgotPasswordPage() {
   const clearFieldError = (field: keyof FieldErrors) =>
     setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
 
+  // Step 1: email — the backend now tells us explicitly if there's no
+  // account under it (a deliberate product choice, not the anti-enumeration
+  // generic response this used to return).
   const sendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -85,10 +88,34 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const validateReset = (): FieldErrors => {
+  // Step 2: code alone. `verifyResetCode` is a UX check, not the real gate —
+  // `resetPassword` in step 3 re-validates the same code from scratch.
+  const submitCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!code.trim()) {
+      setErrors({ code: t('errCodeRequired') });
+      return;
+    }
+    if (!/^\d{6}$/.test(code.trim())) {
+      setErrors({ code: t('errCodeFormat') });
+      return;
+    }
+    setErrors({});
+    setLoading(true);
+    try {
+      await api.verifyResetCode({ email: email.trim(), code: code.trim() });
+      setStep('password');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('genericError'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 3: new password + confirmation.
+  const validatePassword = (): FieldErrors => {
     const next: FieldErrors = {};
-    if (!code.trim()) next.code = t('errCodeRequired');
-    else if (!/^\d{6}$/.test(code.trim())) next.code = t('errCodeFormat');
     if (!newPassword) next.password = t('errPasswordRequired');
     else if (!isPasswordStrongEnough(newPassword)) next.password = t('passwordPolicyError');
     if (!confirm) next.confirm = t('errConfirmRequired');
@@ -96,10 +123,10 @@ export default function ForgotPasswordPage() {
     return next;
   };
 
-  const submitReset = async (e: React.FormEvent) => {
+  const submitPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const fieldErrors = validateReset();
+    const fieldErrors = validatePassword();
     if (Object.keys(fieldErrors).length > 0) {
       setErrors(fieldErrors);
       return;
@@ -137,7 +164,7 @@ export default function ForgotPasswordPage() {
           <CardTitle className="text-2xl">{t('forgotPasswordTitle')}</CardTitle>
           <p className="text-sm text-muted-foreground">
             {step === 'email' && t('forgotPasswordSubtitleEmail')}
-            {step === 'code' && t('forgotPasswordSubtitleCode')}
+            {(step === 'code' || step === 'password') && t('forgotPasswordSubtitleCode')}
           </p>
         </CardHeader>
         <CardContent>
@@ -176,7 +203,7 @@ export default function ForgotPasswordPage() {
           )}
 
           {step === 'code' && (
-            <form onSubmit={submitReset} noValidate className="space-y-4">
+            <form onSubmit={submitCode} noValidate className="space-y-4">
               <Alert>
                 <AlertDescription>{t('codeSentNotice')}</AlertDescription>
               </Alert>
@@ -192,6 +219,7 @@ export default function ForgotPasswordPage() {
                     clearFieldError('code');
                   }}
                   aria-invalid={!!errors.code}
+                  autoFocus
                   className={cn(
                     inputCls,
                     'tracking-[0.5em]',
@@ -201,6 +229,35 @@ export default function ForgotPasswordPage() {
                 <p className="mt-1 text-xs text-muted-foreground">{t('codeHint')}</p>
               </Field>
 
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? t('pleaseWait') : t('verifyEmailButton')}
+              </Button>
+
+              <button
+                type="button"
+                onClick={resend}
+                disabled={resendIn > 0 || loading}
+                className="w-full text-center text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+              >
+                {resendIn > 0 ? t('resendCodeIn', { seconds: resendIn }) : t('resendCode')}
+              </button>
+
+              <p className="text-center text-sm text-muted-foreground">
+                <Link href="/login" className="font-medium text-primary hover:underline">
+                  {t('backToLogin')}
+                </Link>
+              </p>
+            </form>
+          )}
+
+          {step === 'password' && (
+            <form onSubmit={submitPassword} noValidate className="space-y-4">
               <Field label={t('newPassword')} error={errors.password}>
                 <PasswordField
                   value={newPassword}
@@ -243,21 +300,6 @@ export default function ForgotPasswordPage() {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? t('pleaseWait') : t('resetPasswordButton')}
               </Button>
-
-              <button
-                type="button"
-                onClick={resend}
-                disabled={resendIn > 0 || loading}
-                className="w-full text-center text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
-              >
-                {resendIn > 0 ? t('resendCodeIn', { seconds: resendIn }) : t('resendCode')}
-              </button>
-
-              <p className="text-center text-sm text-muted-foreground">
-                <Link href="/login" className="font-medium text-primary hover:underline">
-                  {t('backToLogin')}
-                </Link>
-              </p>
             </form>
           )}
 

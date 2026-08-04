@@ -6,6 +6,7 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
 import { ThemeProvider } from '@/components/theme-provider';
 import { SiteChrome } from '@/components/SiteChrome';
+import { SmoothScroll } from '@/components/SmoothScroll';
 import '../globals.css';
 
 /* UI face — covers uz (latin-ext), ru (cyrillic) and en. */
@@ -64,6 +65,7 @@ export default async function LocaleLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <SmoothScroll />
             <SiteChrome>{children}</SiteChrome>
           </ThemeProvider>
         </NextIntlClientProvider>

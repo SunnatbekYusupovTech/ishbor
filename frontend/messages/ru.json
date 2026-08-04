@@ -74,7 +74,14 @@
     "errCodeFormat": "Код должен состоять из 6 цифр",
     "resetSuccessTitle": "Пароль успешно обновлён",
     "resetSuccessBody": "Теперь вы можете войти с новым паролем.",
-    "goToLogin": "Войти"
+    "goToLogin": "Войти",
+    "verifyEmailTitle": "Подтвердите email",
+    "verifyEmailSubtitle": "Мы отправили 6-значный код на {email}. Введите его, чтобы завершить регистрацию.",
+    "verifyEmailButton": "Подтвердить и продолжить",
+    "useAnotherEmail": "Использовать другой email",
+    "orDivider": "или",
+    "continueWithGoogle": "Продолжить через Google",
+    "googleError": "Не удалось войти через Google. Попробуйте ещё раз."
   },
   "jobs": {
     "title": "Вакансии",
@@ -477,6 +484,13 @@
     "savedTitle": "Сохранённые вакансии",
     "quickLinksTitle": "Быстрые ссылки",
     "noSaved": "Пока нет сохранённых вакансий.",
-    "moreSaved": "ещё +{count}"
+    "moreSaved": "ещё +{count}",
+    "guestTitle": "Пройдите верификацию",
+    "guestBody": "Создайте бесплатный аккаунт, пройдите тест на навыки и получите значок верификации, которому доверяют работодатели.",
+    "guestCta": "Регистрация",
+    "guestLoginHint": "Уже есть аккаунт?",
+    "guestLoginCta": "Войти",
+    "guestJobsTitle": "Почему Ishbor?",
+    "guestJobsBody": "Уровень каждого кандидата подтверждён тестом с контролем — больше никаких догадок по резюме."
   }
 }

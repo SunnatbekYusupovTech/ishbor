@@ -39,8 +39,19 @@ describe('password policy', () => {
       .post('/api/auth/register')
       .send({ email: 'strong-password@example.com', password: 'Str0ng!Pass' });
     expect(res.status).toBe(201);
-    expect(res.body.data.user).toBeTruthy();
-    expect(res.headers['set-cookie']).toBeDefined();
+    // Shape depends on whether SMTP_USER/SMTP_APP_PASSWORD happen to be set
+    // in whatever `.env` this test run loaded (`config/env.ts` reads the
+    // real file, not a mocked one) — either the account is logged in
+    // immediately (mailer unconfigured) or it's pending email verification
+    // (mailer configured). Both are a successful password-policy pass;
+    // that's the only thing this test cares about.
+    if (res.body.data.requiresVerification) {
+      expect(res.body.data.email).toBe('strong-password@example.com');
+      expect(res.headers['set-cookie']).toBeUndefined();
+    } else {
+      expect(res.body.data.user).toBeTruthy();
+      expect(res.headers['set-cookie']).toBeDefined();
+    }
   });
 
   it('does NOT enforce the policy on login — a legacy weak password still works', async () => {

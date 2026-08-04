@@ -8,6 +8,8 @@ import { Review } from '@/models/Review';
 import { deleteImage } from '@/services/imageStorage';
 import { hashPassword, verifyPassword } from '@/utils/password';
 import { TIER_RANK } from '@/services/scoringService';
+import { isMailerConfigured } from '@/utils/mailer';
+import { issueVerificationCode } from '@/services/emailVerificationService';
 import { DIRECTIONS, type Direction } from '@/config/catalog';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
@@ -144,10 +146,12 @@ function touchLastSeen(userId: string, lastSeenAt?: Date): void {
 /**
  * PATCH /api/auth/me
  * Updates name/email/password/primaryDirection — each field optional, only
- * what's sent changes. Setting `newPassword` requires `currentPassword` to
- * verify (enforced by `updateMeSchema`'s refine, re-checked here against the
- * hash). `primaryDirection` is purely the candidate's own "who am I" pick —
- * it doesn't need to be a direction they've actually tested yet.
+ * what's sent changes. Setting `newPassword` OR changing `email` requires
+ * `currentPassword` to verify (enforced by `updateMeSchema`'s refine,
+ * re-checked here against the hash) — a live session alone isn't enough to
+ * redirect where password-reset codes go (see the comment further down).
+ * `primaryDirection` is purely the candidate's own "who am I" pick — it
+ * doesn't need to be a direction they've actually tested yet.
  */
 export const updateMe = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
@@ -166,10 +170,33 @@ export const updateMe = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findById(userId).select('+passwordHash');
   if (!user) throw ApiError.unauthorized('User not found.');
 
-  if (email && email !== user.email) {
+  const changingEmail = !!email && email !== user.email;
+
+  // Email changes require re-proving the current password — same treatment
+  // as `newPassword` (`updateMeSchema`'s refine enforces this is present).
+  // Without this, a hijacked session alone (stolen cookie, XSS elsewhere, an
+  // unlocked device) could repoint `email` to an attacker's inbox, then walk
+  // `forgotPassword`/`resetPassword` (neither of which check `emailVerified`)
+  // to set a brand-new password and revoke every other session — a full
+  // takeover that never touches the real password. See `userSchemas.ts`.
+  if ((changingEmail || newPassword) && (!currentPassword || !verifyPassword(currentPassword, user.passwordHash))) {
+    throw ApiError.unauthorized('Current password is incorrect.');
+  }
+
+  if (changingEmail) {
     const exists = await User.findOne({ email });
     if (exists) throw ApiError.conflict('Email already registered.');
     user.email = email;
+    // Whatever trust `emailVerified` represented was earned by the OLD
+    // address — a changed email hasn't been proven yet, so it resets back
+    // to unverified and (when the mailer is configured — same optional
+    // pattern as `authController.register`) a fresh code goes out. The next
+    // `login` call re-enforces this via the existing `emailVerified === false`
+    // gate; `POST /auth/verify-email` is the same endpoint that completes it.
+    if (isMailerConfigured()) {
+      user.emailVerified = false;
+      await issueVerificationCode(user._id.toString(), email);
+    }
   }
 
   if (username && username !== user.username) {
@@ -186,10 +213,8 @@ export const updateMe = asyncHandler(async (req: Request, res: Response) => {
 
   applyProfileFields(user, body);
 
+  // currentPassword already verified above (shared with the email-change check).
   if (newPassword) {
-    if (!currentPassword || !verifyPassword(currentPassword, user.passwordHash)) {
-      throw ApiError.unauthorized('Current password is incorrect.');
-    }
     user.passwordHash = hashPassword(newPassword);
   }
 

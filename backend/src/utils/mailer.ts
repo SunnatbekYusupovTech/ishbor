@@ -51,3 +51,24 @@ export async function sendPasswordResetEmail(to: string, code: string): Promise<
     `,
   });
 }
+
+/** Registration email-verification code — same transporter, different copy. */
+export async function sendVerificationEmail(to: string, code: string): Promise<void> {
+  const t = getTransporter();
+  if (!t) throw new Error('Mailer is not configured (SMTP_USER/SMTP_APP_PASSWORD missing).');
+
+  await t.sendMail({
+    from: `"${env.smtp.fromName}" <${env.smtp.user}>`,
+    to,
+    subject: `${code} — Ishbor emailni tasdiqlash kodi`,
+    text: `Ishbor'da ro'yxatdan o'tishni yakunlash uchun kod: ${code}\n\nKod 15 daqiqa amal qiladi. Agar bu so'rovni siz yubormagan bo'lsangiz, xabarni e'tiborsiz qoldiring.`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2 style="margin-bottom: 4px;">Emailni tasdiqlash</h2>
+        <p style="color: #555;">Ishbor'da ro'yxatdan o'tishni yakunlash uchun tasdiqlash kodi:</p>
+        <p style="font-size: 32px; font-weight: 700; letter-spacing: 6px; margin: 16px 0;">${code}</p>
+        <p style="color: #888; font-size: 13px;">Kod 15 daqiqa amal qiladi. Agar bu so'rovni siz yubormagan bo'lsangiz, xabarni e'tiborsiz qoldiring.</p>
+      </div>
+    `,
+  });
+}

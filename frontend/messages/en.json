@@ -74,7 +74,14 @@
     "errCodeFormat": "Code must be 6 digits",
     "resetSuccessTitle": "Password updated successfully",
     "resetSuccessBody": "You can now log in with your new password.",
-    "goToLogin": "Log in"
+    "goToLogin": "Log in",
+    "verifyEmailTitle": "Verify your email",
+    "verifyEmailSubtitle": "We sent a 6-digit code to {email}. Enter it below to finish creating your account.",
+    "verifyEmailButton": "Verify & continue",
+    "useAnotherEmail": "Use a different email",
+    "orDivider": "or",
+    "continueWithGoogle": "Continue with Google",
+    "googleError": "Google sign-in failed. Please try again."
   },
   "jobs": {
     "title": "Job listings",
@@ -477,6 +484,13 @@
     "savedTitle": "Saved jobs",
     "quickLinksTitle": "Quick links",
     "noSaved": "No saved jobs yet.",
-    "moreSaved": "+{count} more"
+    "moreSaved": "+{count} more",
+    "guestTitle": "Get verified",
+    "guestBody": "Create a free account, take the skill test and get a verified badge employers trust.",
+    "guestCta": "Sign up",
+    "guestLoginHint": "Already have an account?",
+    "guestLoginCta": "Log in",
+    "guestJobsTitle": "Why Ishbor?",
+    "guestJobsBody": "Every candidate's level is backed by a proctored skill test — no more guessing from a resume."
   }
 }
