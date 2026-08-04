@@ -174,6 +174,20 @@ export const env = {
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
+
+  /**
+   * Where the Google OAuth callback sends the browser back to (success or
+   * failure) — deliberately a DEDICATED env var, not `clientOrigins[0]`.
+   * `clientOrigins`/`CLIENT_ORIGIN` is a CORS allowlist and can legitimately
+   * list multiple origins in any order (e.g. `http://localhost:3000,
+   * https://ishbor-frontend.vercel.app` so a developer's local frontend can
+   * also hit the deployed backend) — picking "the first one" as *the*
+   * frontend silently sent every production user back to a teammate's
+   * unreachable `localhost:3000` instead of the real deployed site. Falls
+   * back to `clientOrigins[0]` only so local dev keeps working with zero
+   * extra config when just one origin is configured.
+   */
+  frontendUrl: process.env.FRONTEND_URL ?? process.env.CLIENT_ORIGIN?.split(',')[0]?.trim(),
 } as const;
 
 export type Env = typeof env;

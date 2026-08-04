@@ -278,10 +278,10 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /** The frontend origin to send the browser back to once the Google OAuth
- *  handshake finishes (success or failure) — the first configured CORS
- *  origin is always the app's own primary frontend. */
+ *  handshake finishes (success or failure) — see `env.frontendUrl`'s comment
+ *  for why this is NOT just `clientOrigins[0]`. */
 function frontendOrigin(): string {
-  return env.clientOrigins[0] ?? 'http://localhost:3000';
+  return env.frontendUrl ?? 'http://localhost:3000';
 }
 
 /**
