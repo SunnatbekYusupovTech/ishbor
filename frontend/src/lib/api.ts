@@ -72,7 +72,14 @@ class ApiError extends Error {
 }
 
 /** Paths that must never trigger a refresh-and-retry (avoids infinite loops / nonsense). */
-const NO_REFRESH_PATHS = new Set(['/auth/login', '/auth/register', '/auth/refresh']);
+const NO_REFRESH_PATHS = new Set([
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/auth/verify-email',
+  '/auth/resend-verification',
+  '/auth/google',
+]);
 
 // Concurrent 401s should trigger exactly one refresh call, not one per request.
 let refreshPromise: Promise<boolean> | null = null;
@@ -166,15 +173,42 @@ export const api = {
   // --- Auth (dev-friendly helpers) ---
   // Tokens never appear in these response bodies — the server sets them as
   // httpOnly `Set-Cookie` headers directly (see `lib/api.ts` module docblock).
+  /**
+   * Two possible shapes: `{ user }` (mailer not configured on this deployment —
+   * account is created and logged in immediately, same as before this
+   * feature existed) or `{ requiresVerification: true, email }` (the normal
+   * path — no cookies set yet, caller must show a code-entry step and call
+   * `api.verifyEmail` to actually log in).
+   */
   register: (body: { name?: string; email: string; password: string; role?: string }) =>
+    request<
+      | { user: { id: string; email: string; role: string } }
+      | { requiresVerification: true; email: string }
+    >('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }).then((data) => {
+      if ('user' in data) tokenStore.markAuthed();
+      return data;
+    }),
+
+  /** Completes registration: verifies the emailed code and logs the account in. */
+  verifyEmail: (body: { email: string; code: string }) =>
     request<{
       user: { id: string; email: string; role: string };
-    }>('/auth/register', {
+    }>('/auth/verify-email', {
       method: 'POST',
       body: JSON.stringify(body),
     }).then((data) => {
       tokenStore.markAuthed();
       return data;
+    }),
+
+  /** Always resolves (never reveals whether the email needs verification). */
+  resendVerification: (email: string) =>
+    request<{ message: string }>('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     }),
 
   login: (body: { email: string; password: string }) =>
@@ -183,6 +217,23 @@ export const api = {
     }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(body),
+    }).then((data) => {
+      tokenStore.markAuthed();
+      return data;
+    }),
+
+  /**
+   * "Continue with Google": `credential` is the signed ID token handed to us
+   * by the Google Identity Services button callback. Logs an existing
+   * account in or creates a new one (always `seeker`) in one step — the
+   * server has already verified the token proves control of the email.
+   */
+  googleLogin: (credential: string) =>
+    request<{
+      user: { id: string; email: string };
+    }>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
     }).then((data) => {
       tokenStore.markAuthed();
       return data;
@@ -197,11 +248,20 @@ export const api = {
     tokenStore.clear();
   },
 
-  /** Always resolves (never reveals whether the email is registered — see backend). */
+  /** Throws (404) if no account is registered under that email — see backend. */
   forgotPassword: (email: string) =>
     request<{ message: string }>('/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify({ email }),
+    }),
+
+  /** Checks the code alone, without changing the password — a UX step so the
+   *  frontend can ask for the code and the new password on separate screens.
+   *  Not itself a trust boundary: `resetPassword` re-validates from scratch. */
+  verifyResetCode: (body: { email: string; code: string }) =>
+    request<{ valid: boolean }>('/auth/verify-reset-code', {
+      method: 'POST',
+      body: JSON.stringify(body),
     }),
 
   /** Verifies the emailed code and sets `newPassword`; also revokes every session on the account. */

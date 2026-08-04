@@ -80,6 +80,23 @@ export const passwordResetRateLimiter = rateLimit({
   },
 });
 
+/**
+ * Guards `/auth/verify-email` and `/auth/resend-verification`. Same shape as
+ * `passwordResetRateLimiter` (real email sent + guessable 6-digit code) —
+ * kept as a separate limiter rather than reusing that one so the two flows
+ * don't share a bucket (a burst of forgot-password attempts shouldn't lock
+ * out someone trying to finish registration on the same IP, and vice versa).
+ */
+export const emailVerificationRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, _res, next) => {
+    next(ApiError.tooManyRequests('Too many attempts. Please try again in a few minutes.'));
+  },
+});
+
 export const testRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,

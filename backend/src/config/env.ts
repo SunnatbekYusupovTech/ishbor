@@ -154,6 +154,19 @@ export const env = {
   passwordResetCodeTtlMinutes: numberFromEnv('PASSWORD_RESET_CODE_TTL_MINUTES', 15),
   /** Wrong-code guesses allowed against one code before it's invalidated. */
   passwordResetMaxAttempts: numberFromEnv('PASSWORD_RESET_MAX_ATTEMPTS', 5),
+
+  /**
+   * "Continue with Google" (`POST /auth/google`). The frontend's Google
+   * Identity Services button produces a signed ID token client-side; this
+   * value is the OAuth Client ID that `google-auth-library`'s
+   * `verifyIdToken` checks the token's `aud` claim against, so a token
+   * minted for some OTHER app can't be replayed against this API. Same
+   * optional-integration pattern as `cloudinary`/`groqApiKey`: unset simply
+   * means `POST /auth/google` 500s with a clear message, every other
+   * endpoint is unaffected. Must match `NEXT_PUBLIC_GOOGLE_CLIENT_ID` on the
+   * frontend (same value, both are public identifiers, not secrets).
+   */
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
 } as const;
 
 export type Env = typeof env;

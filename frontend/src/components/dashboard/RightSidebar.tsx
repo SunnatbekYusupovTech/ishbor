@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Award, ArrowRight, Heart, Trophy, Plus, Building2, UserRound, Wallet } from 'lucide-react';
+import { Award, ArrowRight, Heart, Trophy, Plus, Building2, UserRound, Wallet, ShieldCheck, BadgeCheck } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { api } from '@/lib/api';
 import { useFavorites } from '@/lib/favorites';
@@ -15,12 +15,13 @@ import { displayTier, cn, handleSpotlightMove } from '@/lib/utils';
 
 /**
  * Right-hand widget column — only rendered (by `SiteChrome`) on the jobs
- * listing and profile pages, and only once someone's signed in (there's
- * nothing personal to show a guest). Verification summary + a "saved jobs"
- * preview (full mini-cards, not just titles — reuses the same
+ * listing and profile pages. Signed-in: verification summary + a "saved
+ * jobs" preview (full mini-cards, not just titles — reuses the same
  * `api.getJobs()` the jobs page already calls, filtered client-side against
  * `useFavorites()` since favorites are only ever stored as bare ids) + a
- * couple of quick links.
+ * couple of quick links. Signed-out: a registration nudge (`GuestRightSidebar`
+ * below) — keeps the 3-column layout even for guests instead of collapsing
+ * to 2 just because nobody's logged in.
  */
 export function RightSidebar({ me }: { me: Me | null }) {
   const t = useTranslations('dashboard');
@@ -51,7 +52,7 @@ export function RightSidebar({ me }: { me: Me | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- favIds identity changes on every save/unsave, which is exactly when we want to refetch.
   }, [me, favIds.join(',')]);
 
-  if (!me) return null;
+  if (!me) return <GuestRightSidebar />;
 
   const tier = displayTier(me.verificationLevels, me.primaryDirection);
   const hasResult = me.attempts > 0;
@@ -63,7 +64,10 @@ export function RightSidebar({ me }: { me: Me | null }) {
     // the page's content, not just one viewport (see `LeftSidebar` for the
     // same fix/reasoning). The inner div is the sticky+scrollable part.
     <aside className="hidden shrink-0 xl:block xl:w-80 xl:border-l xl:bg-background">
-      <div className="scrollbar-hide flex flex-col gap-4 p-4 xl:sticky xl:top-16 xl:max-h-[calc(100dvh-4rem)] xl:overflow-y-auto">
+      <div
+        data-lenis-prevent
+        className="scrollbar-hide flex flex-col gap-4 p-4 xl:sticky xl:top-16 xl:max-h-[calc(100dvh-4rem)] xl:overflow-y-auto"
+      >
         {/* Verification / stacks summary */}
         <div className="rounded-2xl border bg-card p-4 shadow-sm">
           <h2 className="flex items-center gap-1.5 text-sm font-bold">
@@ -134,6 +138,52 @@ export function RightSidebar({ me }: { me: Me | null }) {
               {tp('title')}
             </Link>
           </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/**
+ * What a signed-out visitor sees in the right column instead of the
+ * personal widgets above — a registration nudge, so the 3-column layout
+ * doesn't collapse to 2 just because nobody's logged in yet.
+ */
+function GuestRightSidebar() {
+  const t = useTranslations('dashboard');
+
+  return (
+    <aside className="hidden shrink-0 xl:block xl:w-80 xl:border-l xl:bg-background">
+      <div
+        data-lenis-prevent
+        className="scrollbar-hide flex flex-col gap-4 p-4 xl:sticky xl:top-16 xl:max-h-[calc(100dvh-4rem)] xl:overflow-y-auto"
+      >
+        <div className="rounded-2xl border bg-card p-4 shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <h2 className="mt-3 text-sm font-bold">{t('guestTitle')}</h2>
+          <p className="mt-1.5 text-xs text-muted-foreground">{t('guestBody')}</p>
+          <Button asChild size="sm" className="mt-3 w-full">
+            <Link href="/login">
+              {t('guestCta')}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            {t('guestLoginHint')}{' '}
+            <Link href="/login?mode=login" className="font-medium text-primary hover:underline">
+              {t('guestLoginCta')}
+            </Link>
+          </p>
+        </div>
+
+        <div className="rounded-2xl border bg-card p-4 shadow-sm">
+          <h2 className="flex items-center gap-1.5 text-sm font-bold">
+            <BadgeCheck className="h-4 w-4" />
+            {t('guestJobsTitle')}
+          </h2>
+          <p className="mt-2 text-xs text-muted-foreground">{t('guestJobsBody')}</p>
         </div>
       </div>
     </aside>

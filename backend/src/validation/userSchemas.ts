@@ -73,9 +73,17 @@ export const passwordPolicy = z
 
 /**
  * All fields optional — the candidate submits only what they're changing.
- * `currentPassword` is required whenever `newPassword` is present (checked
- * by the refine below); it is never required just to change name/email,
- * matching how most account-settings forms behave.
+ * `currentPassword` is required whenever `newPassword` OR `email` is present
+ * (checked by the refine below). Email changes were originally exempt from
+ * this (matching "most account-settings forms"), but that combined with the
+ * forgot/reset-password flow into a real account-takeover primitive: a
+ * hijacked session (stolen cookie, XSS elsewhere, unlocked device) could
+ * repoint `email` to an attacker-controlled inbox with no password check,
+ * then walk through `forgotPassword`/`resetPassword` (which don't gate on
+ * `emailVerified`) to set a brand-new password and revoke every other
+ * session — all without ever knowing the real password. Requiring
+ * `currentPassword` for email changes closes that: a session alone is no
+ * longer enough to redirect where password-reset codes go.
  */
 export const updateMeSchema = z.object({
   body: z
@@ -106,8 +114,8 @@ export const updateMeSchema = z.object({
     .refine((b) => Object.keys(b).length > 0, {
       message: 'Provide at least one field to update.',
     })
-    .refine((b) => !b.newPassword || !!b.currentPassword, {
-      message: 'currentPassword is required to set a new password.',
+    .refine((b) => !(b.newPassword || b.email) || !!b.currentPassword, {
+      message: 'currentPassword is required to change your email or set a new password.',
       path: ['currentPassword'],
     }),
 });

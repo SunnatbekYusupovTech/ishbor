@@ -26,7 +26,9 @@ function verifyScrypt(password: string, stored: string): boolean {
   return hashBuf.length === derived.length && crypto.timingSafeEqual(hashBuf, derived);
 }
 
-export function verifyPassword(password: string, stored: string): boolean {
+/** `stored` is `undefined` for Google-only accounts (no password ever set) — always rejects rather than throwing. */
+export function verifyPassword(password: string, stored: string | undefined): boolean {
+  if (!stored) return false;
   if (isBcryptHash(stored)) return bcrypt.compareSync(password, stored);
   return verifyScrypt(password, stored);
 }
