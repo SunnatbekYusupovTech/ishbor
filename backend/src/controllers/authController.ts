@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { randomBytes } from 'crypto';
 import { z } from 'zod';
 import { OAuth2Client } from 'google-auth-library';
 import { User } from '@/models/User';
@@ -14,7 +15,14 @@ import { passwordPolicy } from '@/validation/userSchemas';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { env } from '@/config/env';
-import { setAuthCookies, clearAuthCookies, REFRESH_COOKIE } from '@/utils/cookies';
+import {
+  setAuthCookies,
+  clearAuthCookies,
+  setGoogleOAuthStateCookie,
+  clearGoogleOAuthStateCookie,
+  GOOGLE_STATE_COOKIE,
+  REFRESH_COOKIE,
+} from '@/utils/cookies';
 
 /**
  * Lightweight auth to make the assessment flow runnable end-to-end.
@@ -51,11 +59,6 @@ const verifyEmailSchema = z.object({
 
 const resendVerificationSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
-});
-
-const googleLoginSchema = z.object({
-  /** The signed JWT credential from Google Identity Services' button/One Tap callback. */
-  credential: z.string().trim().min(1),
 });
 
 /**
@@ -274,52 +277,39 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+/** The frontend origin to send the browser back to once the Google OAuth
+ *  handshake finishes (success or failure) — the first configured CORS
+ *  origin is always the app's own primary frontend. */
+function frontendOrigin(): string {
+  return env.clientOrigins[0] ?? 'http://localhost:3000';
+}
+
 /**
- * POST /api/auth/google
- * "Continue with Google": the frontend's Google Identity Services button
- * hands us a signed ID token (`credential`), never a password. We verify it
- * against Google's own public keys (`OAuth2Client#verifyIdToken`, checking
- * both signature and `aud === GOOGLE_CLIENT_ID`) rather than trusting
- * anything the client claims, then either log an existing account in or
- * create a brand-new one — same as `login`/`register` in one step, since a
- * verified Google token already proves the mailbox belongs to whoever is
- * signing in (skips the emailed-code verification step entirely).
+ * Shared by `googleAuthCallback`: given a verified Google identity, finds a
+ * matching account (by `googleId` or `email`), links Google to an existing
+ * email/password account on first Google sign-in, or creates a brand-new
+ * account outright — a verified Google token already proves the mailbox
+ * belongs to whoever is signing in, so the emailed-code step is skipped.
  */
-export const googleLogin = asyncHandler(async (req: Request, res: Response) => {
-  const { credential } = googleLoginSchema.parse(req.body);
-
-  if (!env.googleClientId) {
-    throw ApiError.internal('Google sign-in is not configured on this server yet.');
-  }
-
-  let payload;
-  try {
-    const ticket = await getGoogleClient().verifyIdToken({
-      idToken: credential,
-      audience: env.googleClientId,
-    });
-    payload = ticket.getPayload();
-  } catch {
-    throw ApiError.unauthorized('Invalid Google credential.');
-  }
-
-  if (!payload?.email) {
-    throw ApiError.unauthorized('Invalid Google credential.');
-  }
-  const email = payload.email.toLowerCase();
-  const googleId = payload.sub;
-
-  let user = await User.findOne({ $or: [{ googleId }, { email }] });
+async function findOrCreateGoogleUser(params: {
+  email: string;
+  googleId: string;
+  name?: string;
+  picture?: string;
+  ip?: string;
+}) {
+  const email = params.email.toLowerCase();
+  let user = await User.findOne({ $or: [{ googleId: params.googleId }, { email }] });
 
   if (!user) {
     user = await User.create({
-      name: payload.name ?? email.split('@')[0],
+      name: params.name ?? email.split('@')[0],
       email,
-      googleId,
+      googleId: params.googleId,
       role: 'seeker',
-      registrationIp: req.ip,
+      registrationIp: params.ip,
       username: await generateUsername(email),
-      avatarUrl: payload.picture,
+      avatarUrl: params.picture,
       // Google already verified this address — no emailed-code step needed.
       emailVerified: true,
     });
@@ -327,27 +317,128 @@ export const googleLogin = asyncHandler(async (req: Request, res: Response) => {
     // Existing email/password account signing in with Google for the first
     // time: link it (trusting Google's own verified email) rather than
     // creating a duplicate account for the same person.
-    user.googleId = googleId;
+    user.googleId = params.googleId;
     if (user.emailVerified === false) user.emailVerified = true;
     await user.save();
   }
+
+  return user;
+}
+
+/**
+ * GET /api/auth/google
+ * "Continue with Google", step 1: full OAuth 2.0 authorization-code redirect
+ * flow (not the Google Identity Services button/One Tap credential flow) —
+ * this works in every browser/embedded webview, since it doesn't depend on
+ * a script rendering a button or third-party cookies. Sends the browser to
+ * Google's own consent screen with a random `state`, which is also stashed
+ * in a short-lived cookie so the callback can confirm the response actually
+ * belongs to this handshake (CSRF/replay guard).
+ */
+export const googleAuthStart = asyncHandler(async (_req: Request, res: Response) => {
+  if (!env.googleClientId || !env.googleClientSecret || !env.googleRedirectUri) {
+    throw ApiError.internal('Google sign-in is not configured on this server yet.');
+  }
+
+  const state = randomBytes(24).toString('hex');
+  setGoogleOAuthStateCookie(res, state);
+
+  const authorizeUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authorizeUrl.searchParams.set('client_id', env.googleClientId);
+  authorizeUrl.searchParams.set('redirect_uri', env.googleRedirectUri);
+  authorizeUrl.searchParams.set('response_type', 'code');
+  authorizeUrl.searchParams.set('scope', 'openid email profile');
+  authorizeUrl.searchParams.set('state', state);
+  authorizeUrl.searchParams.set('prompt', 'select_account');
+
+  res.redirect(authorizeUrl.toString());
+});
+
+/**
+ * GET /api/auth/google/callback
+ * "Continue with Google", step 2: Google redirects the browser back here
+ * with `?code=&state=`. The authorization `code` is exchanged **server to
+ * server** for tokens using `GOOGLE_CLIENT_SECRET` (never exposed to the
+ * browser) — this is the step the button-only ID-token flow skips, and why
+ * this flow needs a real secret. The returned `id_token` is still verified
+ * against Google's public keys the same way the old flow verified its
+ * credential. On any failure the browser is bounced back to the frontend
+ * login page with an error flag rather than shown a raw JSON error, since
+ * this is a full-page navigation, not an API call a JS client can parse.
+ */
+export const googleAuthCallback = asyncHandler(async (req: Request, res: Response) => {
+  const loginUrl = new URL('/login', frontendOrigin());
+  const failWith = (reason: string) => {
+    loginUrl.searchParams.set('googleError', reason);
+    res.redirect(loginUrl.toString());
+  };
+
+  clearGoogleOAuthStateCookie(res);
+
+  if (!env.googleClientId || !env.googleClientSecret || !env.googleRedirectUri) {
+    return failWith('not_configured');
+  }
+
+  const { code, state, error } = req.query;
+  const expectedState = req.cookies?.[GOOGLE_STATE_COOKIE];
+
+  if (typeof error === 'string') return failWith('denied');
+  if (typeof code !== 'string' || typeof state !== 'string') return failWith('invalid_response');
+  if (!expectedState || state !== expectedState) return failWith('state_mismatch');
+
+  let tokenJson: { id_token?: string };
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: env.googleClientId,
+        client_secret: env.googleClientSecret,
+        redirect_uri: env.googleRedirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+    if (!tokenRes.ok) throw new Error('token exchange failed');
+    tokenJson = (await tokenRes.json()) as { id_token?: string };
+  } catch {
+    return failWith('token_exchange_failed');
+  }
+
+  if (!tokenJson.id_token) return failWith('token_exchange_failed');
+
+  let payload;
+  try {
+    const ticket = await getGoogleClient().verifyIdToken({
+      idToken: tokenJson.id_token,
+      audience: env.googleClientId,
+    });
+    payload = ticket.getPayload();
+  } catch {
+    return failWith('invalid_credential');
+  }
+
+  if (!payload?.email || !payload.sub) return failWith('invalid_credential');
+
+  const user = await findOrCreateGoogleUser({
+    email: payload.email,
+    googleId: payload.sub,
+    name: payload.name,
+    picture: payload.picture,
+    ip: req.ip,
+  });
 
   const token = signAuthToken({ userId: user._id.toString(), email: user.email });
   const refreshToken = await issueRefreshToken(user._id.toString());
   setAuthCookies(res, token, refreshToken);
 
-  res.status(200).json({
-    success: true,
-    data: {
-      user: {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        verificationLevels: user.verificationLevels,
-      },
-    },
-  });
+  // `?googleAuth=1` is picked up once by `useCurrentUser` — see that hook
+  // for why: this redirect never goes through the frontend's own fetch
+  // wrapper, so nothing else would set the non-httpOnly "looks logged in"
+  // UI marker.
+  const successUrl = new URL('/', frontendOrigin());
+  successUrl.searchParams.set('googleAuth', '1');
+  res.redirect(successUrl.toString());
 });
 
 /**

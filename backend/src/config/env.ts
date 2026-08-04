@@ -156,17 +156,24 @@ export const env = {
   passwordResetMaxAttempts: numberFromEnv('PASSWORD_RESET_MAX_ATTEMPTS', 5),
 
   /**
-   * "Continue with Google" (`POST /auth/google`). The frontend's Google
-   * Identity Services button produces a signed ID token client-side; this
-   * value is the OAuth Client ID that `google-auth-library`'s
-   * `verifyIdToken` checks the token's `aud` claim against, so a token
-   * minted for some OTHER app can't be replayed against this API. Same
-   * optional-integration pattern as `cloudinary`/`groqApiKey`: unset simply
-   * means `POST /auth/google` 500s with a clear message, every other
-   * endpoint is unaffected. Must match `NEXT_PUBLIC_GOOGLE_CLIENT_ID` on the
-   * frontend (same value, both are public identifiers, not secrets).
+   * "Continue with Google": full OAuth 2.0 authorization-code redirect flow
+   * (`GET /auth/google` → Google's consent screen → `GET /auth/google/callback`),
+   * not the Google Identity Services one-tap/button credential flow — the
+   * redirect flow works in every browser/webview (GIS's button can fail to
+   * render or get blocked by third-party-cookie restrictions in embedded
+   * browsers). `googleClientSecret` authenticates the server-to-server
+   * authorization-code exchange with Google — unlike `googleClientId` it is
+   * a real secret and must never reach the frontend. `googleRedirectUri`
+   * must be this API's own callback URL, registered byte-for-byte under
+   * "Authorized redirect URIs" for this OAuth client in Google Cloud
+   * Console (e.g. `http://localhost:5000/api/auth/google/callback`).
+   * Same optional-integration pattern as `cloudinary`/`groqApiKey`: unset
+   * simply means `GET /auth/google` 500s with a clear message, every other
+   * endpoint is unaffected.
    */
   googleClientId: process.env.GOOGLE_CLIENT_ID,
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
 } as const;
 
 export type Env = typeof env;

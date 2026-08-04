@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, Suspense, useState } from 'react';
+import { useEffect, Suspense, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { Link, useRouter } from '@/i18n/navigation';
@@ -134,21 +134,19 @@ function LoginForm() {
     }
   };
 
-  const handleGoogleCredential = useCallback(
-    async (credential: string) => {
-      setError(null);
-      setLoading(true);
-      try {
-        await api.googleLogin(credential);
-        router.push(next as '/');
-      } catch (err) {
-        setError(err instanceof ApiError ? err.message : t('googleError'));
-      } finally {
-        setLoading(false);
-      }
-    },
-    [router, next, t],
-  );
+  // `GoogleSignInButton` is a plain link into the backend's OAuth redirect
+  // flow (full-page navigation, not a JS call) — on failure Google bounces
+  // the browser back here with `?googleError=<reason>` instead of throwing
+  // a catchable error, so it's picked up here rather than in a click handler.
+  useEffect(() => {
+    if (searchParams.get('googleError')) {
+      setError(t('googleError'));
+      const params = new URLSearchParams(searchParams);
+      params.delete('googleError');
+      router.replace(`/login${params.toString() ? `?${params}` : ''}` as '/login');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const resendCode = async () => {
     if (resendIn > 0 || loading || !pendingEmail) return;
@@ -373,7 +371,7 @@ function LoginForm() {
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          <GoogleSignInButton onCredential={handleGoogleCredential} />
+          <GoogleSignInButton />
         </CardContent>
       </Card>
     </div>

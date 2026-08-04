@@ -1,150 +1,35 @@
-'use client';
-
-import Script from 'next/script';
-import { useEffect, useRef, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
-import { useTheme } from 'next-themes';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
-/** Minimal shape of the Google Identity Services global — see
- *  https://developers.google.com/identity/gsi/web/reference/js-reference */
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (config: {
-            client_id: string;
-            callback: (response: { credential: string }) => void;
-          }) => void;
-          renderButton: (
-            parent: HTMLElement,
-            options: {
-              type?: 'standard' | 'icon';
-              theme?: 'outline' | 'filled_blue' | 'filled_black';
-              size?: 'large' | 'medium' | 'small';
-              width?: number;
-              text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
-              locale?: string;
-            },
-          ) => void;
-        };
-      };
-    };
-  }
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
 
 /**
- * "Continue with Google", styled to match the rest of the auth form instead
- * of Google's own boxy widget. GIS renders its real button inside a
- * cross-origin iframe (anti-clickjacking) — it can't be restyled with CSS,
- * and it can't be triggered by a synthetic `.click()` from our JS either.
- * So we render the *real* GIS button transparently, stretched to fill this
- * component, sitting on top of a purely decorative div underneath that
- * carries our own look — the user sees our button, but the click physically
- * lands on Google's own (invisible) one. Hover/press feedback on the fake
- * face is driven by mouse events on the wrapper (not CSS `:hover`, since the
- * iframe on top would otherwise swallow it) — `mouseenter`/`mouseleave` still
- * fire on the wrapper because they're evaluated against its box, not the
- * topmost hit-target, but `mousedown`/`mouseup` land inside the iframe and
- * never bubble out, so there's no separate "pressed" state.
+ * "Continue with Google" — a plain link into the backend's OAuth 2.0
+ * authorization-code redirect flow (`GET /api/auth/google`), not the Google
+ * Identity Services button/One-Tap credential flow. This is a full-page
+ * navigation on purpose: the browser leaves the app, goes through Google's
+ * own consent screen, and comes back to `GET /api/auth/google/callback`,
+ * which sets the auth cookies and redirects home. No client-side script or
+ * iframe involved, so it can't fail to render or get blocked by
+ * third-party-cookie restrictions the way the GIS button sometimes does in
+ * embedded/in-app browsers.
  */
-export function GoogleSignInButton({
-  onCredential,
-}: {
-  onCredential: (credential: string) => void;
-}) {
+export function GoogleSignInButton() {
   const t = useTranslations('auth');
-  const locale = useLocale();
-  const { resolvedTheme } = useTheme();
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const realButtonRef = useRef<HTMLDivElement>(null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const clientIdConfigured = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
-  // Keep the latest callback in a ref so re-renders of the parent form (every
-  // keystroke) don't force the button to be re-initialized/re-rendered.
-  const onCredentialRef = useRef(onCredential);
-  onCredentialRef.current = onCredential;
-
-  // `next/script` dedups by `src` — if the GSI script was already loaded by
-  // an earlier mount of this component (e.g. the user visited /login before
-  // in this session, navigated away, then came back client-side), the tag
-  // stays in the DOM and Next doesn't reliably re-fire `onLoad` for the new
-  // mount. Without this, the button silently never appears until a full
-  // page reload re-runs everything from scratch. So: check for the already-
-  // loaded global directly on mount, with a short poll as a fallback for the
-  // narrow window where the tag is present but still executing.
-  useEffect(() => {
-    if (window.google?.accounts?.id) {
-      setScriptLoaded(true);
-      return;
-    }
-    const id = window.setInterval(() => {
-      if (window.google?.accounts?.id) {
-        setScriptLoaded(true);
-        window.clearInterval(id);
-      }
-    }, 100);
-    return () => window.clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    if (!scriptLoaded || !clientId || !window.google || !realButtonRef.current || !wrapperRef.current) return;
-
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      callback: (response) => onCredentialRef.current(response.credential),
-    });
-
-    // Rendered at a fixed 400px (GSI's max) then stretched to fill the
-    // wrapper via CSS below — GSI only accepts a literal pixel width, it
-    // can't be told "100%".
-    realButtonRef.current.replaceChildren();
-    window.google.accounts.id.renderButton(realButtonRef.current, {
-      type: 'standard',
-      theme: resolvedTheme === 'dark' ? 'filled_black' : 'outline',
-      size: 'large',
-      width: 400,
-      text: 'continue_with',
-      locale,
-    });
-  }, [scriptLoaded, clientId, locale, resolvedTheme]);
-
-  if (!clientId) return null;
+  if (!clientIdConfigured) return null;
 
   return (
-    <>
-      <Script
-        src="https://accounts.google.com/gsi/client"
-        strategy="afterInteractive"
-        onLoad={() => setScriptLoaded(true)}
-      />
-      <div
-        ref={wrapperRef}
-        className="relative isolate h-9 w-full"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        {/* Decorative face — matches the site's `Button variant="outline"` look. */}
-        <div
-          aria-hidden
-          className={cn(
-            'pointer-events-none flex h-9 w-full items-center justify-center gap-2 rounded-md border border-input bg-background text-sm font-medium shadow-sm transition-colors',
-            hovered && 'bg-accent text-accent-foreground',
-          )}
-        >
-          <GoogleGlyph className="h-4 w-4 shrink-0" />
-          {t('continueWithGoogle')}
-        </div>
-        {/* The real, invisible, actually-clickable Google button on top. */}
-        <div
-          ref={realButtonRef}
-          className="absolute inset-0 h-9 w-full overflow-hidden rounded-md opacity-0 [&>div]:!h-9 [&>div]:!w-full [&_iframe]:!h-9 [&_iframe]:!w-full"
-        />
-      </div>
-    </>
+    <a
+      href={`${API_URL}/api/auth/google`}
+      className={cn(
+        'flex h-9 w-full items-center justify-center gap-2 rounded-md border border-input bg-background text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground',
+      )}
+    >
+      <GoogleGlyph className="h-4 w-4 shrink-0" />
+      {t('continueWithGoogle')}
+    </a>
   );
 }
 
