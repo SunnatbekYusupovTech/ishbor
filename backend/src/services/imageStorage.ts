@@ -16,7 +16,7 @@ import { logger } from '@/utils/logger';
  */
 
 /** Folder every upload from this app lands in, namespacing it within the Cloudinary account. */
-const CLOUDINARY_FOLDER = 'ishbor-uploads';
+const CLOUDINARY_FOLDER = 'ishzone-uploads';
 
 let configured = false;
 

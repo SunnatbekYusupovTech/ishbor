@@ -1,4 +1,4 @@
-# CLAUDE.md — Backend (Ishbor API)
+# CLAUDE.md — Backend (Ishzone API)
 
 > Ildizdagi `/CLAUDE.md` ni ham o'qing — umumiy kontekst o'sha yerda.
 
@@ -32,7 +32,7 @@ npm run typecheck -w backend  # tsc --noEmit
 - **Auth:** `middleware/authenticate` JWT ni tekshiradi, `req.user` ni to'ldiradi
   (`types/express.d.ts`). Token `utils/jwt`.
 - **Auth tokenlar — httpOnly cookie'da (localStorage/Bearer header emas):**
-  ikkala token ham (`ishbor_token` — access, `ishbor_refresh_token` — refresh)
+  ikkala token ham (`ishzone_token` — access, `ishzone_refresh_token` — refresh)
   `Set-Cookie` orqali `HttpOnly` + (prodda) `Secure` + `SameSite` bilan
   yuboriladi (`utils/cookies.ts#setAuthCookies`/`clearAuthCookies`) — client JS
   hech qachon xom tokenni ko'rmaydi/o'qimaydi, shuning uchun XSS orqali token
@@ -250,7 +250,7 @@ npm run typecheck -w backend  # tsc --noEmit
   olingan savollar emas, yangi savollar chiqadi. Agar texnologiya uchun
   ko'rilmagan savollar yetarli bo'lmasa, qolganini ko'rilganlardan
   to'ldiradi (test qisqarib qolmasin deb).
-- **QA/anti-cheat test hisobi (`User.isQaTester`):** `qa@ishbor.uz` / `password123`
+- **QA/anti-cheat test hisobi (`User.isQaTester`):** `qa@ishzone.uz` / `password123`
   (`seed.ts` orqali seed qilinadi) — oddiy `seeker`, lekin `startTest` ikkita
   qo'riqchidan mustasno: (1) cooldown gate umuman ishlamaydi, (2) "allaqachon
   faol sessiya bor" konflikti o'rniga eski `in-progress` sessiya avtomatik
@@ -379,7 +379,7 @@ npm run typecheck -w backend  # tsc --noEmit
 > yuklanadi — bu muammoni butunlay, konfiguratsiyasiz hal qiladi.
 
 `POST /api/uploads/image` (`authenticate` + `uploadRateLimiter`) →
-`{ url: 'https://res.cloudinary.com/<cloud>/image/upload/v.../ishbor-uploads/<uuid>.<ext>', bytes, mime }`.
+`{ url: 'https://res.cloudinary.com/<cloud>/image/upload/v.../ishzone-uploads/<uuid>.<ext>', bytes, mime }`.
 Servis: `services/imageStorage.ts`. Kerakli env: `CLOUDINARY_CLOUD_NAME`,
 `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` (bepul hisob, cloudinary.com) —
 sozlanmagan bo'lsa `POST /uploads/image` aniq xato xabari bilan 500 qaytaradi,
@@ -403,12 +403,12 @@ ixtiyoriy, `groqApiKey` bilan bir xil pattern).
   - **SVG ataylab qo'llab-quvvatlanmaydi** — SVG bu rasm emas, hujjat:
     ichida `<script>` bo'lishi mumkin.
   - **Fayl nomi hech qachon klientdan olinmaydi** — Cloudinary `public_id`
-    sifatida `crypto.randomUUID()` beriladi (`ishbor-uploads/<uuid>` papkada).
+    sifatida `crypto.randomUUID()` beriladi (`ishzone-uploads/<uuid>` papkada).
   - `multer.memoryStorage()` — baytlar tekshirilmaguncha hech qayerga
     yozilmaydi; `limits.fileSize` (`MAX_UPLOAD_BYTES`, default 5 MB) oqimni
     yarmida uzadi.
 - **Bazada saqlanadigan qiymat** `INTERNAL_UPLOAD_RE` bilan tekshiriladi —
-  aynan bizning `ishbor-uploads/<uuid>.<ext>` papka+nom konventsiyasiga mos
+  aynan bizning `ishzone-uploads/<uuid>.<ext>` papka+nom konventsiyasiga mos
   Cloudinary URL'i, anchored. Faqat `res.cloudinary.com` domenini tekshirish
   yetarli emas edi: boshqa papkadagi/hisobdagi Cloudinary asseti ham shu
   tekshiruvdan o'tib, `deleteImage`ga "bizniki" sifatida uzatilishi mumkin edi.
@@ -428,7 +428,7 @@ ixtiyoriy, `groqApiKey` bilan bir xil pattern).
   2. **Davriy:** `services/uploadCleanup.ts` — foydalanuvchi tahrirlash
      oynasida rasm yuklaydi (preview uchun u darhol Cloudinary'ga tushadi),
      keyin **saqlamasdan oynani yopadi** — hech kim bu assetga ishora
-     qilmaydi. Sweeper `cloudinary.api.resources({ prefix: 'ishbor-uploads/' })`
+     qilmaydi. Sweeper `cloudinary.api.resources({ prefix: 'ishzone-uploads/' })`
      bilan butun papkani ro'yxatlab, bazadagi referenslar bilan taqqoslaydi
      va **24 soatdan eski** hamda hech qayerda ishlatilmagan assetlarni
      `cloudinary.api.delete_resources` bilan (100talik partiyalarda)
@@ -491,7 +491,7 @@ AI savol import, `X-Webhook-Secret` bilan himoyalangan).
   `config/env.ts`), `app.ts`dagi `cors()` va `sockets/antiCheat.ts`dagi socket.io
   CORS'ga to'g'ridan-to'g'ri array sifatida beriladi. Prod'da deploy qilingan
   frontend domenini shu ro'yxatga qo'sh (masalan
-  `http://localhost:3000,https://ishbor-frontend.vercel.app`) — aks holda
+  `http://localhost:3000,https://ishzone-frontend.vercel.app`) — aks holda
   brauzer preflight so'rovni CORS xatosi bilan bloklaydi.
 - Path alias `@/` → `backend/src/`.
 - Yangi endpoint: model → controller (`asyncHandler`) → Zod sxema → route → `routes/index.ts` ga ulash.

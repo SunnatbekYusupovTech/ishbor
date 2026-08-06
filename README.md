@@ -1,4 +1,4 @@
-# Ishbor — Skill-Based Job Portal (Secure Assessment Engine)
+# Ishzone — Skill-Based Job Portal (Secure Assessment Engine)
 
 A monorepo for a skill-verification job portal. Candidates earn a **Verified** badge
 by passing a proctored, anti-cheat assessment whose scoring lives entirely on the server.
@@ -6,7 +6,7 @@ by passing a proctored, anti-cheat assessment whose scoring lives entirely on th
 ## Architecture
 
 ```
-ishbor.uz/
+ishzone.uz/
 ├── backend/     Node + Express + TypeScript + Mongoose + Socket.io + Vitest
 ├── frontend/    Next.js 15 (App Router) + TS + Tailwind + shadcn/ui + next-intl
 ├── docker-compose.yml
@@ -111,7 +111,7 @@ Environment variables:
 |----------|-------|-------|
 | `MONGO_URI` | your Mongo connection string | **Non-SRV** connection string (`mongodb://…`), not `mongodb+srv://` |
 | `JWT_SECRET` | a long random secret | required |
-| `CLIENT_ORIGIN` | the frontend's public URL | e.g. `https://ishbor-frontend.up.railway.app`; comma-separate multiple |
+| `CLIENT_ORIGIN` | the frontend's public URL | e.g. `https://ishzone-frontend.up.railway.app`; comma-separate multiple |
 | `NODE_ENV` | `production` | enables `trust proxy`, HSTS |
 | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | from your Cloudinary dashboard | required for `POST /uploads/image` — see below |
 
@@ -125,4 +125,4 @@ without them, every other endpoint still works, but image uploads 500.
 ### Frontend service
 `NEXT_PUBLIC_API_URL` is baked in **at build time**, so set it as a
 **build argument** (not just a runtime variable) to the backend's public URL,
-e.g. `https://ishbor-backend.up.railway.app`.
+e.g. `https://ishzone-uz.up.railway.app`.

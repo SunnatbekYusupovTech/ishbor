@@ -4,14 +4,14 @@ import { useSyncExternalStore } from 'react';
 
 /**
  * Client-only "saved listings" store, hh-style heart. Persisted in
- * localStorage under `ishbor_favorites` and shared across the header heart,
+ * localStorage under `ishzone_favorites` and shared across the header heart,
  * the card hearts and the sidebar counter via useSyncExternalStore.
  *
  * read() memoises the parsed array against the raw localStorage string so
  * useSyncExternalStore gets a stable reference when nothing changed (a fresh
  * array every call would trigger an infinite render loop).
  */
-const KEY = 'ishbor_favorites';
+const KEY = 'ishzone_favorites';
 const EMPTY: string[] = [];
 const listeners = new Set<() => void>();
 

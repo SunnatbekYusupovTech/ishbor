@@ -11,12 +11,12 @@ import type { Me } from '@/types/domain';
  * independently (3x the requests) and go stale relative to each other.
  *
  * Refetches on route change (covers login/logout navigations that land on a
- * *different* pathname) AND on the `ishbor:authed-changed` event (covers the
+ * *different* pathname) AND on the `ishzone:authed-changed` event (covers the
  * same-pathname case, e.g. logging out while already on `/` — `router.push`
  * to the current path is a no-op for `usePathname`, so the pathname effect
  * alone would never re-fire there; see `lib/api.ts#tokenStore`). Also
  * refetches on every successful `api.updateMe` (avatar/name/tier changes)
- * via the `ishbor:me-updated` event.
+ * via the `ishzone:me-updated` event.
  */
 export function useCurrentUser() {
   const pathname = usePathname();
@@ -60,8 +60,8 @@ export function useCurrentUser() {
       setMe(updated);
       setIsAdmin(updated?.role === 'admin');
     };
-    window.addEventListener('ishbor:me-updated', onMeUpdated);
-    return () => window.removeEventListener('ishbor:me-updated', onMeUpdated);
+    window.addEventListener('ishzone:me-updated', onMeUpdated);
+    return () => window.removeEventListener('ishzone:me-updated', onMeUpdated);
   }, []);
 
   // "Continue with Google" lands the browser back here via a plain server

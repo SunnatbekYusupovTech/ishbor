@@ -1,11 +1,11 @@
-# CLAUDE.md — Ishbor Skill Portal
+# CLAUDE.md — Ishzone Skill Portal
 
 > Bu fayl har bir Claude Code sessiyasida avtomatik yuklanadi. Loyihaning umumiy
 > konteksti shu yerda — kim prompt bermasin, kontekst yo'qolmaydi.
 
 ## Loyiha nima?
 
-**Ishbor** — malaka tasdiqlash (skill assessment) + ish e'lonlari platformasi.
+**Ishzone** — malaka tasdiqlash (skill assessment) + ish e'lonlari platformasi.
 Ish qidiruvchilar xavfsiz, anti-cheat himoyali test topshirib "tasdiqlangan" daraja
 (junior/middle/senior) oladi; ish beruvchilar vakansiya joylaydi. Barchasi bitta
 e'lonlar sahifasida ko'rinadi va daraja/yo'nalish bo'yicha filtrlanadi.
@@ -50,7 +50,7 @@ frontend/src/
 npm run dev              # backend (5000) + frontend (3000) birga
 npm run build            # ikkalasini build qiladi
 npm run lint             # ikkalasini lint qiladi
-npm run seed -w backend  # demo ma'lumot (employer@ishbor.uz / seeker@ishbor.uz, parol: password123)
+npm run seed -w backend  # demo ma'lumot (employer@ishzone.uz / seeker@ishzone.uz, parol: password123)
 npm run test -w backend  # Vitest
 ```
 Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
@@ -59,7 +59,7 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 ## Muhim konvensiyalar
 
 - **API javob formati:** `{ success, data }` yoki xatoda `{ success: false, error: { message, details } }`. Frontend `lib/api.ts` `payload.data` ni qaytaradi.
-- **Auth:** JWT `localStorage`da `ishbor_token` kaliti ostida (`tokenStore`). REST va Socket.io bir xil token ishlatadi.
+- **Auth:** JWT `localStorage`da `ishzone_token` kaliti ostida (`tokenStore`). REST va Socket.io bir xil token ishlatadi.
 - **i18n:** har yangi matn **uz/ru/en uchtala** `messages/*.json` ga qo'shilishi shart. Komponentda `useTranslations('namespace')`.
 - **Path alias:** ikkala tomonda ham `@/` → `src/`.
 - **Rollar:** `User.role` = `employer | seeker` (admin panel uchun `admin` roli keyin qo'shiladi).
@@ -98,7 +98,7 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
   Orfan-yuklamalarni tozalash sweeperi endi Cloudinary Admin API orqali
   ishlaydi. Batafsil: `backend/CLAUDE.md` → "Rasm yuklash (upload) — Cloudinary".
 - **Auth tokenlar localStorage'dan httpOnly cookie'ga ko'chirildi:** access
-  (`ishbor_token`) va refresh (`ishbor_refresh_token`) tokenlar endi backend
+  (`ishzone_token`) va refresh (`ishzone_refresh_token`) tokenlar endi backend
   tomonidan `Set-Cookie` bilan `HttpOnly` + (prodda) `Secure` +
   `SameSite=Lax/None` sifatida o'rnatiladi — frontend JS ularni umuman
   o'qimaydi/yozmaydi (XSS orqali token o'g'irlash imkoni yo'qoladi).
@@ -108,7 +108,7 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
   `sockets/antiCheat.ts` endi cookie'dan o'qiydi (socket — xom `Cookie`
   header, `cookie` npm paketi bilan parse). Frontend: `lib/api.ts` har bir
   `fetch`da `credentials: 'include'`; `tokenStore` endi haqiqiy token emas —
-  faqat `js-cookie` bilan yozilgan, httpOnly BO'LMAGAN `ishbor_authed` UI
+  faqat `js-cookie` bilan yozilgan, httpOnly BO'LMAGAN `ishzone_authed` UI
   belgisi (sinxron "loginmi-yo'qmi" tekshiruvi uchun, xavfsizlik uchun emas);
   `lib/socket.ts#createAntiCheatSocket` endi token emas, faqat `sessionId`
   qabul qiladi (`withCredentials: true`). Batafsil: `backend/CLAUDE.md` →
@@ -183,7 +183,7 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
   endi **tanlangan stack**ka mos darajaga qarab ochiladi (`jobs/new`). Batafsil:
   `backend/CLAUDE.md` → "Modellar", `frontend/CLAUDE.md` → "Marshrutlar".
 - **QA/anti-cheat test hisobi + trilingual AI savol tarjimasi + mobil responsive
-  (Sardor):** `qa@ishbor.uz` (`User.isQaTester`) — cooldown va "faol sessiya bor"
+  (Sardor):** `qa@ishzone.uz` (`User.isQaTester`) — cooldown va "faol sessiya bor"
   qo'riqchilaridan mustasno, `POST /test/auto-complete` bilan sessiyani darhol
   5/5 yakunlaydi (test/page.tsx'da "QA: Avtomatik tugatish" tugmasi) — anti-cheat
   oqimini uz/ru/en'da tez-tez sinash uchun. Batafsil: `backend/CLAUDE.md` →

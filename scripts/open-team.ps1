@@ -1,7 +1,7 @@
-﻿# Разворачивает все рабочие домены Ishbor по отдельным окнам консоли:
+﻿# Разворачивает все рабочие домены Ishzone по отдельным окнам консоли:
 # frontend, backend, qa — каждое своя сессия Claude Code (см. open-role.ps1).
 #
-# Использование (из корня ishbor):
+# Использование (из корня ishzone):
 #   powershell -File scripts/open-team.ps1
 #   powershell -File scripts/open-team.ps1 -Roles frontend,backend
 #   powershell -File scripts/open-team.ps1 -WhatIf
@@ -36,7 +36,7 @@ if ($WhatIf) {
     Write-Host "(-WhatIf: команды не выполняются, окна не открываются)" -ForegroundColor Yellow
 }
 
-Write-Host "Открываю команду ishbor: $($Roles -join ', ')..." -ForegroundColor Cyan
+Write-Host "Открываю команду ishzone: $($Roles -join ', ')..." -ForegroundColor Cyan
 
 foreach ($r in $Roles) {
     $innerArgs = @("-NoExit", "-File", $OpenRolePath, "-Role", $r)

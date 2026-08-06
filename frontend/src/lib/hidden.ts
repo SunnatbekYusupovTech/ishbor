@@ -4,11 +4,11 @@ import { useSyncExternalStore } from 'react';
 
 /**
  * Client-only "hidden listings" store (hh-style eye/hide). Persisted in
- * localStorage under `ishbor_hidden` so a hidden vacancy stays hidden across
+ * localStorage under `ishzone_hidden` so a hidden vacancy stays hidden across
  * reloads. Same memoised-read pattern as `favorites.ts` to keep
  * useSyncExternalStore references stable.
  */
-const KEY = 'ishbor_hidden';
+const KEY = 'ishzone_hidden';
 const EMPTY: string[] = [];
 const listeners = new Set<() => void>();
 

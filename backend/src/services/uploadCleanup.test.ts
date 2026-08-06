@@ -6,7 +6,7 @@ import { PortfolioItem } from '@/models/PortfolioItem';
 import { sweepOrphanedUploads } from '@/services/uploadCleanup';
 
 /**
- * In-memory stand-in for the Cloudinary account's `ishbor-uploads` folder,
+ * In-memory stand-in for the Cloudinary account's `ishzone-uploads` folder,
  * so the sweeper's Admin API calls (`resources` / `delete_resources`) never
  * touch a real Cloudinary account in tests.
  */
@@ -29,12 +29,12 @@ vi.mock('@/services/imageStorage', async (importOriginal) => {
 
 /** Adds a fake Cloudinary asset; `ageMs` back-dates its `created_at`. */
 function makeAsset(uuid: string, ageMs = 0): string {
-  const publicId = `ishbor-uploads/${uuid}`;
+  const publicId = `ishzone-uploads/${uuid}`;
   resources.push({ public_id: publicId, created_at: new Date(Date.now() - ageMs).toISOString() });
   return `https://res.cloudinary.com/demo/image/upload/v1700000000/${publicId}.png`;
 }
 
-const exists = (uuid: string) => resources.some((r) => r.public_id === `ishbor-uploads/${uuid}`);
+const exists = (uuid: string) => resources.some((r) => r.public_id === `ishzone-uploads/${uuid}`);
 
 /**
  * The sweeper exists for one case the eager cleanups can't cover: an image

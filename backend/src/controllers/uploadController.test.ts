@@ -49,7 +49,7 @@ const WEBP = Buffer.concat([
 const HTML = Buffer.from('<html><script>alert(1)</script></html>', 'utf8');
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>', 'utf8');
 
-const CLOUDINARY_URL_RE = /^https:\/\/res\.cloudinary\.com\/.+\/ishbor-uploads\/[a-f0-9-]{36}\.png$/;
+const CLOUDINARY_URL_RE = /^https:\/\/res\.cloudinary\.com\/.+\/ishzone-uploads\/[a-f0-9-]{36}\.png$/;
 
 describe('POST /api/uploads/image', () => {
   let mongo: MongoMemoryServer;
@@ -160,7 +160,7 @@ describe('POST /api/uploads/image', () => {
     it('accepts only our own Cloudinary folder + naming convention', () => {
       expect(
         isInternalUpload(
-          'https://res.cloudinary.com/demo/image/upload/v1700000000/ishbor-uploads/0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0.png',
+          'https://res.cloudinary.com/demo/image/upload/v1700000000/ishzone-uploads/0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0.png',
         ),
       ).toBe(true);
       expect(isInternalUpload('https://example.com/a.png')).toBe(false);
@@ -174,7 +174,7 @@ describe('POST /api/uploads/image', () => {
         ),
       ).toBe(false);
       expect(
-        isInternalUpload('https://res.cloudinary.com/demo/image/upload/ishbor-uploads/a.png'),
+        isInternalUpload('https://res.cloudinary.com/demo/image/upload/ishzone-uploads/a.png'),
       ).toBe(false); // not a UUID name, no version segment
     });
   });

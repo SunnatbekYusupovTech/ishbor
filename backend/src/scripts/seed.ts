@@ -36,13 +36,13 @@ const sampleJobs = [
   {
     type: 'vacancy' as const,
     title: 'Senior Fullstack Developer',
-    company: 'Ishbor',
+    company: 'Ishzone',
     description:
       'Next.js + Node.js monorepo, arxitektura qarorlari, jamoa yetakchiligi. 4+ yil tajriba talab qilinadi.',
     level: 'senior' as const,
     stack: 'fullstack' as const,
     salary: '$2500+',
-    contactTelegram: '@ishbor_jobs',
+    contactTelegram: '@ishzone_jobs',
   },
 ];
 
@@ -82,7 +82,7 @@ const demoFreelancerProfile = {
     'yaqin interfeyslar quraman. Dizayndan pixel-perfect verstka va komponent kutubxonalari ' +
     'bilan ishlash tajribam bor. Masofaviy hamkorlikka ochiqman.',
   avatarUrl: 'https://i.pravatar.cc/300?img=12',
-  coverUrl: 'https://picsum.photos/seed/ishbor-cover/1600/400',
+  coverUrl: 'https://picsum.photos/seed/ishzone-cover/1600/400',
   socials: {
     telegram: 'https://t.me/candidate_dev',
     github: 'https://github.com/candidate-dev',
@@ -97,23 +97,23 @@ const demoFreelancerProfile = {
 /** Sample works for the demo seeker's portfolio grid. */
 const demoPortfolio = [
   {
-    title: 'Ishbor — job board redesign',
+    title: 'Ishzone — job board redesign',
     category: 'Web',
     description: "hh.uz uslubidagi e'lonlar lentasi, filtrlar va malaka belgilari. Next.js + Tailwind.",
-    imageUrl: 'https://picsum.photos/seed/ishbor-work-1/800/500',
-    link: 'https://example.com/ishbor',
+    imageUrl: 'https://picsum.photos/seed/ishzone-work-1/800/500',
+    link: 'https://example.com/ishzone',
   },
   {
     title: 'FinFlow dashboard',
     category: 'Dashboard',
     description: "To'lov tizimi uchun analitika paneli: grafiklar, real-time hisobotlar.",
-    imageUrl: 'https://picsum.photos/seed/ishbor-work-2/800/500',
+    imageUrl: 'https://picsum.photos/seed/ishzone-work-2/800/500',
   },
   {
     title: 'Nova UI kit',
     category: 'UI/UX',
     description: '40+ komponentdan iborat dizayn tizimi — Figma va React implementatsiyasi.',
-    imageUrl: 'https://picsum.photos/seed/ishbor-work-3/800/500',
+    imageUrl: 'https://picsum.photos/seed/ishzone-work-3/800/500',
     link: 'https://example.com/nova-ui',
   },
 ];
@@ -147,7 +147,7 @@ async function seed(): Promise<void> {
 
   // Demo EMPLOYER + vacancies.
   const employer = await User.findOneAndUpdate(
-    { email: 'employer@ishbor.uz' },
+    { email: 'employer@ishzone.uz' },
     {
       $set: {
         name: 'Demo Employer',
@@ -165,7 +165,7 @@ async function seed(): Promise<void> {
 
   // Demo SEEKER (verified) + resumes.
   const seeker = await User.findOneAndUpdate(
-    { email: 'seeker@ishbor.uz' },
+    { email: 'seeker@ishzone.uz' },
     {
       $set: {
         name: 'Demo Candidate',
@@ -192,7 +192,7 @@ async function seed(): Promise<void> {
 
   logger.info(
     `Seeded ${sampleJobs.length} vacancies + ${sampleResumes.length} resumes ` +
-      `(employer@ishbor.uz / seeker@ishbor.uz, parol: password123).`,
+      `(employer@ishzone.uz / seeker@ishzone.uz, parol: password123).`,
   );
 
   // Public freelancer profile content for the demo seeker (`/u/demo_candidate`).
@@ -220,7 +220,7 @@ async function seed(): Promise<void> {
   // testing repeatedly restart mid-test and walk the full result flow
   // (ResultCard, badge award, ...) in uz/ru/en without real cooldowns.
   await User.findOneAndUpdate(
-    { email: 'qa@ishbor.uz' },
+    { email: 'qa@ishzone.uz' },
     {
       $set: {
         name: 'QA Tester',
@@ -231,7 +231,7 @@ async function seed(): Promise<void> {
     },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
-  logger.info('Seeded QA tester account (qa@ishbor.uz, parol: password123, cooldownlarsiz).');
+  logger.info('Seeded QA tester account (qa@ishzone.uz, parol: password123, cooldownlarsiz).');
 
   await disconnectDatabase();
   process.exit(0);

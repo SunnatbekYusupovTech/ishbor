@@ -65,7 +65,7 @@ export function TopHeader({
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-base font-black leading-none text-brand-foreground shadow-sm">
             ish
           </span>
-          <span className="hidden text-lg font-extrabold tracking-tight sm:inline">Ishbor</span>
+          <span className="hidden text-lg font-extrabold tracking-tight sm:inline">Ishzone</span>
         </Link>
 
         <form onSubmit={onSearchSubmit} className="relative ml-2 min-w-0 max-w-md flex-1">
@@ -139,7 +139,7 @@ function UserMenu({ me }: { me: Me }) {
     setLogoutDialogOpen(false);
     setOpen(false);
     // Must be awaited: `api.logout()` clears the httpOnly cookie server-side
-    // AND the local `ishbor_authed` marker. If we navigate before it
+    // AND the local `ishzone_authed` marker. If we navigate before it
     // resolves, `useCurrentUser`'s pathname-triggered refetch can land
     // between "cookie still valid" and "cookie cleared" and re-hydrate the
     // UI as still logged in — the user then has to click logout 2-3 times

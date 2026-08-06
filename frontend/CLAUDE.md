@@ -1,4 +1,4 @@
-# CLAUDE.md — Frontend (Ishbor Web)
+# CLAUDE.md — Frontend (Ishzone Web)
 
 > Ildizdagi `/CLAUDE.md` ni ham o'qing — umumiy kontekst o'sha yerda.
 
@@ -62,7 +62,7 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   chiqmaydi**, faqat render joyi o'zgaradi. Hozircha faqat `page.tsx`
   ishlatadi; yangi sahifa o'z sidebar-vidjetini xohlasa shu naqshni
   qaytarsin (route-group emas — mavjud pathname-check konvensiyasiga mos).
-- **`hooks/useCurrentUser.ts`** — `api.me()` + `ishbor:me-updated` tinglovchi
+- **`hooks/useCurrentUser.ts`** — `api.me()` + `ishzone:me-updated` tinglovchi
   bitta joyda (`SiteChrome`), natija `TopHeader`/`LeftSidebar`/`RightSidebar`ga
   prop sifatida uzatiladi — har biri alohida so'rov yubormasin deb.
 
@@ -189,7 +189,7 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   yuboradi, brauzer qolganini o'zi qiladi (batafsil: `backend/CLAUDE.md` →
   "Auth tokenlar — httpOnly cookie'da"). `lib/api.ts`dagi `tokenStore` shu
   sabab **haqiqiy token emas** — faqat `js-cookie` bilan yozilgan, httpOnly
-  BO'LMAGAN kichik `ishbor_authed` belgi-cookie atrofidagi yordamchi
+  BO'LMAGAN kichik `ishzone_authed` belgi-cookie atrofidagi yordamchi
   (`get(): boolean` — "oxirgi urinish muvaffaqiyatli edi"), sinxron UI
   tekshiruvlari uchun (masalan sahifa `useEffect`da darhol `/login`ga
   yo'naltirish, `api.me()` javobini kutmasdan). Haqiqiy avtorizatsiya har doim
@@ -266,7 +266,7 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   `test/page.tsx` anti-cheat'ni ulaydi (`useAntiCheat` REST) va `proctor` namespace'dan
   matn oladi; savol matni/variantlari backend'dan lokalizatsiyalangan holda keladi
   (`api.startTest` `locale` yuboradi). Modal ochilganda savol taymeri pauza qilinadi.
-- `lib/hidden.ts` — yashirilgan e'lonlar (localStorage `ishbor_hidden`, `favorites.ts`
+- `lib/hidden.ts` — yashirilgan e'lonlar (localStorage `ishzone_hidden`, `favorites.ts`
   bilan bir xil `useSyncExternalStore` shabloni).
 - `login/page.tsx` — parolni ko'rsatish (ko'z), `confirmPassword`, `noValidate` + maydon
   ostidagi lokalizatsiyalangan xatolar (`auth.err*`). `jobs/new` — maosh diapazoni va
@@ -322,7 +322,7 @@ Yangi buzilish turi qo'shsang: `types/test.ts`dagi `ViolationType`,
 `useAntiCheat.ts`, `ViolationDialog.tsx` (`bodyKeyByType`) va `messages/*.json`dagi
 `proctor` namespace'ni yangila (backendda ham `VIOLATION_TYPES`).
 
-`api.me().isQaTester` bo'lsa (faqat `qa@ishbor.uz` — backend: `User.isQaTester`,
+`api.me().isQaTester` bo'lsa (faqat `qa@ishzone.uz` — backend: `User.isQaTester`,
 batafsil `backend/CLAUDE.md`), faol test paytida "QA: Avtomatik tugatish (5/5)"
 tugmasi chiqadi — `api.autoCompleteTest(sessionId)` sessiyani darhol to'g'ri
 javoblar bilan yakunlaydi, natija oddiy `submitTest` bilan bir xil `ResultCard`
@@ -368,7 +368,7 @@ qayta boshlab tez-tez sinash uchun.
   `rating.verificationLevel !== 'none'`), rol bejlik, sarlavha (dialog ochadi), teglar,
   yashil maosh, tavsif; o'ng-yuqorida `EyeOff` (yashirish) + `Heart` (saqlash); pastda
   vaqt + ko'k `Bog'lanish`.
-- **Saqlanganlar (favorites):** `lib/favorites.ts` — localStorage (`ishbor_favorites`) +
+- **Saqlanganlar (favorites):** `lib/favorites.ts` — localStorage (`ishzone_favorites`) +
   `useSyncExternalStore` (snapshot memoizatsiya qilinadi, aks holda infinite-loop). Header
   yuragi, karta yuragi va sidebar counteri shu store orqali sinxron.
 - `container` padding adaptiv: `1rem` (mobil) → `1.5rem` (sm) → `2rem` (lg).
