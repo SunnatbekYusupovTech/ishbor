@@ -148,7 +148,7 @@ export const env = {
   smtp: {
     user: process.env.SMTP_USER,
     appPassword: process.env.SMTP_APP_PASSWORD,
-    fromName: process.env.SMTP_FROM_NAME ?? 'Ishbor',
+    fromName: process.env.SMTP_FROM_NAME ?? 'Ishzone',
   },
   /** Minutes a password-reset code stays valid after being emailed. */
   passwordResetCodeTtlMinutes: numberFromEnv('PASSWORD_RESET_CODE_TTL_MINUTES', 15),
@@ -180,7 +180,7 @@ export const env = {
    * failure) — deliberately a DEDICATED env var, not `clientOrigins[0]`.
    * `clientOrigins`/`CLIENT_ORIGIN` is a CORS allowlist and can legitimately
    * list multiple origins in any order (e.g. `http://localhost:3000,
-   * https://ishbor-frontend.vercel.app` so a developer's local frontend can
+   * https://ishzone-frontend.vercel.app` so a developer's local frontend can
    * also hit the deployed backend) — picking "the first one" as *the*
    * frontend silently sent every production user back to a teammate's
    * unreachable `localhost:3000` instead of the real deployed site. Falls

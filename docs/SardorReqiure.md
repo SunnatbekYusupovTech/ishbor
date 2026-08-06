@@ -74,7 +74,7 @@ Quyidagi fayllarga Sardor ham teggan — merge conflict ehtimoli bor:
 - **Branch nomi:** `gojo`
 - **Holati:** Draft PR #2, hali `main` ga merge qilinmagan
 - **Ish boshlashdan oldin:** `git pull origin gojo` qilib olish kerak
-- **PR:** https://github.com/SunnatbekYusupovTech/ishbor/pull/2
+- **PR:** https://github.com/SunnatbekYusupovTech/ishzone/pull/2
 
 ---
 

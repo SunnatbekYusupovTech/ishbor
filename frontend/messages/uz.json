@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Ishbor — Tasdiqlangan malaka va ish e'lonlari",
+    "title": "Ishzone — Tasdiqlangan malaka va ish e'lonlari",
     "description": "Xavfsiz malaka testidan o'ting, tasdiqlangan daraja oling va ish toping. Ish beruvchilar uchun: tasdiqlangan mutaxassislarni ishga oling."
   },
   "notFound": {
@@ -9,8 +9,8 @@
     "backHome": "Bosh sahifaga qaytish"
   },
   "common": {
-    "appName": "Ishbor Portal",
-    "footer": "Ishbor — Malaka tasdiqlash platformasi",
+    "appName": "Ishzone Portal",
+    "footer": "Ishzone — Malaka tasdiqlash platformasi",
     "language": "Til",
     "toggleTheme": "Mavzuni almashtirish"
   },
@@ -28,7 +28,7 @@
     "admin": "Admin"
   },
   "auth": {
-    "title": "Ishbor Malaka Tasdig'i",
+    "title": "Ishzone Malaka Tasdig'i",
     "subtitle": "<b>Tasdiqlangan</b> nishonini olish uchun testdan o'ting.",
     "register": "Ro'yxatdan o'tish",
     "login": "Kirish",
@@ -490,7 +490,7 @@
     "guestCta": "Ro'yxatdan o'tish",
     "guestLoginHint": "Hisobingiz bormi?",
     "guestLoginCta": "Kirish",
-    "guestJobsTitle": "Nega Ishbor?",
+    "guestJobsTitle": "Nega Ishzone?",
     "guestJobsBody": "Har bir nomzodning darajasi nazorat ostidagi test bilan tasdiqlangan — endi rezyumeга qarab taxmin qilish shart emas."
   }
 }

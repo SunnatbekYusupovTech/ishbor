@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Ishbor — Verified Skills & Jobs",
+    "title": "Ishzone — Verified Skills & Jobs",
     "description": "Pass a secure skill assessment, earn a verified level and find a job. For employers: hire verified specialists."
   },
   "notFound": {
@@ -9,8 +9,8 @@
     "backHome": "Back to home"
   },
   "common": {
-    "appName": "Ishbor Portal",
-    "footer": "Ishbor — Skill verification platform",
+    "appName": "Ishzone Portal",
+    "footer": "Ishzone — Skill verification platform",
     "language": "Language",
     "toggleTheme": "Toggle theme"
   },
@@ -28,7 +28,7 @@
     "admin": "Admin"
   },
   "auth": {
-    "title": "Ishbor Skill Verification",
+    "title": "Ishzone Skill Verification",
     "subtitle": "Pass the test to earn a <b>Verified</b> badge.",
     "register": "Register",
     "login": "Log in",
@@ -490,7 +490,7 @@
     "guestCta": "Sign up",
     "guestLoginHint": "Already have an account?",
     "guestLoginCta": "Log in",
-    "guestJobsTitle": "Why Ishbor?",
+    "guestJobsTitle": "Why Ishzone?",
     "guestJobsBody": "Every candidate's level is backed by a proctored skill test — no more guessing from a resume."
   }
 }

@@ -134,7 +134,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
         .post('/api/users/me/portfolio')
         .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
         .send({
-          title: 'Ishbor redesign',
+          title: 'Ishzone redesign',
           category: 'Web',
           description: 'Job board UI.',
           imageUrl: 'https://example.com/preview.png',
@@ -145,7 +145,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
 
       const profile = await request(app).get('/api/users/profile/aziz_dev');
       expect(profile.body.data.portfolio).toHaveLength(1);
-      expect(profile.body.data.portfolio[0].title).toBe('Ishbor redesign');
+      expect(profile.body.data.portfolio[0].title).toBe('Ishzone redesign');
     });
 
     it('accepts an unlimited number of works', async () => {
@@ -165,10 +165,10 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
       const res = await request(app)
         .patch(`/api/users/me/portfolio/${itemId}`)
         .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
-        .send({ title: 'Ishbor redesign v2', imageUrl: '' });
+        .send({ title: 'Ishzone redesign v2', imageUrl: '' });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.title).toBe('Ishbor redesign v2');
+      expect(res.body.data.title).toBe('Ishzone redesign v2');
       expect(res.body.data.imageUrl).toBeNull();
     });
 
@@ -180,7 +180,7 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
 
       expect(res.status).toBe(404);
       const untouched = await PortfolioItem.findById(itemId);
-      expect(untouched!.title).toBe('Ishbor redesign v2');
+      expect(untouched!.title).toBe('Ishzone redesign v2');
     });
 
     it("refuses to delete another user's work", async () => {

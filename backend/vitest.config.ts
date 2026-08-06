@@ -15,7 +15,7 @@ export default defineConfig({
     // connects mongoose to a separate in-memory server, so MONGO_URI is a stub.
     env: {
       NODE_ENV: 'test',
-      MONGO_URI: 'mongodb://127.0.0.1:27017/ishbor_test_stub',
+      MONGO_URI: 'mongodb://127.0.0.1:27017/ishzone_test_stub',
       JWT_SECRET: 'test-secret-not-for-production',
       // The `cloudinary` package itself is mocked in upload-related tests, but
       // imageStorage.ts's ensureConfigured() still checks these are non-empty

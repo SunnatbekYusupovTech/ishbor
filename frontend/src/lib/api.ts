@@ -33,7 +33,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
  * never sent to the server and carries no security weight; the real gate on
  * every request is still the httpOnly cookie the browser sends on its own.
  */
-const AUTHED_MARKER = 'ishbor_authed';
+const AUTHED_MARKER = 'ishzone_authed';
 
 /**
  * Fired synchronously whenever `markAuthed`/`clear` run, so `useCurrentUser`
@@ -44,7 +44,7 @@ const AUTHED_MARKER = 'ishbor_authed';
  * pathname-keyed effect never re-ran, so the header kept showing the old
  * session until an unrelated navigation happened to change the pathname.
  */
-const AUTH_CHANGED_EVENT = 'ishbor:authed-changed';
+const AUTH_CHANGED_EVENT = 'ishzone:authed-changed';
 
 export const tokenStore = {
   /** Synchronous, best-effort "looks logged in" hint — see `AUTHED_MARKER` above. */
@@ -341,7 +341,7 @@ export const api = {
       // so a new avatar wouldn't show up in the header until the user
       // navigated somewhere.
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent<Me>('ishbor:me-updated', { detail: me }));
+        window.dispatchEvent(new CustomEvent<Me>('ishzone:me-updated', { detail: me }));
       }
       return me;
     }),

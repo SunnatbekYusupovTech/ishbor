@@ -7,9 +7,9 @@ import { env } from '@/config/env';
  * `ACCESS_COOKIE` is sent on every request (`path: '/'`); `REFRESH_COOKIE` is
  * scoped to `/api/auth` since only `refresh`/`logout` ever need it.
  */
-export const ACCESS_COOKIE = 'ishbor_token';
-export const REFRESH_COOKIE = 'ishbor_refresh_token';
-export const GOOGLE_STATE_COOKIE = 'ishbor_google_oauth_state';
+export const ACCESS_COOKIE = 'ishzone_token';
+export const REFRESH_COOKIE = 'ishzone_refresh_token';
+export const GOOGLE_STATE_COOKIE = 'ishzone_google_oauth_state';
 
 const REFRESH_COOKIE_PATH = '/api/auth';
 const GOOGLE_OAUTH_PATH = '/api/auth/google';

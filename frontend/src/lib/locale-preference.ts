@@ -5,7 +5,7 @@ import { routing, type Locale } from '@/i18n/routing';
  * URL, so this is the belt-and-braces copy: it survives navigations to
  * locale-less entry points and lets other tabs/components read the preference.
  */
-const KEY = 'ishbor_locale';
+const KEY = 'ishzone_locale';
 
 function isLocale(value: string | null): value is Locale {
   return value !== null && (routing.locales as readonly string[]).includes(value);

@@ -1,9 +1,9 @@
 ﻿# Открывает Claude Code сессию, "заточенную" под один из технических доменов
-# Ishbor (frontend / backend / qa), в отдельном терминале — по образцу
+# Ishzone (frontend / backend / qa), в отдельном терминале — по образцу
 # ролевых сессий AI-Studio, но адаптировано под реальный воркфлоу проекта
 # (GitHub PR, доменное разделение backend/frontend, без agents/state.json).
 #
-# Использование (из корня ishbor):
+# Использование (из корня ishzone):
 #   powershell -File scripts/open-role.ps1 -Role frontend
 #   powershell -File scripts/open-role.ps1 -Role backend -NewWindow
 #   powershell -File scripts/open-role.ps1 -Role qa
@@ -47,12 +47,12 @@ $roles = @{
 
 $cfg = $roles[$Role]
 
-try { $Host.UI.RawUI.WindowTitle = "$($cfg.Emoji) $($cfg.Title) — ishbor" } catch {}
+try { $Host.UI.RawUI.WindowTitle = "$($cfg.Emoji) $($cfg.Title) — ishzone" } catch {}
 
 $contextFiles = ($cfg.Context -join ", ")
 
 $startPrompt = @"
-Ты — $($cfg.Title) $($cfg.Emoji) в проекте Ishbor (Skill Assessment + job board, Next.js/Express monorepo).
+Ты — $($cfg.Title) $($cfg.Emoji) в проекте Ishzone (Skill Assessment + job board, Next.js/Express monorepo).
 Работаешь в отдельном терминале напрямую с человеком.
 
 Сначала прочитай: $contextFiles.
@@ -76,7 +76,7 @@ $startPrompt = @"
 Представься коротко (кто ты, чем можешь помочь по своему домену) и жди задачу.
 "@
 
-Write-Host "Запускаю $($cfg.Emoji) $($cfg.Title) (ishbor)..." -ForegroundColor Cyan
+Write-Host "Запускаю $($cfg.Emoji) $($cfg.Title) (ishzone)..." -ForegroundColor Cyan
 
 $claudeArgs = @($startPrompt)
 

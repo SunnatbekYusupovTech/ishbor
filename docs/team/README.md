@@ -1,4 +1,4 @@
-# 👥 Jamoa taqsimoti — Ishbor Skill Portal
+# 👥 Jamoa taqsimoti — Ishzone Skill Portal
 
 Loyiha 3 o'quvchiga bo'lingan. Har kim o'z domenining **backend + frontend** qismini
 to'liq egallaydi (full-stack). Batafsil vazifalar har kimning faylida.

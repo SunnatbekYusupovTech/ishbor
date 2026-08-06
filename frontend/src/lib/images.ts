@@ -20,7 +20,7 @@ export function resolveImageUrl(value: string | null | undefined): string | null
 export function isInternalUploadUrl(value: string | null | undefined): boolean {
   return (
     !!value &&
-    /^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/v\d+\/ishbor-uploads\/[a-f0-9-]{36}\.(jpg|png|gif|webp|avif)$/.test(
+    /^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/v\d+\/ishzone-uploads\/[a-f0-9-]{36}\.(jpg|png|gif|webp|avif)$/.test(
       value,
     )
   );

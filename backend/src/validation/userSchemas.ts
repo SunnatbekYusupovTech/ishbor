@@ -29,7 +29,7 @@ const textField = (max: number) => z.string().trim().max(max).optional();
 
 /**
  * An image reference: either an external URL the user pasted, or one of our
- * own Cloudinary uploads (`https://res.cloudinary.com/.../ishbor-uploads/
+ * own Cloudinary uploads (`https://res.cloudinary.com/.../ishzone-uploads/
  * <uuid>.<ext>`) produced by `POST /uploads/image`.
  *
  * The internal branch is matched against `INTERNAL_UPLOAD_RE` — our exact
