@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Menu, X, Search, Bell, Mail, MessageCircle, FlaskConical, LayoutGrid, Briefcase, Star, Settings, LogOut } from 'lucide-react';
+import { Menu, X, Search, Bell, Mail, MessageCircle, FlaskConical, LayoutGrid, Briefcase, Star, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { useChatUnread } from '@/hooks/useChatUnread';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { api } from '@/lib/api';
@@ -10,6 +10,7 @@ import { LanguageSelector } from '@/components/language-selector';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, RatingStars } from '@/components/rating';
 import { VerifiedBadge } from '@/components/badges';
+import { RoleSelectDialog } from '@/components/RoleSelectDialog';
 import type { Me } from '@/types/domain';
 import { Button } from '@/components/ui/button';
 import {
@@ -116,6 +117,7 @@ function UserMenu({ me }: { me: Me }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const handle = me.username ?? me.id;
 
@@ -160,10 +162,7 @@ function UserMenu({ me }: { me: Me }) {
           aria-label={th('profile')}
           aria-haspopup="menu"
           aria-expanded={open}
-          className={cn(
-            'rounded-full transition-shadow',
-            open && 'ring-2 ring-ring ring-offset-2 ring-offset-background',
-          )}
+          className={cn('rounded-full transition-shadow')}
         >
           <Avatar name={me.name || '?'} src={me.avatarUrl} size="sm" />
         </button>
@@ -191,9 +190,19 @@ function UserMenu({ me }: { me: Me }) {
           </div>
 
           <div className="flex items-center justify-between gap-2 border-b px-3.5 py-2.5">
-            <span className="text-xs font-semibold text-muted-foreground">
-              {me.role === 'seeker' ? tj('seeker') : tj('employer')}
-            </span>
+            {me.role === 'seeker' || me.role === 'employer' ? (
+              <button
+                type="button"
+                onClick={() => setRoleDialogOpen(true)}
+                title={th('changeRole')}
+                className="flex items-center gap-1 rounded-lg border border-transparent px-1.5 py-0.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground"
+              >
+                {me.role === 'seeker' ? tj('seeker') : tj('employer')}
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </button>
+            ) : (
+              <span className="text-xs font-semibold text-muted-foreground">{tj('employer')}</span>
+            )}
             <div className="flex items-center gap-2">
               {me.attempts > 0 && <RatingStars percentage={me.bestPercentage} size="sm" showValue={false} />}
               <VerifiedBadge level={displayTier(me.verificationLevels, me.primaryDirection)} />
@@ -265,6 +274,13 @@ function UserMenu({ me }: { me: Me }) {
           onOpenChange={setLogoutDialogOpen}
           onConfirm={confirmLogout}
         />
+        {me.role === 'seeker' || me.role === 'employer' ? (
+          <RoleSelectDialog
+            open={roleDialogOpen}
+            onOpenChange={setRoleDialogOpen}
+            current={me.role}
+          />
+        ) : null}
       </div>
   );
 }

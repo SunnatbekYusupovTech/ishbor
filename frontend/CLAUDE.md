@@ -70,10 +70,18 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   (filtrlar/saqlangan-qidiruvlar endi yuqoridagi `SidebarSlotContext` orqali
   `LeftSidebar`da ko'rinadi — sahifaning o'zi bitta ustun).
   Kengaytirilgan filtrlar: joylashuv (`RegionSelect`), maosh oralig'i, sort.
-- `jobs/new/page.tsx` — e'lon berish. Seeker uchun daraja **stack-bo'yicha**:
-  `verificationLevels[form.stack]` (frontend testidan o'tish backend rezyume
-  joylashni ochmaydi) — tanlangan stack uchun `none` bo'lsa forma ogohlantiradi
-  va submit bloklanadi (`stackUnverifiedHint`).
+  **`2026-08-11`:** stack filtri **multi-select** (`MultiFilterGroup`, state +
+  `?stack=a,b` URL param `applyStacks` orqali sinxron, `api.getJobs`ga
+  `stack: selectedStacks.join(',')` yuboriladi).
+  **`2026-08-11`:** sidebar Filtrlar kartasida `Yashirilganlar (N)` toggle'i
+  (`?hidden=1`) — faqat yashirilgan e'lonlarni ko'rsatuvchi alohida rejim
+  (`HiddenJobRow` + `Qaytarish`/`Barchasini qaytarish`, `lib/hidden.ts`ga qarang).
+- `jobs/new/page.tsx` — e'lon berish. Yo'nalish **multi-select chip tanlagich**
+  (`MultiPills`, `form.stacks`, min 1 / max 4). Seeker uchun daraja tanlangan
+  stacklar orasidagi **eng yuqori** tier (`bestTier` — frontend testidan o'tish
+  backend-only rezyume joylashni ochmaydi, lekin frontend+backend rezyume uchun
+  ulardan bittasi yetarli) — barcha tanlangan stacklar `none` bo'lsa forma
+  ogohlantiradi va submit bloklanadi (`stackUnverifiedHint`, `errStackRequired`).
 - `admin/login/page.tsx` — **alohida** admin kirish sahifasi (email/parol, `api.login`
   + `api.me()` bilan `role==='admin'` tekshiradi — aks holda token tashlab yuboriladi
   va `notAdmin` xatosi ko'rsatiladi). 3 marta ketma-ket xato urinishdan keyin forma
@@ -139,12 +147,13 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   `<a>` havola**, `${NEXT_PUBLIC_API_URL}/api/auth/google`ga to'liq sahifa
   navigatsiyasi (Google Identity Services skripti/iframe'i **emas** — butun
   OAuth redirect oqimi backendda, batafsil `backend/CLAUDE.md` → "Continue
-  with Google"). Muvaffaqiyatli bo'lsa backend brauzerni bevosita `/` ga
-  (`?googleAuth=1` bilan) qaytaradi; xato bo'lsa `/login?googleError=<reason>`ga
+  with Google"). Muvaffaqiyatli bo'lsa backend brauzerni `?googleAuth=1` bilan
+  qaytaradi: **yangi Google akkaunti → `/role-select`** (quyiga qarang), mavjud
+  akkaunt → `/`; xato bo'lsa `/login?googleError=<reason>`ga
   — `login/page.tsx` shu query-parametrni `useEffect`da o'qib `t('googleError')`
   xabarini ko'rsatadi va parametrni URL'dan tozalaydi (bu JS `catch` bloki
   emas, chunki bu to'liq sahifa redirect). `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
-  sozlanmagan bo'lsa komponent hech narsa render qilmaydi (faqat tugmani
+  sozlanmasa komponent hech narsa render qilmaydi (faqat tugmani
   ko'rsatish/yashirish uchun ishlatiladi — haqiqiy OAuth almashinuvida
   frontend hech qanday Google qiymatidan foydalanmaydi).
   **`hooks/useCurrentUser.ts`** — `?googleAuth=1` query-parametrini bitta
@@ -152,6 +161,16 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   tozalaydi: bu redirect `lib/api.ts#request()` orqali o'tmagani uchun (oddiy
   server redirect, `fetch` emas) hech kim boshqa joyda bu belgi-cookie'ni
   o'rnatmaydi.
+- `role-select/page.tsx` — **birinchi kirish "Kim siz?"** sahifasi: yangi
+  Google akkaunti shu yerga tushadi (`GET /auth/google/callback` `created`
+  bo'lsa `/role-select?googleAuth=1`ga redirect qiladi — OAuth oqimida
+  "seeker/employer?" formasi uchun joy yo'q edi). `useCurrentUser`dan
+  `authed`ni kutadi (Google callback cookie'larni o'rnatib, sahifani shu
+  yerga yo'naltirgan — `googleAuth` markeri birinchi render'da `authed`ni
+  yoqadi; to'g'ridan-to'g'ri tizimga kirmasdan ochilgan bo'lsa 1.5s keyin
+  `/login`ga qaytadi). `RolePicker` bilan tanlanadi → `api.updateMe({ role })`
+  → `/`. "O'tkazib yuborish" (`roleSkip`) mavjud — `seeker` default qoladi,
+  keyinroq o'zgartiriladi.
 - `messages/page.tsx` — **live chat inbox** (ish beruvchi ↔ ish qidiruvchi, bir
   tizim arizalar bilan — `2026-08-10`): chapda suhbatlar ro'yxati (avatar +
   onlayn nuqta, oxirgi xabar, vaqt, o'qilmaganlar soni), o'ngda chat oynasi
@@ -161,6 +180,22 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   avtomatik ochadi. Thread header'ida: suhbatdosh profili (link),
   `job` banneri + `application.status` chipi (pending/accepted/rejected).
   Kirish talab qilinadi — kirmagan bo'lsa `/login`ga.
+  **`2026-08-11`:** header'dagi o'qilmaganlar badge'i endi **o'qish vaqtida
+  ham** yangilanadi — `markConversationRead` muvaffaqiyatli bo'lganda
+  `window`ga `CHAT_READ_EVENT` (`lib/chatSocket.ts`) yuboriladi va
+  `useChatUnread` shuni tinglab `listConversations`ni qayta chaqiradi
+  (socket'ning `chat:read`i faqat **boshqa** ishtirokchiga boradi, o'quvchining
+  o'z badge'i eskirib qolardi).
+- `jobs/[id]/page.tsx` — **e'lon detal sahifasi** (`/jobs/<id>`, `2026-08-11`):
+  chat suhbatining `job` banneri va feeddan tashqari boshqa havolalar shu yerga
+  tushadi (avval 404 berardi). `api.getJob(id)` → `JobDetailDialog` **`mode="page"`**
+  bilan — modal OVERLAY YO'Q, modalning to'liq mazmuni (hero karta, reyting,
+  tavsif, kontakt, pastki action bar: Respond/Arizalar/Contact/Heart/More)
+  sahifaning o'zida inline render bo'ladi (`mode` prop haqida
+  `JobDetailDialog`ga qarang). Yuqorida breadcrumb: `jobs.backToAll` ("Barcha
+  e'lonlar") ← orqaga + e'lon sarlavhasi. `onHide` (More→Yashirish) e'lonni
+  `lib/hidden.ts`ga qo'shib `/`ga yo'naltiradi. Xato/topilmadi holatida ham
+  back-link ko'rsatiladi.
 - `forgot-password/page.tsx` — parolni tiklash, ikki bosqich (bitta sahifa,
   `step` state bilan): email kiritish → `api.forgotPassword` (60s cosmetic
   resend-cooldown, haqiqiy limit backendda) → 6 xonali kod + yangi parol →
@@ -225,17 +260,45 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
 
 ## Asosiy komponentlar
 
-- `JobCard.tsx` — bosiladigan e'lon kartasi → `JobDetailDialog` ochadi.
+- `JobCard.tsx` — bosiladigan e'lon kartasi → `JobDetailDialog` ochadi. O'zining
+  `onHide` propini dialogga ham uzatadi (dialogdagi "More" tugmasi bilan yashirish).
+  **`2026-08-11`** — feed kartasi hh-style "job header card" strukturasiga keltirildi:
+  rol bejligi + vaqt qatori → sarlavha (`text-2xl`) → kompaniya + `BadgeCheck` →
+  yashil maosh → spec qatorlari (Daraja/Yo'nalish/Joylashuv) → reyting →
+  qisqartirilgan tavsif → **pastki harakat paneli**: asosiy `Bog'lanish` (h-12,
+  flex-1, ko'k `bg-primary`), `Heart` (48px, och-ko'k `bg-primary/10 text-primary`),
+  `More` (48px, och-ko'k; bosilganda **ochiladigan dropdown menyu** — `Xabar
+  yozish` (`DialogTrigger` → detal modal) + `Yashirish` (`onHide(job.id)`); menyu
+  karta ustida `bottom-full right-0`, oq, `rounded-2xl`; tashqariga bosish bilan
+  yopiladi (`fixed inset-0 z-10` backdrop)).
 - `JobDetailDialog.tsx` — to'liq detal modal (reyting, tavsif, bog'lanish).
-  `2026-08-10` dan boshlab e'lon ichida **in-app harakatlar** ham bor —
-  dialog ochilganda `api.getJob(id)` + `api.me()` yuklanadi (faqat ochilganda,
-  har karta uchun emas) va turiga qarab: seeker → vakansiyaga "Ariza
-  yuborish" (`ApplyDialog` → `api.applyToJob`), ariza yuborilgan bo'lsa
-  "Ariza yuborilgan — xabarlarga o'tish" (suhbatga sakrash), o'z vakansiyasining
-  employer'i → "Arizalar (N)" (`ApplicantsDialog` — har arizada ishchining
-  **to'liq formasi**: avatar, skills, verificationLevels badge'i + yulduzlar,
-  about, portfolio thumbnails, sharh reytingi, cover-message; Qabul/Rad +
-  suhbatga o'tish), har qanday begona e'lon → "Xabar yozish"
+  **`2026-08-11`** — hh-style hero-karta layout'iga o'zgartirildi: yuqorida rol
+  bejligi → sarlavha → kompaniya → yashil maosh → "spec" qatorlari (Daraja/
+  Yo'nalish/Joylashuv — `SpecRow`, `LevelBadge`/`StackBadge`); o'rtada scroll
+  qilinadigan tana (reyting paneli, tavsif, kontakt); **pastda sticky harakat
+  paneli** — `Respond` (asosiy: Ariza yuborish / **`Ariza yuborildi`** (✓
+  `CheckCircle2` — `applied` bo'lsa, bosilganda `goToMessages()` orqali
+  to'g'ridan-to'g'ri suhbatga `/messages?convo=` o'tadi; eski uzun "— xabarlarga
+  o'tish" labeli `chat.applied` bilan almashtirildi) / Arizalar (N) / Kirish),
+  `Contact` (och ko'k, faqat `canApply && canMessage` bo'lsa),
+  `Heart` (favorite toggle), `More` (`…`, hover'da qora bubble-tooltip,
+  bosilganda `onHide(id)` + dialog yopiladi). Dialog endi **boshqariladigan**
+  (`open` state) — More tugmasi yopilishi uchun. **`mode` prop** — `dialog`
+  (default, feed'dagi overlay) yoki `page` (mustaqil `/jobs/[id]` sahifasi
+  uchun: to'liq kontent **overlaysiz inline** render bo'ladi; hero header'dagi
+  Radix `DialogTitle`/`DialogDescription` `page` rejimida oddiy `h1`/`p`ga
+  almashadi — Radix primitivlari o'z Dialog kontekstidan tashqarida ishlamaydi;
+  body `max-h` cheklovi ham faqat `dialog` rejimida). `page` rejimida
+  action-flag'lar mount'da yuklanadi (`onOpenChange` kutish shart emas).
+  `2026-08-10` dan boshlab e'lon
+  ichida **in-app harakatlar** ham bor — dialog ochilganda `api.getJob(id)` +
+  `api.me()` yuklanadi (faqat ochilganda, har karta uchun emas) va turiga
+  qarab: seeker → vakansiyaga "Ariza yuborish" (`ApplyDialog` → `api.applyToJob`),
+  ariza yuborilgan bo'lsa "Ariza yuborildi" (suhbatga
+  sakrash), o'z vakansiyasining employer'i → "Arizalar (N)" (`ApplicantsDialog` —
+  har arizada ishchining **to'liq formasi**: avatar, skills, verificationLevels
+  badge'i + yulduzlar, about, portfolio thumbnails, sharh reytingi, cover-message;
+  Qabul/Rad + suhbatga o'tish), har qanday begona e'lon → "Xabar yozish"
   (`api.startConversation` → `/messages?convo=`).
 - `components/chat/*` — `ConversationList` (inbox qatori), `ChatWindow`
   (suhbat: bubble'lar, o'qilgan belgisi `Check`/`CheckCheck`, Enter bilan
@@ -245,10 +308,15 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
 - `lib/chatSocket.ts` — `/chat` namespace uchun **yagona** socket singleton
   (`getChatSocket()`, `autoConnect: false`; logout'da `disconnectChatSocket()`).
   Anti-cheat socketidan farqli — bu app-keng ko'lamda doimiy, per-session emas.
+  Shu yerda **`CHAT_READ_EVENT`** ham export qilinadi — foydalanuvchi suhbatni
+  o'qiganda (`markConversationRead` muvaffaqiyati) `window`ga yuboriladi;
+  `useChatUnread` shu orqali header badge'ini refresh'da yangilaydi (socketning
+  `chat:read`i faqat boshqa ishtirokchiga boradi).
 - `hooks/useChatUnread.ts` — header/sidebar badge'lari uchun jami
   o'qilmaganlar soni; `tokenStore`ga (emaskin `useCurrentUser` — qo'shimcha
   `api.me()` chaqirmaslik uchun) + socket eventlariga (`chat:message`,
-  `chat:conversation`, `chat:application`) quloq soladi.
+  `chat:conversation`, `chat:application`) + `CHAT_READ_EVENT`ga (o'z
+  o'qishi — yuqoriga qarang) quloq soladi.
 - `rating.tsx` — `RatingStars` (test %idan yulduz) + `Avatar` (ismdan gradient;
   ixtiyoriy `src` bilan rasm — yuklanmasa yoki havola buzilgan bo'lsa
   avtomatik initsiallarga qaytadi; `size="xl"` profil sahifasi uchun).
@@ -290,21 +358,41 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   `lib/utils.ts#displayTier(verificationLevels, primaryDirection)` — bitta "headline"
   belgi kerak bo'lgan joyda (`LeftSidebar` identity kartochkasi, admin/users jadvali): `primaryDirection`
   tanlangan bo'lsa o'sha yo'nalish darajasi, aks holda barcha yo'nalishlar orasidan eng
-  yuqorisi. `JobCard`/`JobDetailDialog`dagi `rating.verificationLevel` esa backend
-  tomonidan **o'sha e'lonning `stack`iga mos** darajaga oldindan hisoblab beriladi
+  yuqorisi.   `JobCard`/`JobDetailDialog`dagi `rating.verificationLevel` esa backend
+  tomonidan **o'sha e'lonning tanlangan stacklariga mos** (eng yuqori) darajaga
+  oldindan hisoblab beriladi
   (`jobController` — bu yerda frontendda qayta hisoblash shart emas).
 - `QuestionCard`, `Timer`, `ResultCard`, `AntiCheatBanner`, `ViolationDialog` — test oqimi.
   `test/page.tsx` anti-cheat'ni ulaydi (`useAntiCheat` REST) va `proctor` namespace'dan
   matn oladi; savol matni/variantlari backend'dan lokalizatsiyalangan holda keladi
   (`api.startTest` `locale` yuboradi). Modal ochilganda savol taymeri pauza qilinadi.
 - `lib/hidden.ts` — yashirilgan e'lonlar (localStorage `ishzone_hidden`, `favorites.ts`
-  bilan bir xil `useSyncExternalStore` shabloni).
+  bilan bir xil `useSyncExternalStore` shabloni). **`2026-08-11`:** e'lonlar
+  sahifasining sidebar "Filtrlar" kartasida `Yashirilganlar (N)` toggle'i
+  (real-time son `useHiddenJobs`dan, URL `?hidden=1`) — bosilganda feed faqat
+  yashirilgan e'lonlarni ko'rsatadi (`HiddenJobRow` — sarlavha + kompaniya +
+  `Qaytarish` (`hiddenJobs.unhide`); header'da `hiddenViewTitle` · N,
+  `restoreAll` (`hiddenJobs.clear()`), `backToAll` — chiqish; bo'sh holat
+  `hiddenEmpty`). `filtered` pipeline'da `hiddenOnly` hidden-setni ko'rsatishga
+  invert qiladi.
 - `login/page.tsx` — parolni ko'rsatish (ko'z), `confirmPassword`, `noValidate` + maydon
   ostidagi lokalizatsiyalangan xatolar (`auth.err*`). `jobs/new` — maosh diapazoni va
   maydon validatsiyasi (`post.err*`).
 - `components/form-field.tsx` — `login/page.tsx` va `profile/page.tsx` bo'lishadigan
   `Field`, `PasswordField` (ko'z ikonkasi bilan), `inputCls`, `isPasswordStrongEnough`
   (`backend/src/validation/userSchemas.ts`dagi `passwordPolicy`ni oynalaydi), `EMAIL_RE`.
+- `components/RolePicker.tsx` — "Kim siz?" ikki katta variant-kartasi (yashil
+  `Ish qidiruvchi` `UserRound` / ko'k `Ish beruvchi` `Briefcase`). Uchala sirt
+  bir xil tanlash uchun bitta komponent: `role-select/page.tsx`, hisob
+  sozlamalari kartasi (`AccountSection`) va `RoleSelectDialog`. `auth` namespace:
+  `roleSeeker`/`roleEmployer` + `roleSeekerHint`/`roleEmployerHint`.
+- `components/RoleSelectDialog.tsx` — header avatar dropdown'idagi rol
+  bejligi (`Ish qidiruvchi`/`Ish beruvchi` + `ChevronDown`, `TopHeader`'dagi
+  `UserMenu`) bosilganda ochiladi. `RolePicker` orqali tanlanadi →
+  `api.updateMe({ role })` → muvaffaqiyatda `ishzone:me-updated` ishlaydi
+  (header chipi jonli yangilanadi, `useCurrentUser` orqali). `profile`
+  namespace: `roleTitle`/`roleHint`/`roleChangeError`. Rol `seeker|employer`
+  bilan cheklangan — `admin` rolini o'zi o'zgartira olmaydi.
 - `components/region-select.tsx` + `lib/regions.ts` — joylashuv tanlagich: 12 viloyat +
   Qoraqalpog'iston Respublikasi + Toshkent shahri (`regions` namespace, `t(slug)`),
   pastda "Boshqa" tanlansa erkin matn inputi chiqadi. `value`/`onChange` hali ham oddiy
@@ -395,10 +483,20 @@ qayta boshlab tez-tez sinash uchun.
   (empty-state popover) + avatar (link). Nav linklar, saqlanganlar, profil-menyu,
   locale/theme, Kirish/Chiqish — `LeftSidebar`da. O'ng widget-panel faqat
   `/` va `/u/*`da (`RightSidebar`).
-- **JobCard:** keng "orol" karta — avatar + ko'k `BadgeCheck` (verifikatsiya =
-  `rating.verificationLevel !== 'none'`), rol bejlik, sarlavha (dialog ochadi), teglar,
-  yashil maosh, tavsif; o'ng-yuqorida `EyeOff` (yashirish) + `Heart` (saqlash); pastda
-  vaqt + ko'k `Bog'lanish`.
+- **JobCard (hh-style job header, `2026-08-11`):** keng "orol" karta — rol bejligi +
+  vaqt, sarlavha (`text-2xl`, dialog ochadi), kompaniya + ko'k `BadgeCheck`,
+  yashil maosh, spec qatorlari (Daraja/Yo'nalish/Joylashuv), reyting,
+  qisqartirilgan tavsif; pastda harakat paneli — asosiy `Bog'lanish` (`h-12
+  flex-1 bg-primary`), `Heart` + `More` (48px, och-ko'k `bg-primary/10
+  text-primary`). `More` → ochiladigan dropdown (Xabar yozish / Yashirish),
+  `bottom-full right-0`, oq `rounded-2xl` karta ustida ochiladi, tashqariga
+  bosish bilan yopiladi.
+- **JobDetailDialog (hero-karta, `2026-08-11`):** sarlavha → maosh → spec qatorlari
+  (Daraja/Yo'nalish/Joylashuv), tana scroll, pastda 4-tugmali harakat paneli —
+  `Respond` (ko'k `primary`), `Contact` (`bg-primary/10 text-primary` — och ko'k),
+  `Heart` (ikonka, `primary/10` fon), `More` (`…` ikonkali, hover'da `bg-foreground`
+  qora bubble-tooltip + pointer). Panel `bg-muted/30` + `border-t` bilan ajratiladi;
+  ikonkali tugmalar `h-12 w-12`, asosiy tugmalar `h-12 flex-1`.
 - **Saqlanganlar (favorites):** `lib/favorites.ts` — localStorage (`ishzone_favorites`) +
   `useSyncExternalStore` (snapshot memoizatsiya qilinadi, aks holda infinite-loop). Header
   yuragi, karta yuragi va sidebar counteri shu store orqali sinxron.

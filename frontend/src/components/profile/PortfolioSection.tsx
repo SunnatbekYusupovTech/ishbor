@@ -299,10 +299,14 @@ function PortfolioFormDialog({
             <input
               value={form.title}
               onChange={set('title')}
+              maxLength={120}
               aria-invalid={!!titleError}
               className={inputCls}
               autoFocus
             />
+            <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+              {form.title.length.toLocaleString()}/120
+            </p>
           </Field>
 
           <Field label={t('workCategory')}>
@@ -310,6 +314,7 @@ function PortfolioFormDialog({
               value={form.category}
               onChange={set('category')}
               placeholder={t('workCategoryPlaceholder')}
+              maxLength={60}
               className={inputCls}
             />
           </Field>
@@ -319,8 +324,12 @@ function PortfolioFormDialog({
               value={form.description}
               onChange={set('description')}
               rows={3}
+              maxLength={1000}
               className={cn(inputCls, 'resize-y')}
             />
+            <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+              {(form.description?.length ?? 0).toLocaleString()}/1000
+            </p>
           </Field>
 
           <ImageDropzone

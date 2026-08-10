@@ -243,6 +243,14 @@ function LoginForm() {
           </p>
         </CardHeader>
         <CardContent>
+          <GoogleSignInButton />
+
+          <div className="my-4 flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs uppercase text-muted-foreground">{t('orDivider')}</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
           <div className="mb-6 flex rounded-lg bg-muted p-1 text-sm font-medium">
             {(['register', 'login'] as const).map((m) => (
               <button
@@ -292,9 +300,13 @@ function LoginForm() {
                       setName(e.target.value);
                       clearFieldError('name');
                     }}
+                    maxLength={16}
                     aria-invalid={!!errors.name}
                     className={cn(inputCls, errors.name ? 'border-destructive' : 'border-input')}
                   />
+                  <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+                    {name.length.toLocaleString()}/16
+                  </p>
                 </Field>
               </>
             )}
@@ -307,6 +319,7 @@ function LoginForm() {
                   setEmail(e.target.value);
                   clearFieldError('email');
                 }}
+                maxLength={254}
                 aria-invalid={!!errors.email}
                 className={cn(inputCls, errors.email ? 'border-destructive' : 'border-input')}
               />
@@ -324,6 +337,7 @@ function LoginForm() {
                 invalid={!!errors.password}
                 showLabel={t('showPassword')}
                 hideLabel={t('hidePassword')}
+                maxLength={128}
               />
               {mode === 'register' && (
                 <p className="mt-1 text-xs text-muted-foreground">{t('passwordPolicyHint')}</p>
@@ -350,6 +364,7 @@ function LoginForm() {
                   invalid={!!errors.confirm}
                   showLabel={t('showPassword')}
                   hideLabel={t('hidePassword')}
+                  maxLength={128}
                 />
               </Field>
             )}
@@ -364,14 +379,6 @@ function LoginForm() {
               {loading ? t('pleaseWait') : mode === 'register' ? t('createAccount') : t('logIn')}
             </Button>
           </form>
-
-          <div className="my-4 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs uppercase text-muted-foreground">{t('orDivider')}</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <GoogleSignInButton />
         </CardContent>
       </Card>
     </div>

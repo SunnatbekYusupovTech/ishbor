@@ -307,7 +307,7 @@ export const listAdminJobs = asyncHandler(async (req: Request, res: Response) =>
         title: j.title,
         company: j.company ?? null,
         level: j.level,
-        stack: j.stack,
+        stack: j.stacks && j.stacks.length ? j.stacks[0] : (j.stack ?? 'frontend'),
         postedByName: j.postedByName,
         createdAt: j.createdAt,
       })),

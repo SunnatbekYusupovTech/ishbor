@@ -5,8 +5,8 @@ import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft, UserX } from 'lucide-react';
 import { Link, useRouter } from '@/i18n/navigation';
-import { api, ApiError } from '@/lib/api';
-import type { Direction, FreelancerProfile, PortfolioItem, ProfileReview } from '@/types/domain';
+import { api, ApiError, tokenStore } from '@/lib/api';
+import type { Direction, FreelancerProfile, Me, PortfolioItem, ProfileReview } from '@/types/domain';
 import { Button } from '@/components/ui/button';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { StacksSection } from '@/components/profile/StacksSection';
@@ -33,9 +33,9 @@ export default function FreelancerProfilePage() {
   const handle = params.handle;
 
   const [profile, setProfile] = useState<FreelancerProfile | null>(null);
-  const [account, setAccount] = useState<{ name: string; email: string; isQaTester?: boolean } | null>(
-    null,
-  );
+  const [account, setAccount] = useState<
+    { name: string; email: string; role?: 'seeker' | 'employer'; isQaTester?: boolean } | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -45,21 +45,38 @@ export default function FreelancerProfilePage() {
     setLoading(true);
     api
       .getProfile(handle)
-      .then((data) => {
+      .then(async (data) => {
         if (cancelled) return;
-        setProfile(data);
+
+        // An expired access token makes `optionalAuthenticate` silently drop
+        // the viewer (`isOwner: false`), while the review POST's `authenticate`
+        // would refresh and then 403 "You cannot review your own profile." —
+        // so the "leave review" button would appear on the owner's own profile.
+        // Cross-check with `/auth/me` so ownership never depends on the
+        // optional-auth result.
+        const signedIn = tokenStore.get();
+        let me: Me | null = null;
+        let isOwner = data.isOwner;
+        if (signedIn) {
+          try {
+            me = await api.me();
+            isOwner = isOwner || me.id === data.id;
+          } catch {
+            /* marker lied — treat as anonymous */
+          }
+        }
+        if (cancelled) return;
+        setProfile({ ...data, isOwner });
         // `FreelancerProfile` doesn't carry `email`/`isQaTester` (those are
         // account-only, not part of the public response) — one extra call,
         // only for the owner, to feed the account-settings section.
-        if (data.isOwner) {
-          api
-            .me()
-            .then((me) => {
-              if (!cancelled) setAccount({ name: me.name, email: me.email, isQaTester: me.isQaTester });
-            })
-            .catch(() => {
-              /* Account section just won't render if this fails. */
-            });
+        if (isOwner && me) {
+          setAccount({
+            name: me.name,
+            email: me.email,
+            role: me.role === 'seeker' || me.role === 'employer' ? me.role : undefined,
+            isQaTester: me.isQaTester,
+          });
         }
       })
       .catch((err) => {
@@ -176,6 +193,7 @@ export default function FreelancerProfilePage() {
         <AccountSection
           name={account.name}
           email={account.email}
+          role={account.role}
           isQaTester={account.isQaTester}
           onUpdated={(patch) => {
             setAccount((prev) => (prev ? { ...prev, ...patch } : prev));

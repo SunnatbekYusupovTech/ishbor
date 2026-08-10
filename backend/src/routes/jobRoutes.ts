@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { listJobs, getJobById, createJob } from '@/controllers/jobController';
+import { listJobs, getJobById, createJob, reportJob } from '@/controllers/jobController';
 import { applyToJob, listJobApplications } from '@/controllers/applicationController';
 import { authenticate } from '@/middleware/authenticate';
 import { optionalAuthenticate } from '@/middleware/optionalAuthenticate';
 import { validate } from '@/middleware/validate';
-import { listJobsSchema, createJobSchema } from '@/validation/jobSchemas';
+import { listJobsSchema, createJobSchema, reportJobSchema } from '@/validation/jobSchemas';
 import { applySchema } from '@/validation/chatSchemas';
 
 const router = Router();
@@ -20,6 +20,9 @@ router.post('/:id/apply', authenticate, validate(applySchema), applyToJob);
 
 // The vacancy's own employer reviews the requests (each with the seeker's full form).
 router.get('/:id/applications', authenticate, listJobApplications);
+
+// File a complaint about a vacancy — stored for moderators, never edits the listing.
+router.post('/:id/report', authenticate, validate(reportJobSchema), reportJob);
 
 // Authenticated + verified — publish a listing.
 router.post('/', authenticate, validate(createJobSchema), createJob);

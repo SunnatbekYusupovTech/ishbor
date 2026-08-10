@@ -1,7 +1,8 @@
 import type { Request, Response } from 'express';
-import { Job, type JobLevel, type JobStack, type ListingType } from '@/models/Job';
+import { Job, type JobLevel, type JobSalaryCurrency, type JobStack, type ListingType } from '@/models/Job';
 import { User, type IUser } from '@/models/User';
 import { Application } from '@/models/Application';
+import { JobReport } from '@/models/JobReport';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { logger } from '@/utils/logger';
@@ -11,6 +12,32 @@ import { logger } from '@/utils/logger';
 function tierToJobLevel(tier: string): JobLevel | null {
   if (tier === 'none') return null;
   return tier.replace(/^strong-/, '') as JobLevel;
+}
+
+/** Ranks the 7 verification tiers so the "best" one among several can be picked. */
+const TIER_RANK: Record<string, number> = {
+  none: 0,
+  junior: 1,
+  'strong-junior': 2,
+  middle: 3,
+  'strong-middle': 4,
+  senior: 5,
+  'strong-senior': 6,
+};
+
+/** The highest-ranked tier in the list (`'none'` when nothing is verified). */
+function bestTier(tiers: Array<string | undefined>): string {
+  let best = 'none';
+  for (const tier of tiers) {
+    const rank = TIER_RANK[tier ?? 'none'] ?? 0;
+    if (rank > TIER_RANK[best]) best = tier ?? 'none';
+  }
+  return best;
+}
+
+/** The listing's stacks — the multi-select array, falling back to the legacy single field. */
+function stacksOf(job: { stacks?: JobStack[]; stack?: JobStack }): JobStack[] {
+  return job.stacks && job.stacks.length ? job.stacks : [job.stack ?? 'frontend'];
 }
 
 /** Helper: parse a display-salary string like "$500 - $900" to numeric bounds. */
@@ -33,52 +60,56 @@ function parseSalaryRange(salary?: string): { salaryMin?: number; salaryMax?: nu
 export const listJobs = asyncHandler(async (req: Request, res: Response) => {
   const { type, level, stack, keyword, location, salaryMin, salaryMax, sort } = req.query as Record<string, string | undefined>;
 
-  const filter: Record<string, unknown> = {};
-  if (type) filter.type = type;
-  if (level) filter.level = level;
-  if (stack) filter.stack = stack;
+  // Every clause lives in one `$and` array — safe to wrap even a single member.
+  const and: Record<string, unknown>[] = [];
+
+  if (type) and.push({ type });
+  if (level) and.push({ level });
+
+  // `stack` now carries a comma-separated list of wanted stacks. A listing
+  // matches when ANY of its `stacks` overlaps the wanted set — or, for legacy
+  // docs that only carry the single `stack` field, that legacy value does.
+  if (stack?.trim()) {
+    const wanted = stack
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (wanted.length) {
+      and.push({ $or: [{ stacks: { $in: wanted } }, { stack: { $in: wanted } }] });
+    }
+  }
 
   // Full-text keyword search across title, company, description, postedByName.
   if (keyword?.trim()) {
     const escaped = keyword.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = { $regex: escaped, $options: 'i' };
-    filter.$or = [
-      { title: regex },
-      { company: regex },
-      { description: regex },
-      { postedByName: regex },
-    ];
+    and.push({
+      $or: [
+        { title: regex },
+        { company: regex },
+        { description: regex },
+        { postedByName: regex },
+      ],
+    });
   }
 
   // Location filter (case-insensitive partial match).
   if (location?.trim()) {
-    filter.location = { $regex: location.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+    and.push({ location: { $regex: location.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } });
   }
 
-  // Salary range filter.
+  // Salary range filter — listings whose salary range overlaps the requested
+  // range: salaryMin <= requestedMax AND salaryMax >= requestedMin.
   if (salaryMin || salaryMax) {
-    const salaryFilter: Record<string, number> = {};
-    if (salaryMin) salaryFilter.$lte = Number(salaryMin);
-    if (salaryMax) salaryFilter.$gte = Number(salaryMax);
-    // We want listings whose salary range overlaps with the requested range:
-    // salaryMin <= requestedMax AND salaryMax >= requestedMin
-    const salaryOr = [
-      { salaryMin: { $lte: salaryMax ? Number(salaryMax) : Infinity } },
-      { salaryMax: { $gte: salaryMin ? Number(salaryMin) : 0 } },
-    ];
-
-    if (filter.$or) {
-      // Combine with existing $or (keyword/location) using $and (AND semantics).
-      const existingOr = filter.$or;
-      delete filter.$or;
-      filter.$and = [
-        { $or: existingOr as unknown[] },
-        { $or: salaryOr },
-      ];
-    } else {
-      filter.$or = salaryOr;
-    }
+    and.push({
+      $or: [
+        { salaryMin: { $lte: salaryMax ? Number(salaryMax) : Infinity } },
+        { salaryMax: { $gte: salaryMin ? Number(salaryMin) : 0 } },
+      ],
+    });
   }
+
+  const filter = and.length ? { $and: and } : {};
 
   // Sort.
   let sortOption: Record<string, 1 | -1> = { createdAt: -1 }; // newest first (default)
@@ -99,6 +130,7 @@ export const listJobs = asyncHandler(async (req: Request, res: Response) => {
     success: true,
     data: jobs.map((j) => {
       const author = j.postedBy;
+      const stacks = stacksOf(j);
       return {
         id: j._id.toString(),
         type: j.type,
@@ -106,19 +138,21 @@ export const listJobs = asyncHandler(async (req: Request, res: Response) => {
         company: j.company ?? null,
         description: j.description,
         level: j.level,
-        stack: j.stack,
+        stacks,
+        stack: stacks[0],
         salary: j.salary ?? null,
+        salaryCurrency: j.salaryCurrency ?? null,
         location: j.location ?? null,
         contactPhone: j.contactPhone ?? null,
         contactTelegram: j.contactTelegram ?? null,
         postedByName: j.postedByName,
         postedByRole: author?.role ?? (j.type === 'resume' ? 'seeker' : 'employer'),
         createdAt: j.createdAt,
-        // The badge shown next to a listing is the author's tier for THIS
-        // job's own stack — a frontend job shows their frontend badge, etc.
+        // The badge shown next to a listing is the author's BEST tier across
+        // the listing's stacks — a frontend+backend job shows the higher badge.
         rating: author
           ? {
-              verificationLevel: author.verificationLevels?.[j.stack] ?? 'none',
+              verificationLevel: bestTier(stacks.map((s) => author.verificationLevels?.[s])),
               bestPercentage: author.bestPercentage,
               bestScore: author.bestScore,
               attempts: author.attempts,
@@ -150,6 +184,7 @@ export const getJobById = asyncHandler(async (req: Request, res: Response) => {
   const author = job.postedBy;
   const viewerId = req.user?.userId ?? null;
   const postedById = job.postedBy?._id?.toString() ?? null;
+  const stacks = stacksOf(job);
 
   let appliedByMe = false;
   let myApplicationStatus: string | null = null;
@@ -176,8 +211,10 @@ export const getJobById = asyncHandler(async (req: Request, res: Response) => {
       company: job.company ?? null,
       description: job.description,
       level: job.level,
-      stack: job.stack,
+      stacks,
+      stack: stacks[0],
       salary: job.salary ?? null,
+      salaryCurrency: job.salaryCurrency ?? null,
       location: job.location ?? null,
       contactPhone: job.contactPhone ?? null,
       contactTelegram: job.contactTelegram ?? null,
@@ -187,7 +224,7 @@ export const getJobById = asyncHandler(async (req: Request, res: Response) => {
       createdAt: job.createdAt,
       rating: author
         ? {
-            verificationLevel: author.verificationLevels?.[job.stack] ?? 'none',
+            verificationLevel: bestTier(stacks.map((s) => author.verificationLevels?.[s])),
             bestPercentage: author.bestPercentage,
             bestScore: author.bestScore,
             attempts: author.attempts,
@@ -214,14 +251,15 @@ export const createJob = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findById(userId);
   if (!user) throw ApiError.unauthorized('User not found.');
 
-  const { title, company, description, stack, level, salary, location, contactPhone, contactTelegram } =
+  const { title, company, description, stacks, level, salary, salaryCurrency, location, contactPhone, contactTelegram } =
     req.body as {
       title: string;
       company?: string;
       description: string;
-      stack: JobStack;
+      stacks: JobStack[];
       level?: JobLevel;
       salary?: string;
+      salaryCurrency?: JobSalaryCurrency;
       location?: string;
       contactPhone?: string;
       contactTelegram?: string;
@@ -244,13 +282,14 @@ export const createJob = asyncHandler(async (req: Request, res: Response) => {
   } else {
     // seeker → resume
     type = 'resume';
-    // A seeker's advertised level is their earned badge for THIS stack —
-    // passing a frontend test doesn't unlock posting a backend resume.
-    const stackTier = user.verificationLevels?.[stack] ?? 'none';
+    // A seeker's advertised level is their BEST earned badge across the
+    // selected stacks — passing a frontend test doesn't unlock posting a
+    // backend-only resume, but frontend+backend needs just one verified.
+    const stackTier = bestTier(stacks.map((s) => user.verificationLevels?.[s]));
     const jobLevel = tierToJobLevel(stackTier);
     if (!jobLevel) {
       throw ApiError.forbidden(
-        `You must pass the ${stack} skill assessment before posting a resume for it.`,
+        'You must pass the skill assessment for at least one of the selected stacks before posting a resume.',
       );
     }
     resolvedLevel = jobLevel;
@@ -263,8 +302,10 @@ export const createJob = asyncHandler(async (req: Request, res: Response) => {
     company: resolvedCompany,
     description,
     level: resolvedLevel,
-    stack,
+    stacks,
+    stack: stacks[0],
     salary,
+    salaryCurrency: salary ? (salaryCurrency as JobSalaryCurrency) : undefined,
     ...parseSalaryRange(salary),
     location,
     contactPhone,
@@ -278,5 +319,33 @@ export const createJob = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json({
     success: true,
     data: { id: job._id.toString(), type },
+  });
+});
+
+/**
+ * POST /api/jobs/:id/report — file a complaint about a vacancy (spam / fake /
+ * inappropriate / incorrect salary). The listing itself is never modified; the
+ * report is stored for moderators. Idempotent-ish: a user can re-report, but a
+ * new report row is created each time (no rate limit beyond auth here).
+ */
+export const reportJob = asyncHandler(async (req: Request, res: Response) => {
+  const { reason, note } = req.body as { reason: string; note?: string };
+  const job = await Job.findById(req.params.id).select('title company');
+  if (!job) throw ApiError.notFound('Job not found');
+
+  const report = await JobReport.create({
+    jobId: job._id,
+    reporterId: req.user!.userId,
+    jobTitle: job.title,
+    company: job.company,
+    reason,
+    note: note?.trim() || undefined,
+  });
+
+  logger.info(`Job ${job._id} reported by ${req.user!.email} (reason: ${reason})`);
+
+  res.status(201).json({
+    success: true,
+    data: { id: report._id.toString() },
   });
 });

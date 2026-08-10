@@ -309,6 +309,25 @@ describe('Freelancer profile (/api/users/profile/:handle)', () => {
       expect(res.body.data.about).toBeNull();
     });
 
+    it('lets the user switch sides of the market (role change)', async () => {
+      const res = await request(app)
+        .patch('/api/auth/me')
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
+        .send({ role: 'employer' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.role).toBe('employer');
+    });
+
+    it('rejects self-assigning the admin role via the same endpoint', async () => {
+      const res = await request(app)
+        .patch('/api/auth/me')
+        .set('Cookie', `${ACCESS_COOKIE}=${ownerToken}`)
+        .send({ role: 'admin' });
+
+      expect(res.status).toBe(400);
+    });
+
     it('adds and removes individual social links', async () => {
       const added = await request(app)
         .patch('/api/auth/me')

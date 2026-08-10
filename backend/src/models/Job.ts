@@ -2,11 +2,13 @@ import { Schema, model, type Document, type Types } from 'mongoose';
 
 export type JobLevel = 'junior' | 'middle' | 'senior';
 export type JobStack = 'frontend' | 'backend' | 'fullstack' | 'mobile';
+export type JobSalaryCurrency = 'uzs' | 'usd' | 'rub' | 'eur';
 /** 'vacancy' = posted by an employer; 'resume' = posted by a job seeker. */
 export type ListingType = 'vacancy' | 'resume';
 
 export const JOB_LEVELS: JobLevel[] = ['junior', 'middle', 'senior'];
 export const JOB_STACKS: JobStack[] = ['frontend', 'backend', 'fullstack', 'mobile'];
+export const SALARY_CURRENCIES: JobSalaryCurrency[] = ['uzs', 'usd', 'rub', 'eur'];
 export const LISTING_TYPES: ListingType[] = ['vacancy', 'resume'];
 
 export interface IJob extends Document {
@@ -17,8 +19,13 @@ export interface IJob extends Document {
   company?: string;
   description: string;
   level: JobLevel;
-  stack: JobStack;
+  /** Legacy single stack — kept optional and populated for back-compat. */
+  stack?: JobStack;
+  /** The listing's stacks (multi-select); the primary one also lands in `stack`. */
+  stacks: JobStack[];
   salary?: string;
+  /** Currency for `salary` (UZS/USD/RUB/EUR) — set when a structured amount is posted. */
+  salaryCurrency?: JobSalaryCurrency;
   /** Numeric salary bounds extracted from the display string — used for range filtering. */
   salaryMin?: number;
   salaryMax?: number;
@@ -49,10 +56,17 @@ const jobSchema = new Schema<IJob>(
     stack: {
       type: String,
       enum: JOB_STACKS,
+      index: true,
+    },
+    stacks: {
+      type: [String],
+      enum: JOB_STACKS,
       required: true,
+      default: ['frontend'],
       index: true,
     },
     salary: { type: String, trim: true, maxlength: 60 },
+    salaryCurrency: { type: String, enum: SALARY_CURRENCIES },
     salaryMin: { type: Number, min: 0 },
     salaryMax: { type: Number, min: 0 },
     location: { type: String, trim: true, maxlength: 100 },

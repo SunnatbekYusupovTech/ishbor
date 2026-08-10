@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FlaskConical, Pencil, Check, AlertTriangle } from 'lucide-react';
+import { FlaskConical, Pencil, Check, AlertTriangle, UserRoundCog } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
 import { api, tokenStore, ApiError } from '@/lib/api';
 import { Field, PasswordField, inputCls, isPasswordStrongEnough, EMAIL_RE } from '@/components/form-field';
@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { RolePicker } from '@/components/RolePicker';
 
 type FieldErrors = Partial<Record<'name' | 'email' | 'newPassword' | 'currentPassword', string>>;
 
@@ -28,11 +29,14 @@ type FieldErrors = Partial<Record<'name' | 'email' | 'newPassword' | 'currentPas
 export function AccountSection({
   name,
   email,
+  role,
   isQaTester,
   onUpdated,
 }: {
   name: string;
   email: string;
+  /** `undefined` for admins — the role card is pointless there (granted via DB/admin panel). */
+  role?: 'seeker' | 'employer';
   isQaTester?: boolean;
   onUpdated: (patch: { name: string; email: string }) => void;
 }) {
@@ -51,8 +55,69 @@ export function AccountSection({
       )}
 
       <EditAccountCard name={name} email={email} onUpdated={onUpdated} t={t} ta={ta} />
+      {role && <RoleCard role={role} t={t} />}
       <DangerZoneCard />
     </div>
+  );
+}
+
+/** "Who are you?" — the seeker/employer side of the market, changeable anytime. */
+function RoleCard({ role, t }: { role: 'seeker' | 'employer'; t: ReturnType<typeof useTranslations<'profile'>> }) {
+  const [roleValue, setRoleValue] = useState<'seeker' | 'employer'>(role);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const save = async () => {
+    if (roleValue === role) return;
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      await api.updateMe({ role: roleValue });
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('roleChangeError'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-1.5 text-base">
+          <UserRoundCog className="h-4 w-4" />
+          {t('roleTitle')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">{t('roleHint')}</p>
+        <RolePicker
+          value={roleValue}
+          onChange={(r) => {
+            setRoleValue(r);
+            setSaved(false);
+            setError(null);
+          }}
+          disabled={saving}
+        />
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {saved && (
+          <Alert>
+            <Check className="h-4 w-4" />
+            <AlertDescription>{t('roleSaved')}</AlertDescription>
+          </Alert>
+        )}
+        <Button onClick={save} disabled={saving || roleValue === role}>
+          {saving ? t('saving') : t('save')}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

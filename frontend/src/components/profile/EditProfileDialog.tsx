@@ -217,11 +217,17 @@ export function EditProfileDialog({
                     setForm((f) => ({ ...f, username: e.target.value }));
                     setUsernameError(null);
                   }}
+                  maxLength={30}
                   aria-invalid={!!usernameError}
                   className={cn(inputCls, 'pl-7 font-mono')}
                 />
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">{t('usernameHint')}</p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">{t('usernameHint')}</p>
+                <p className="text-right text-xs tabular-nums text-muted-foreground">
+                  {form.username.length.toLocaleString()}/30
+                </p>
+              </div>
             </Field>
 
             <Field label={t('specialization')}>
@@ -230,6 +236,7 @@ export function EditProfileDialog({
                 onChange={set('specialization')}
                 list="specialization-presets"
                 placeholder="Frontend Developer"
+                maxLength={80}
                 className={inputCls}
               />
               <datalist id="specialization-presets">
@@ -237,26 +244,26 @@ export function EditProfileDialog({
                   <option key={s} value={s} />
                 ))}
               </datalist>
+              <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+                {form.specialization.length.toLocaleString()}/80
+              </p>
             </Field>
           </div>
 
           <Field label={t('skills')}>
             <div className="flex flex-wrap gap-1.5 rounded-md border bg-background p-2">
               {skills.map((skill) => (
-                <span
+                <button
                   key={skill}
-                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium"
+                  type="button"
+                  onClick={() => setSkills((prev) => prev.filter((s) => s !== skill))}
+                  aria-label={`${t('removeSkill')}: ${skill}`}
+                  title={t('removeSkill')}
+                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium transition-colors hover:bg-destructive/10 hover:text-destructive"
                 >
                   {skill}
-                  <button
-                    type="button"
-                    onClick={() => setSkills((prev) => prev.filter((s) => s !== skill))}
-                    aria-label={`${t('removeSkill')}: ${skill}`}
-                    className="rounded-full text-muted-foreground transition-colors hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
+                  <X className="h-3 w-3 opacity-60" />
+                </button>
               ))}
               <input
                 value={skillDraft}
@@ -289,9 +296,12 @@ export function EditProfileDialog({
               value={form.about}
               onChange={set('about')}
               rows={4}
-              maxLength={1500}
+              maxLength={600}
               className={cn(inputCls, 'resize-y')}
             />
+            <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+              {form.about.length.toLocaleString()}/600
+            </p>
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
@@ -359,6 +369,7 @@ export function EditProfileDialog({
                           onChange={(e) =>
                             setSocials((prev) => ({ ...prev, [platform]: e.target.value }))
                           }
+                          maxLength={200}
                           placeholder={platform === 'website' ? 'example.com' : 'username'}
                           className="min-w-0 flex-1 bg-transparent py-2 pr-3 text-sm outline-none"
                         />
@@ -370,6 +381,7 @@ export function EditProfileDialog({
                         onChange={(e) =>
                           setSocials((prev) => ({ ...prev, [platform]: e.target.value }))
                         }
+                        maxLength={200}
                         placeholder="https://…"
                         className={inputCls}
                       />

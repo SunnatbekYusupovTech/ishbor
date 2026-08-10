@@ -41,6 +41,10 @@
     "roleEmployer": "Employer",
     "roleSeekerHint": "Pass the test and post your resume.",
     "roleEmployerHint": "Post vacancies (no test required).",
+    "roleSelectTitle": "Welcome! Who are you?",
+    "roleSelectSubtitle": "Pick your role — you can change it at any time.",
+    "roleContinue": "Continue",
+    "roleSkip": "I'll choose later",
     "confirmPassword": "Confirm password",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
@@ -129,7 +133,13 @@
     "contactAction": "Contact",
     "favorite": "Save",
     "favorited": "Saved",
+    "more": "More actions",
     "hide": "Hide",
+    "hideCompany": "Hide vacancies of this company",
+    "reportAction": "Report the vacancy",
+    "hiddenToast": "Vacancy hidden",
+    "companyHiddenToast": "This company's vacancies hidden",
+    "undo": "Undo",
     "restoreHidden": "Show hidden ({count})",
     "verifiedTitle": "Skills verified",
     "sidebarTitle": "Your activity",
@@ -140,7 +150,13 @@
     "promoBody": "Take the test and earn a verified level — your listing looks more trustworthy.",
     "promoCta": "Take the test",
     "guestPrompt": "Log in to track your activity.",
-    "signIn": "Log in"
+    "signIn": "Log in",
+    "sidebarHidden": "Hidden ({count})",
+    "hiddenViewTitle": "Hidden listings",
+    "hiddenEmpty": "No hidden listings.",
+    "unhide": "Restore",
+    "restoreAll": "Restore all",
+    "backToAll": "All listings"
   },
   "header": {
     "city": "Tashkent",
@@ -154,6 +170,7 @@
     "myProjects": "My projects",
     "myReviews": "My reviews",
     "accountSettings": "Account settings",
+    "changeRole": "Change role",
     "menu": "Menu",
     "close": "Close"
   },
@@ -216,7 +233,11 @@
     "tashkentCity": "Tashkent City",
     "other": "Other",
     "otherPlaceholder": "Enter a location",
-    "selectPlaceholder": "Select…"
+    "selectPlaceholder": "Select…",
+    "locate": "Use my location",
+    "locating": "Locating…",
+    "locateError": "Couldn't determine your location. Pick a region manually.",
+    "locateDenied": "Location access is blocked. Allow it in your browser settings or pick a region manually."
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -250,6 +271,10 @@
     "save": "Save",
     "saving": "Saving…",
     "saved": "Changes saved.",
+    "roleTitle": "Who are you?",
+    "roleHint": "This role decides which side of the listings you take part in — you can change it at any time.",
+    "roleSaved": "Role updated.",
+    "roleChangeError": "Could not change the role.",
     "updateError": "Could not update.",
     "errCurrentPasswordRequired": "Enter your current password to set a new one",
     "dangerZone": "Danger zone",
@@ -351,11 +376,17 @@
     "takeTest": "Start the test",
     "verifiedNote": "You are verified — you can post listings.",
     "jobTitle": "Job title",
+    "jobTitlePlaceholder": "e.g. Senior Backend Developer",
     "company": "Company",
+    "companyPlaceholder": "e.g. It Park / Artel",
     "description": "Description",
+    "descriptionPlaceholder": "Describe responsibilities, requirements and conditions…",
     "level": "Level",
     "stack": "Direction",
+    "stackSelectHint": "Pick one or more stacks",
+    "errStackRequired": "Select at least one stack",
     "salary": "Salary",
+    "salaryCurrency": "Currency",
     "location": "Location",
     "telegram": "Telegram",
     "phone": "Phone",
@@ -365,7 +396,9 @@
     "errTitleRequired": "Enter a title",
     "errCompanyRequired": "Enter the company name",
     "errDescriptionShort": "Description is too short (min. 10 characters)",
-    "errSalaryRange": "The lower salary bound must not exceed the upper one"
+    "errDescriptionTooLong": "Description is too long (max. 10,000 characters)",
+    "errSalaryRange": "The lower salary bound must not exceed the upper one",
+    "errLocationRequired": "Pick or enter a location"
   },
   "test": {
     "title": "Skill test",
@@ -518,7 +551,6 @@
     "sending": "Sending…",
     "cancel": "Cancel",
     "applied": "Request sent",
-    "goToMessages": "Request sent — go to messages",
     "applicants": "Applications",
     "noApplicants": "No applications yet.",
     "accept": "Accept",
@@ -529,5 +561,20 @@
     "deletedAccount": "This user's account was deleted.",
     "loadError": "Something went wrong.",
     "loginToApply": "Log in to apply"
+  },
+  "report": {
+    "title": "Report this vacancy",
+    "notePlaceholder": "Additional comment (optional)…",
+    "cancel": "Cancel",
+    "submit": "Submit report",
+    "sending": "Submitting…",
+    "success": "Your report was submitted. Moderators will review it.",
+    "loadError": "Could not submit the report. Please try again.",
+    "reason": {
+      "spam": "Spam",
+      "inappropriate": "Inappropriate content",
+      "incorrect-salary": "Incorrect salary shown",
+      "fake": "Fake job"
+    }
   }
 }

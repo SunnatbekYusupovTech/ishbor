@@ -14,6 +14,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
  * `disconnectChatSocket()` tears it down on logout, so a stale singleton
  * never outlives its session.
  */
+/** Fired on `window` after the signed-in user reads a conversation
+ *  (`POST /chat/conversations/:id/read` succeeds) so the header unread badge
+ *  (`useChatUnread`) can recompute without a page refresh. The socket's own
+ *  `chat:read` event only reaches the OTHER participant. */
+export const CHAT_READ_EVENT = 'chat:read-locally';
+
 let socket: Socket | null = null;
 
 export function getChatSocket(): Socket {

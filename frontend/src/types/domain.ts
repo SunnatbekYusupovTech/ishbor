@@ -25,6 +25,9 @@ export const TIERS: VerificationLevel[] = [
 ];
 export type Role = 'employer' | 'seeker' | 'admin';
 export type ListingType = 'vacancy' | 'resume';
+/** Structured salary currency — mirrors `backend/src/models/Job.ts`. */
+export type SalaryCurrency = 'uzs' | 'usd' | 'rub' | 'eur';
+export const SALARY_CURRENCIES: SalaryCurrency[] = ['uzs', 'usd', 'rub', 'eur'];
 
 export interface Catalog {
   /** direction → ordered list of technology ids */
@@ -49,8 +52,12 @@ export interface Job {
   company: string | null;
   description: string;
   level: Level;
+  /** All stacks the listing covers (multi-select). */
+  stacks: Stack[];
+  /** The primary stack — `stacks[0]`, kept for back-compat display. */
   stack: Stack;
   salary: string | null;
+  salaryCurrency: SalaryCurrency | null;
   location: string | null;
   contactPhone: string | null;
   contactTelegram: string | null;
@@ -66,8 +73,9 @@ export interface CreateJobInput {
   company?: string;
   description: string;
   level?: Level;
-  stack: Stack;
+  stacks: Stack[];
   salary?: string;
+  salaryCurrency?: SalaryCurrency;
   location?: string;
   contactPhone?: string;
   contactTelegram?: string;

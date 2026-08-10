@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { MessageCircle } from 'lucide-react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { api, ApiError, tokenStore } from '@/lib/api';
-import { getChatSocket } from '@/lib/chatSocket';
+import { getChatSocket, CHAT_READ_EVENT } from '@/lib/chatSocket';
 import type { ApplicationStatus, ChatConversation, ChatMessage } from '@/types/domain';
 import { ConversationList } from '@/components/chat/ConversationList';
 import { ChatWindow } from '@/components/chat/ChatWindow';
@@ -70,6 +70,16 @@ export default function MessagesPage() {
       .finally(() => setLoading(false));
   }, [t]);
 
+  /** Mark a thread read on the server, then tell `useChatUnread` (header
+   *  badge) to recompute — the socket's `chat:read` only notifies the OTHER
+   *  participant, so the reader's own badge would stay stale until refresh. */
+  const markRead = useCallback((convoId: string) => {
+    api
+      .markConversationRead(convoId)
+      .then(() => window.dispatchEvent(new Event(CHAT_READ_EVENT)))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!authed || loadedOnce) return;
     loadConversations();
@@ -103,7 +113,7 @@ export default function MessagesPage() {
 
     // Opening the thread = reading it.
     setConversations((prev) => prev.map((c) => (c.id === active.id ? { ...c, unreadCount: 0 } : c)));
-    void api.markConversationRead(active.id).catch(() => {});
+    markRead(active.id);
 
     api
       .getMessages(active.id)
@@ -113,7 +123,7 @@ export default function MessagesPage() {
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t('loadError')))
       .finally(() => setMessagesLoading(false));
-  }, [active, t]);
+  }, [active, t, markRead]);
 
   const loadMore = useCallback(
     (before: string) => {
@@ -169,7 +179,7 @@ export default function MessagesPage() {
       if (conversationId === activeIdRef.current) {
         upsertMessage(message);
         // Reading it here — the sender's receipt updates live.
-        void api.markConversationRead(conversationId).catch(() => {});
+        markRead(conversationId);
       }
     };
 
@@ -206,7 +216,7 @@ export default function MessagesPage() {
       socket.off('chat:application-updated', onAppUpdated);
       socket.off('chat:read', onRead);
     };
-  }, [authed, upsertMessage, loadConversations]);
+  }, [authed, upsertMessage, loadConversations, markRead]);
 
   // Join the open thread's room so scoped events could reach us.
   useEffect(() => {

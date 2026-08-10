@@ -138,6 +138,7 @@ export default function AdminLoginPage() {
                   setEmail(e.target.value);
                   setErrors((p) => ({ ...p, email: undefined }));
                 }}
+                maxLength={254}
                 disabled={locked}
                 aria-invalid={!!errors.email}
                 className={inputCls}
@@ -158,6 +159,7 @@ export default function AdminLoginPage() {
                 showLabel={ta('showPassword')}
                 hideLabel={ta('hidePassword')}
                 autoComplete="current-password"
+                maxLength={128}
               />
             </Field>
 

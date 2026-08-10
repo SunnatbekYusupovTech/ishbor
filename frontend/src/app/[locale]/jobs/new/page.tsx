@@ -5,15 +5,26 @@ import { useTranslations } from 'next-intl';
 import { ShieldCheck, Lock } from 'lucide-react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { api, tokenStore, ApiError } from '@/lib/api';
-import type { CreateJobInput, Level, Stack, Direction, Role, VerificationLevel } from '@/types/domain';
+import { TIERS, type CreateJobInput, type Level, type Stack, type Direction, type Role, type VerificationLevel, type SalaryCurrency } from '@/types/domain';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RegionSelect } from '@/components/region-select';
+import { CurrencySelect } from '@/components/currency-select';
+import { formatSalaryAmount } from '@/lib/salary';
 import { cn } from '@/lib/utils';
 
 const LEVELS: Level[] = ['junior', 'middle', 'senior'];
 const STACKS: Stack[] = ['frontend', 'backend', 'fullstack', 'mobile'];
+
+/** The highest-ranked verification tier among the given ones (`'none'` when nothing is verified). */
+function bestTier(tiers: VerificationLevel[]): VerificationLevel {
+  let best: VerificationLevel = 'none';
+  for (const tier of tiers) {
+    if (TIERS.indexOf(tier) > TIERS.indexOf(best)) best = tier;
+  }
+  return best;
+}
 
 // Formats the part after the fixed "+998" prefix as the user types: XX-XXX-XX-XX.
 function formatUzPhoneLocal(raw: string): string {
@@ -94,14 +105,7 @@ export default function NewJobPage() {
   return <JobForm role={role} verificationLevels={verificationLevels} />;
 }
 
-type JobFieldErrors = Partial<Record<'title' | 'company' | 'description' | 'salary', string>>;
-
-/** Parse the numeric bounds out of a free-text salary like "$500 - $900". */
-function salaryBounds(raw: string): number[] {
-  return (raw.match(/\d[\d\s]*/g) ?? [])
-    .map((n) => Number(n.replace(/\s/g, '')))
-    .filter((n) => Number.isFinite(n));
-}
+type JobFieldErrors = Partial<Record<'title' | 'company' | 'description' | 'stacks' | 'salary' | 'location', string>>;
 
 function JobForm({
   role,
@@ -113,6 +117,7 @@ function JobForm({
   const t = useTranslations('post');
   const tl = useTranslations('levels');
   const ts = useTranslations('stacks');
+  const tr = useTranslations('regions');
   const router = useRouter();
   const isEmployer = role === 'employer';
 
@@ -121,9 +126,8 @@ function JobForm({
     company: '',
     description: '',
     level: 'junior',
-    stack: 'frontend',
-    salary: '',
-    location: '',
+    stacks: ['frontend'],
+    location: tr('tashkentCity'),
     contactPhone: '',
     contactTelegram: '',
   });
@@ -131,10 +135,14 @@ function JobForm({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [phoneLocal, setPhoneLocal] = useState('');
+  const [telegramLocal, setTelegramLocal] = useState('');
+  const [salaryAmount, setSalaryAmount] = useState('');
+  const [salaryCurrency, setSalaryCurrency] = useState<SalaryCurrency>('usd');
 
-  // The badge shown/enforced depends on which stack is currently selected —
-  // passing a frontend test doesn't unlock posting a backend resume.
-  const stackTier = verificationLevels[form.stack] ?? 'none';
+  // The badge shown/enforced is the BEST tier across the selected stacks —
+  // passing a frontend test doesn't unlock a backend-only resume, but a
+  // frontend+backend resume just needs at least one of the two verified.
+  const stackTier = bestTier(form.stacks.map((s) => verificationLevels[s] ?? 'none'));
   const stackUnverified = !isEmployer && stackTier === 'none';
 
   const set = <K extends keyof CreateJobInput>(k: K, v: CreateJobInput[K]) => {
@@ -147,10 +155,9 @@ function JobForm({
     if (form.title.trim().length < 2) e.title = t('errTitleRequired');
     if (isEmployer && (form.company ?? '').trim().length < 2) e.company = t('errCompanyRequired');
     if (form.description.trim().length < 10) e.description = t('errDescriptionShort');
-    const bounds = salaryBounds(form.salary ?? '');
-    if (bounds.length >= 2 && bounds[0] > bounds[bounds.length - 1]) {
-      e.salary = t('errSalaryRange');
-    }
+    if (form.description.trim().length > 4000) e.description = t('errDescriptionTooLong');
+    if (form.stacks.length === 0) e.stacks = t('errStackRequired');
+    if (!(form.location ?? '').trim()) e.location = t('errLocationRequired');
     return e;
   };
 
@@ -158,6 +165,12 @@ function JobForm({
     const formatted = formatUzPhoneLocal(raw);
     setPhoneLocal(formatted);
     set('contactPhone', formatted ? `+998 ${formatted}` : '');
+  };
+
+  const onTelegramChange = (raw: string) => {
+    const username = raw.replace(/^@+/, '');
+    setTelegramLocal(username);
+    set('contactTelegram', username ? `@${username}` : '');
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -171,12 +184,14 @@ function JobForm({
     setErrors({});
     setLoading(true);
     try {
+      const salaryText = salaryAmount ? formatSalaryAmount(salaryAmount, salaryCurrency) : undefined;
       // Employers send company + level; seekers omit them (backend uses their badge).
       await api.createJob({
         title: form.title,
         description: form.description,
-        stack: form.stack,
-        salary: form.salary || undefined,
+        stacks: form.stacks,
+        salary: salaryText,
+        salaryCurrency: salaryText ? salaryCurrency : undefined,
         location: form.location || undefined,
         contactPhone: form.contactPhone || undefined,
         contactTelegram: form.contactTelegram || undefined,
@@ -214,10 +229,14 @@ function JobForm({
               <input
                 value={form.title}
                 onChange={(e) => set('title', e.target.value)}
-                placeholder={isEmployer ? '' : t('resumeTitlePlaceholder')}
+                placeholder={isEmployer ? t('jobTitlePlaceholder') : t('resumeTitlePlaceholder')}
+                maxLength={120}
                 aria-invalid={!!errors.title}
                 className={cn(inputCls, errors.title && 'border-destructive')}
               />
+              <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+                {form.title.length.toLocaleString()}/120
+              </p>
             </Field>
 
             {isEmployer && (
@@ -225,20 +244,30 @@ function JobForm({
                 <input
                   value={form.company}
                   onChange={(e) => set('company', e.target.value)}
+                  placeholder={t('companyPlaceholder')}
+                  maxLength={120}
                   aria-invalid={!!errors.company}
                   className={cn(inputCls, errors.company && 'border-destructive')}
                 />
+                <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+                  {(form.company?.length ?? 0).toLocaleString()}/120
+                </p>
               </Field>
             )}
 
             <Field label={t('description')} error={errors.description}>
               <textarea
                 rows={4}
+                maxLength={4000}
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
+                placeholder={t('descriptionPlaceholder')}
                 aria-invalid={!!errors.description}
-                className={cn(inputCls, errors.description && 'border-destructive')}
+                className={cn(inputCls, 'min-h-32 max-h-96', errors.description && 'border-destructive')}
               />
+              <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+                {form.description.length.toLocaleString()}/4 000
+              </p>
             </Field>
 
             <div className={cn('grid gap-4', isEmployer ? 'grid-cols-2' : 'grid-cols-1')}>
@@ -252,41 +281,64 @@ function JobForm({
                   />
                 </Field>
               )}
-              <Field label={t('stack')}>
-                <Pills
-                  value={form.stack}
+              <Field label={t('stack')} error={errors.stacks}>
+                <MultiPills
+                  values={form.stacks}
                   options={STACKS}
-                  onChange={(v) => set('stack', v)}
+                  onChange={(stacks) => set('stacks', stacks)}
                   render={(v) => ts(v)}
                 />
+                <p className="mt-1 text-xs text-muted-foreground">{t('stackSelectHint')}</p>
               </Field>
             </div>
 
-            <Field label={t('location')}>
+            <Field label={t('location')} error={errors.location}>
               <RegionSelect
                 value={form.location ?? ''}
                 onChange={(v) => set('location', v)}
-                selectClassName={inputCls}
+                required
               />
             </Field>
 
             <Field label={t('salary')} error={errors.salary}>
-              <input
-                value={form.salary}
-                onChange={(e) => set('salary', e.target.value)}
-                placeholder="$500 - $900"
-                aria-invalid={!!errors.salary}
-                className={cn(inputCls, errors.salary && 'border-destructive')}
-              />
+              <div className="flex">
+                <div className="flex items-center rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground">
+                  <CurrencySelect value={salaryCurrency} onChange={setSalaryCurrency} />
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={salaryAmount}
+                  onChange={(e) => setSalaryAmount(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                  placeholder="500 000"
+                  maxLength={12}
+                  aria-invalid={!!errors.salary}
+                  className={cn(inputCls, 'rounded-l-none tabular-nums', errors.salary && 'border-destructive')}
+                />
+              </div>
+              {salaryAmount && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatSalaryAmount(salaryAmount, salaryCurrency)}
+                </p>
+              )}
+              <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+                {salaryAmount.length.toLocaleString()}/12
+              </p>
             </Field>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label={t('telegram')}>
-                <input
-                  value={form.contactTelegram}
-                  onChange={(e) => set('contactTelegram', e.target.value)}
-                  placeholder="@username"
-                  className={inputCls}
-                />
+                <div className="flex">
+                  <div className="flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                    @
+                  </div>
+                  <input
+                    value={telegramLocal}
+                    onChange={(e) => onTelegramChange(e.target.value)}
+                    placeholder="username"
+                    maxLength={32}
+                    className={cn(inputCls, 'rounded-l-none')}
+                  />
+                </div>
               </Field>
               <Field label={t('phone')}>
                 <div className="flex">
@@ -299,6 +351,7 @@ function JobForm({
                     value={phoneLocal}
                     onChange={(e) => onPhoneChange(e.target.value)}
                     placeholder="90-123-45-67"
+                    maxLength={12}
                     className={cn(inputCls, 'rounded-l-none')}
                   />
                 </div>
@@ -365,6 +418,40 @@ function Pills<T extends string>({
           {render(o)}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** Multi-select variant of `Pills` — chips toggle in/out of `values`. */
+function MultiPills<T extends string>({
+  values,
+  options,
+  onChange,
+  render,
+}: {
+  values: T[];
+  options: T[];
+  onChange: (next: T[]) => void;
+  render: (v: T) => string;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => {
+        const active = values.includes(o);
+        return (
+          <button
+            key={o}
+            type="button"
+            onClick={() => onChange(active ? values.filter((v) => v !== o) : [...values, o])}
+            className={cn(
+              'rounded-full border px-2.5 py-1 text-xs capitalize transition-colors',
+              active ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-accent',
+            )}
+          >
+            {render(o)}
+          </button>
+        );
+      })}
     </div>
   );
 }

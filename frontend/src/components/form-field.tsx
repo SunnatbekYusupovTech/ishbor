@@ -33,6 +33,7 @@ export function PasswordField({
   showLabel,
   hideLabel,
   autoComplete,
+  maxLength,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -42,6 +43,7 @@ export function PasswordField({
   showLabel: string;
   hideLabel: string;
   autoComplete?: string;
+  maxLength?: number;
 }) {
   return (
     <div className="relative">
@@ -49,6 +51,7 @@ export function PasswordField({
         type={visible ? 'text' : 'password'}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        maxLength={maxLength}
         aria-invalid={invalid}
         autoComplete={autoComplete}
         className={cn(inputCls, 'pr-10', invalid ? 'border-destructive' : 'border-input')}

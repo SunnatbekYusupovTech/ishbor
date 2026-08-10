@@ -160,6 +160,7 @@ export const updateMe = asyncHandler(async (req: Request, res: Response) => {
     email?: string;
     currentPassword?: string;
     newPassword?: string;
+    role?: 'employer' | 'seeker';
     primaryDirection?: Direction | null;
     username?: string;
     skills?: string[];
@@ -206,6 +207,16 @@ export const updateMe = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (name) user.name = name;
+
+  // Switching sides of the market is fully self-service (`updateMeSchema`
+  // restricts it to seeker/employer; admin is never reachable here). Data is
+  // left intact either way — a former employer's vacancies stay visible
+  // under their name, a former seeker's resume stays posted — only what the
+  // account can DO next changes (`jobController.postJob` derives listing
+  // type from the role at post time).
+  if (body.role && body.role !== user.role) {
+    user.role = body.role;
+  }
 
   if (primaryDirection !== undefined) {
     user.primaryDirection = primaryDirection ?? undefined;

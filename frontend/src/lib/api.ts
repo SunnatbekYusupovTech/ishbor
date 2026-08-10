@@ -326,6 +326,8 @@ export const api = {
     email?: string;
     currentPassword?: string;
     newPassword?: string;
+    /** Which side of the market — `seeker`/`employer` only, `admin` is never self-assignable. */
+    role?: 'seeker' | 'employer';
     primaryDirection?: Direction | null;
     // --- Public freelancer profile ---
     username?: string;
@@ -430,6 +432,13 @@ export const api = {
     request<{ application: Application; conversationId: string }>(`/jobs/${jobId}/apply`, {
       method: 'POST',
       body: JSON.stringify(message ? { message } : {}),
+    }),
+
+  /** File a complaint about a vacancy (More menu → Report). */
+  reportJob: (jobId: string, reason: string, note?: string) =>
+    request<{ id: string }>(`/jobs/${jobId}/report`, {
+      method: 'POST',
+      body: JSON.stringify(note ? { reason, note } : { reason }),
     }),
 
   /** The vacancy's employer reviews every request with the seeker's FULL form. */

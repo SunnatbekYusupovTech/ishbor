@@ -311,6 +311,11 @@ function googleRedirectUri(req: Request): string {
  * email/password account on first Google sign-in, or creates a brand-new
  * account outright — a verified Google token already proves the mailbox
  * belongs to whoever is signing in, so the emailed-code step is skipped.
+ *
+ * Returns whether this was a brand-new account (`created`): the callback
+ * uses it to send first-timers to the role-select screen — the OAuth
+ * redirect is a single step with no form in between, so a fresh Google
+ * signup is the one case where "who are you?" is NOT asked up front.
  */
 async function findOrCreateGoogleUser(params: {
   email: string;
@@ -318,15 +323,22 @@ async function findOrCreateGoogleUser(params: {
   name?: string;
   picture?: string;
   ip?: string;
-}) {
+}): Promise<{ user: InstanceType<typeof User>; created: boolean }> {
   const email = params.email.toLowerCase();
   let user = await User.findOne({ $or: [{ googleId: params.googleId }, { email }] });
+  let created = false;
 
   if (!user) {
+    created = true;
     user = await User.create({
       name: params.name ?? email.split('@')[0],
       email,
       googleId: params.googleId,
+      // Default side of the market. A Google signup is a single redirect, so
+      // there's no in-flow chance to ask — the callback bounces new accounts
+      // to `/role-select` where they pick seeker/employer; this default is
+      // only the fallback if they skip it (or an API client hits Google
+      // sign-in directly without the frontend flow).
       role: 'seeker',
       registrationIp: params.ip,
       username: await generateUsername(email),
@@ -343,7 +355,7 @@ async function findOrCreateGoogleUser(params: {
     await user.save();
   }
 
-  return user;
+  return { user, created };
 }
 
 /**
@@ -460,7 +472,7 @@ export const googleAuthCallback = asyncHandler(async (req: Request, res: Respons
 
   if (!payload?.email || !payload.sub) return failWith('invalid_credential');
 
-  const user = await findOrCreateGoogleUser({
+  const { user, created } = await findOrCreateGoogleUser({
     email: payload.email,
     googleId: payload.sub,
     name: payload.name,
@@ -475,8 +487,10 @@ export const googleAuthCallback = asyncHandler(async (req: Request, res: Respons
   // `?googleAuth=1` is picked up once by `useCurrentUser` — see that hook
   // for why: this redirect never goes through the frontend's own fetch
   // wrapper, so nothing else would set the non-httpOnly "looks logged in"
-  // UI marker.
-  const successUrl = new URL('/', frontendOrigin());
+  // UI marker. Brand-new accounts (no prior email/password signup) go to
+  // the role-select screen first — the OAuth redirect had no place to ask
+  // "who are you?" — everyone else straight back to the feed.
+  const successUrl = new URL(created ? '/role-select' : '/', frontendOrigin());
   successUrl.searchParams.set('googleAuth', '1');
   res.redirect(successUrl.toString());
 });

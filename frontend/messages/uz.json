@@ -41,6 +41,10 @@
     "roleEmployer": "Ish beruvchi",
     "roleSeekerHint": "Testdan o'tib, o'z rezyumengizni joylaysiz.",
     "roleEmployerHint": "Vakansiya joylaysiz (test talab qilinmaydi).",
+    "roleSelectTitle": "Xush kelibsiz! Siz kimsiz?",
+    "roleSelectSubtitle": "Rolingizni tanlang — istalgan vaqtda o'zgartirishingiz mumkin.",
+    "roleContinue": "Davom etish",
+    "roleSkip": "Keyinroq tanlayman",
     "confirmPassword": "Parolni tasdiqlang",
     "showPassword": "Parolni ko'rsatish",
     "hidePassword": "Parolni yashirish",
@@ -129,7 +133,13 @@
     "contactAction": "Bog'lanish",
     "favorite": "Saqlash",
     "favorited": "Saqlangan",
+    "more": "Ko'proq amallar",
     "hide": "Yashirish",
+    "hideCompany": "Kompaniyani yashirish",
+    "reportAction": "E'lon ustidan shikoyat qilish",
+    "hiddenToast": "E'lon yashirildi",
+    "companyHiddenToast": "Kompaniya e'lonlari yashirildi",
+    "undo": "Qaytarish",
     "restoreHidden": "Yashirilganlarni ko'rsatish ({count})",
     "verifiedTitle": "Malakasi tasdiqlangan",
     "sidebarTitle": "Faoliyatingiz",
@@ -140,7 +150,13 @@
     "promoBody": "Testdan o'ting va tasdiqlangan daraja oling — e'loningiz ishonchliroq ko'rinadi.",
     "promoCta": "Testni boshlash",
     "guestPrompt": "Faoliyatni kuzatish uchun kiring.",
-    "signIn": "Kirish"
+    "signIn": "Kirish",
+    "sidebarHidden": "Yashirilganlar ({count})",
+    "hiddenViewTitle": "Yashirilgan e'lonlar",
+    "hiddenEmpty": "Yashirilgan e'lonlar yo'q.",
+    "unhide": "Qaytarish",
+    "restoreAll": "Barchasini qaytarish",
+    "backToAll": "Barcha e'lonlar"
   },
   "header": {
     "city": "Toshkent",
@@ -154,6 +170,7 @@
     "myProjects": "Mening loyihalarim",
     "myReviews": "Mening sharhlarim",
     "accountSettings": "Hisob sozlamalari",
+    "changeRole": "Rolni o'zgartirish",
     "menu": "Menyu",
     "close": "Yopish"
   },
@@ -216,7 +233,11 @@
     "tashkentCity": "Toshkent shahri",
     "other": "Boshqa",
     "otherPlaceholder": "Joylashuvni kiriting",
-    "selectPlaceholder": "Tanlang…"
+    "selectPlaceholder": "Tanlang…",
+    "locate": "Joylashuvimni qo'llash",
+    "locating": "Joylashuv aniqlanmoqda…",
+    "locateError": "Joylashuvni aniqlab bo'lmadi. Viloyatni qo'lda tanlang.",
+    "locateDenied": "Joylashuvga ruxsat berilmagan. Brauzer sozlamalarida ruxsat bering yoki viloyatni qo'lda tanlang."
   },
   "leaderboard": {
     "title": "Reyting",
@@ -250,6 +271,10 @@
     "save": "Saqlash",
     "saving": "Saqlanmoqda…",
     "saved": "O'zgarishlar saqlandi.",
+    "roleTitle": "Siz kimsiz?",
+    "roleHint": "Bu rol e'lonlarda qaysi tomondan ishtirok etishingizni belgilaydi — istalgan vaqtda o'zgartirishingiz mumkin.",
+    "roleSaved": "Rol yangilandi.",
+    "roleChangeError": "Rolni o'zgartirib bo'lmadi.",
     "updateError": "Yangilab bo'lmadi.",
     "errCurrentPasswordRequired": "Yangi parol qo'yish uchun joriy parolni kiriting",
     "dangerZone": "Xavfli hudud",
@@ -351,11 +376,17 @@
     "takeTest": "Testni boshlash",
     "verifiedNote": "Siz tasdiqlangansiz — e'lon bera olasiz.",
     "jobTitle": "Lavozim nomi",
+    "jobTitlePlaceholder": "Masalan: Senior Backend Developer",
     "company": "Kompaniya",
+    "companyPlaceholder": "Masalan: It Park / Artel",
     "description": "Tavsif",
+    "descriptionPlaceholder": "Vazifalar, talablar va shartlarni tavsiflang…",
     "level": "Daraja",
     "stack": "Yo'nalish",
+    "stackSelectHint": "Bir yoki bir nechta yo'nalish tanlang",
+    "errStackRequired": "Kamida bitta yo'nalish tanlang",
     "salary": "Maosh",
+    "salaryCurrency": "Valyuta",
     "location": "Joylashuv",
     "telegram": "Telegram",
     "phone": "Telefon",
@@ -365,7 +396,9 @@
     "errTitleRequired": "Sarlavhani kiriting",
     "errCompanyRequired": "Kompaniya nomini kiriting",
     "errDescriptionShort": "Tavsif juda qisqa (kamida 10 belgi)",
-    "errSalaryRange": "Maoshning quyi chegarasi yuqori chegaradan oshmasligi kerak"
+    "errDescriptionTooLong": "Tavsif juda uzun (maksimal 4 000 belgi)",
+    "errSalaryRange": "Maoshning quyi chegarasi yuqori chegaradan oshmasligi kerak",
+    "errLocationRequired": "Joylashuvni tanlang yoki kiriting"
   },
   "test": {
     "title": "Malaka testi",
@@ -517,8 +550,7 @@
     "applyCta": "Ariza yuborish",
     "sending": "Yuborilmoqda…",
     "cancel": "Bekor qilish",
-    "applied": "Ariza yuborilgan",
-    "goToMessages": "Ariza yuborilgan — xabarlarga o'tish",
+    "applied": "Ariza yuborildi",
     "applicants": "Arizalar",
     "noApplicants": "Hozircha arizalar yo'q.",
     "accept": "Qabul qilish",
@@ -529,5 +561,20 @@
     "deletedAccount": "Foydalanuvchi akkaunti o'chirilgan.",
     "loadError": "Xatolik yuz berdi.",
     "loginToApply": "Ariza yuborish uchun kiring"
+  },
+  "report": {
+    "title": "E'lon ustidan shikoyat qilish",
+    "notePlaceholder": "Qo'shimcha izoh (ixtiyoriy)…",
+    "cancel": "Bekor qilish",
+    "submit": "Shikoyat yuborish",
+    "sending": "Yuborilmoqda…",
+    "success": "Shikoyatingiz yuborildi. Moderatorlar ko'rib chiqadi.",
+    "loadError": "Shikoyat yuborilmadi. Qayta urinib ko'ring.",
+    "reason": {
+      "spam": "Spam",
+      "inappropriate": "Nomaqbul kontent",
+      "incorrect-salary": "Noto'g'ri maosh ko'rsatilgan",
+      "fake": "Soxta e'lon"
+    }
   }
 }

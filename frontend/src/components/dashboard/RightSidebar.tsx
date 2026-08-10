@@ -212,7 +212,9 @@ function SavedJobMiniCard({ job }: { job: Job }) {
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-1">
             <LevelBadge level={job.level} />
-            <StackBadge stack={job.stack} />
+            {job.stacks.map((s) => (
+              <StackBadge key={s} stack={s} />
+            ))}
           </div>
           {job.salary && (
             <p className="mt-2 flex items-center gap-1 text-sm font-bold text-success">

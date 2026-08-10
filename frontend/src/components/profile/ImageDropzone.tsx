@@ -154,6 +154,12 @@ export function ImageDropzone({
             showPreview &&
               'bg-background/80 opacity-0 backdrop-blur-sm group-hover:opacity-100 group-focus-within:opacity-100',
             showPreview && 'absolute inset-0 justify-center',
+            // `backdrop-blur` creates its own composited layer, and Chrome
+            // does NOT clip that layer to an ancestor's `border-radius`
+            // (overflow-hidden clipping is skipped for composited layers) —
+            // so over a circular avatar the hover tint would render as a
+            // SQUARE. Clipping it with its own radius+overflow instead.
+            variant === 'avatar' && showPreview && 'overflow-hidden rounded-full',
           )}
         >
           {uploading ? (

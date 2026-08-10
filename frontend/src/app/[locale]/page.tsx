@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFavorites } from '@/lib/favorites';
 import { hiddenJobs, useHiddenJobs } from '@/lib/hidden';
+import { useBlacklistedCompanies } from '@/lib/companyBlacklist';
 import { RegionSelect } from '@/components/region-select';
 import { useSidebarSlot } from '@/components/dashboard/SidebarSlotContext';
 import { cn } from '@/lib/utils';
@@ -50,7 +51,7 @@ export default function JobsPage() {
 
   const [role, setRole] = useState<RoleFilter>('all');
   const [level, setLevel] = useState<Level | null>(null);
-  const [stack, setStack] = useState<Stack | null>(null);
+  const [selectedStacks, setSelectedStacks] = useState<Stack[]>([]);
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('');
   const [salaryMin, setSalaryMin] = useState('');
@@ -60,20 +61,30 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savedOnly, setSavedOnly] = useState(false);
+  const [hiddenOnly, setHiddenOnly] = useState(false);
   const [authed, setAuthed] = useState(false);
   const setSidebarContent = useSidebarSlot();
 
   const favIds = useFavorites();
   const hiddenIds = useHiddenJobs();
+  const blacklistedCompanies = useBlacklistedCompanies();
 
   // Read the "saved" view intent (from the sidebar heart) + a `?q=` deep link
-  // (from the header's global search) + auth state, all on mount.
+  // (from the header's global search) + `?stack=` (multi-select stack filter)
+  // + auth state, all on mount.
   useEffect(() => {
     setAuthed(!!tokenStore.get());
     const params = new URLSearchParams(window.location.search);
     setSavedOnly(params.get('saved') === '1');
+    setHiddenOnly(params.get('hidden') === '1');
     const q = params.get('q');
     if (q) setQuery(q);
+    const stackParam = params.get('stack');
+    if (stackParam) {
+      const valid = (STACKS as string[]).includes.bind(STACKS);
+      const parsed = stackParam.split(',').map((s) => s.trim()).filter(valid);
+      if (parsed.length) setSelectedStacks(parsed as Stack[]);
+    }
   }, []);
 
   const toggleSaved = (val: boolean) => {
@@ -81,6 +92,23 @@ export default function JobsPage() {
     const url = new URL(window.location.href);
     if (val) url.searchParams.set('saved', '1');
     else url.searchParams.delete('saved');
+    window.history.replaceState(null, '', url.toString());
+  };
+
+  const toggleHidden = (val: boolean) => {
+    setHiddenOnly(val);
+    const url = new URL(window.location.href);
+    if (val) url.searchParams.set('hidden', '1');
+    else url.searchParams.delete('hidden');
+    window.history.replaceState(null, '', url.toString());
+  };
+
+  /** Multi-select stack filter — state + the `?stack=` URL param stay in sync. */
+  const applyStacks = (next: Stack[]) => {
+    setSelectedStacks(next);
+    const url = new URL(window.location.href);
+    if (next.length) url.searchParams.set('stack', next.join(','));
+    else url.searchParams.delete('stack');
     window.history.replaceState(null, '', url.toString());
   };
 
@@ -92,7 +120,7 @@ export default function JobsPage() {
       .getJobs({
         type: role === 'all' ? undefined : role,
         level: level ?? undefined,
-        stack: stack ?? undefined,
+        stack: selectedStacks.length ? selectedStacks.join(',') : undefined,
         location: location.trim() || undefined,
         salaryMin: salaryMin.trim() ? Number(salaryMin) : undefined,
         salaryMax: salaryMax.trim() ? Number(salaryMax) : undefined,
@@ -104,26 +132,30 @@ export default function JobsPage() {
     return () => {
       cancelled = true;
     };
-  }, [role, level, stack, location, salaryMin, salaryMax, sort, t]);
+  }, [role, level, selectedStacks, location, salaryMin, salaryMax, sort, t]);
 
-  // Client-side pipeline: drop hidden → saved-only → text search.
+  // Client-side pipeline: drop hidden + blacklisted-company → saved-only → text search.
+  // `hiddenOnly` inverts it — show exactly the hidden set (so you can manage them).
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const favSet = new Set(favIds);
     const hiddenSet = new Set(hiddenIds);
+    const companySet = new Set(blacklistedCompanies);
     return jobs.filter((j) => {
+      if (hiddenOnly) return hiddenSet.has(j.id);
       if (hiddenSet.has(j.id)) return false;
+      if (j.company && companySet.has(j.company.trim().toLowerCase())) return false;
       if (savedOnly && !favSet.has(j.id)) return false;
       if (!q) return true;
       return [j.title, j.company, j.description, j.postedByName]
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q));
     });
-  }, [jobs, query, hiddenIds, savedOnly, favIds]);
+  }, [jobs, query, hiddenIds, blacklistedCompanies, savedOnly, hiddenOnly, favIds]);
 
   const hasFilters =
     level !== null ||
-    stack !== null ||
+    selectedStacks.length > 0 ||
     query.trim() !== '' ||
     location.trim() !== '' ||
     salaryMin.trim() !== '' ||
@@ -131,7 +163,7 @@ export default function JobsPage() {
     sort !== 'newest';
   const resetFilters = () => {
     setLevel(null);
-    setStack(null);
+    applyStacks([]);
     setQuery('');
     setLocation('');
     setSalaryMin('');
@@ -165,11 +197,11 @@ export default function JobsPage() {
               </button>
             )}
           </div>
-          <FilterGroup
+          <MultiFilterGroup
             label={t('filterStack')}
-            value={stack}
+            values={selectedStacks}
             options={STACKS}
-            onChange={setStack}
+            onChange={applyStacks}
             render={(v) => ts(v)}
             allLabel={t('all')}
           />
@@ -191,7 +223,7 @@ export default function JobsPage() {
               value={location}
               onChange={setLocation}
               className="mt-2"
-              selectClassName="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
+              triggerClassName="h-9 rounded-lg focus-visible:ring-2 focus-visible:ring-ring/25"
             />
           </div>
 
@@ -240,6 +272,26 @@ export default function JobsPage() {
               ))}
             </select>
           </div>
+
+          {/* Hidden listings — view the hidden set (with count) */}
+          {hiddenIds.length > 0 && (
+            <button
+              onClick={() => toggleHidden(!hiddenOnly)}
+              aria-pressed={hiddenOnly}
+              className={cn(
+                'flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors',
+                hiddenOnly
+                  ? 'border-primary bg-primary/5 text-foreground'
+                  : 'border-border text-muted-foreground hover:bg-accent',
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <EyeOff className={cn('h-4 w-4', hiddenOnly ? 'text-primary' : 'text-muted-foreground')} />
+                {t('sidebarHidden', { count: hiddenIds.length })}
+              </span>
+              {hiddenOnly ? <X className="h-4 w-4 text-muted-foreground" /> : null}
+            </button>
+          )}
         </div>
 
         {/* Saved searches (presets) */}
@@ -253,7 +305,7 @@ export default function JobsPage() {
               <button
                 key={`${p.stack}-${p.level}`}
                 onClick={() => {
-                  setStack(p.stack);
+                  applyStacks([p.stack]);
                   setLevel(p.level);
                 }}
                 className="flex items-center justify-between rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -292,7 +344,7 @@ export default function JobsPage() {
     return () => setSidebarContent(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `setSidebarContent` (useState setter) and the `t`/`ts`/`tl` translators are stable references; only the filter values below should retrigger this.
   }, [
-    stack,
+    selectedStacks,
     level,
     location,
     salaryMin,
@@ -300,6 +352,8 @@ export default function JobsPage() {
     sort,
     authed,
     hasFilters,
+    hiddenOnly,
+    hiddenIds.length,
   ]);
 
   const roleTabs: { value: RoleFilter; label: string; icon: React.ReactNode }[] = [
@@ -385,29 +439,59 @@ export default function JobsPage() {
           column has the full content width to itself. ────────────────── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          {!loading && !error && (
+          {hiddenOnly ? (
             <p className="text-sm font-medium text-muted-foreground">
-              {t('resultsCount', { count: filtered.length })}
+              {t('hiddenViewTitle')} · {filtered.length}
             </p>
+          ) : (
+            !loading &&
+            !error && (
+              <p className="text-sm font-medium text-muted-foreground">
+                {t('resultsCount', { count: filtered.length })}
+              </p>
+            )
           )}
           <div className="flex items-center gap-3">
-            {hiddenIds.length > 0 && (
-              <button
-                onClick={() => hiddenJobs.clear()}
-                className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <EyeOff className="h-3.5 w-3.5" />
-                {t('restoreHidden', { count: hiddenIds.length })}
-              </button>
-            )}
-            {savedOnly && (
-              <button
-                onClick={() => toggleSaved(false)}
-                className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-              >
-                <X className="h-3.5 w-3.5" />
-                {t('sidebarFavorites')}
-              </button>
+            {hiddenOnly ? (
+              <>
+                {hiddenIds.length > 0 && (
+                  <button
+                    onClick={() => hiddenJobs.clear()}
+                    className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <EyeOff className="h-3.5 w-3.5" />
+                    {t('restoreAll')}
+                  </button>
+                )}
+                <button
+                  onClick={() => toggleHidden(false)}
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  {t('backToAll')}
+                </button>
+              </>
+            ) : (
+              <>
+                {hiddenIds.length > 0 && (
+                  <button
+                    onClick={() => hiddenJobs.clear()}
+                    className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <EyeOff className="h-3.5 w-3.5" />
+                    {t('restoreHidden', { count: hiddenIds.length })}
+                  </button>
+                )}
+                {savedOnly && (
+                  <button
+                    onClick={() => toggleSaved(false)}
+                    className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    {t('sidebarFavorites')}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -426,20 +510,31 @@ export default function JobsPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed bg-card py-20 text-center text-muted-foreground">
-            <Search className="h-10 w-10 opacity-40" />
-            <p>{t('empty')}</p>
-            {(hasFilters || savedOnly) && (
+            <EyeOff className="h-10 w-10 opacity-40" />
+            <p>{hiddenOnly ? t('hiddenEmpty') : t('empty')}</p>
+            {(hasFilters || savedOnly || hiddenOnly) && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
                   resetFilters();
                   toggleSaved(false);
+                  toggleHidden(false);
                 }}
               >
                 {t('reset')}
               </Button>
             )}
+          </div>
+        ) : hiddenOnly ? (
+          <div className="space-y-3">
+            {filtered.map((job) => (
+              <HiddenJobRow
+                key={job.id}
+                job={job}
+                onUnhide={(id) => hiddenJobs.unhide(id)}
+              />
+            ))}
           </div>
         ) : (
           <div className="space-y-4">
@@ -449,6 +544,28 @@ export default function JobsPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** A compact row for the "hidden listings" view — title + Unhide action. */
+function HiddenJobRow({ job, onUnhide }: { job: Job; onUnhide: (id: string) => void }) {
+  const t = useTranslations('jobs');
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed bg-card p-4 shadow-sm">
+      <div className="min-w-0">
+        <p className="truncate font-semibold">{job.title}</p>
+        <p className="truncate text-sm text-muted-foreground">{job.company ?? job.postedByName}</p>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onUnhide(job.id)}
+        className="shrink-0 gap-1.5"
+      >
+        <EyeOff className="h-4 w-4" />
+        {t('unhide')}
+      </Button>
     </div>
   );
 }
@@ -494,6 +611,60 @@ function FilterGroup<T extends string>({
             className={cn(
               'rounded-full border px-3 py-1 text-sm capitalize transition-colors',
               value === o ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-accent',
+            )}
+          >
+            {render(o)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Multi-select variant of `FilterGroup` — chips toggle in/out of `values`. */
+function MultiFilterGroup<T extends string>({
+  label,
+  values,
+  options,
+  onChange,
+  render,
+  allLabel,
+}: {
+  label: string;
+  values: T[];
+  options: T[];
+  onChange: (next: T[]) => void;
+  render: (v: T) => string;
+  allLabel: string;
+}) {
+  return (
+    <div>
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => onChange([])}
+          className={cn(
+            'rounded-full border px-3 py-1 text-sm transition-colors',
+            values.length === 0
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'hover:bg-accent',
+          )}
+        >
+          {allLabel}
+        </button>
+        {options.map((o) => (
+          <button
+            key={o}
+            type="button"
+            onClick={() =>
+              onChange(values.includes(o) ? values.filter((v) => v !== o) : [...values, o])
+            }
+            className={cn(
+              'rounded-full border px-3 py-1 text-sm capitalize transition-colors',
+              values.includes(o) ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-accent',
             )}
           >
             {render(o)}

@@ -178,6 +178,7 @@ export default function ForgotPasswordPage() {
                     setEmail(e.target.value);
                     clearFieldError('email');
                   }}
+                  maxLength={254}
                   aria-invalid={!!errors.email}
                   className={cn(inputCls, errors.email ? 'border-destructive' : 'border-input')}
                   autoFocus
@@ -271,6 +272,7 @@ export default function ForgotPasswordPage() {
                   showLabel={t('showPassword')}
                   hideLabel={t('hidePassword')}
                   autoComplete="new-password"
+                  maxLength={128}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">{t('passwordPolicyHint')}</p>
               </Field>
@@ -288,6 +290,7 @@ export default function ForgotPasswordPage() {
                   showLabel={t('showPassword')}
                   hideLabel={t('hidePassword')}
                   autoComplete="new-password"
+                  maxLength={128}
                 />
               </Field>
 

@@ -66,6 +66,9 @@ export function ApplyDialog({
           className="w-full resize-none rounded-xl border bg-card px-3.5 py-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/25"
         />
         <p className="text-xs text-muted-foreground">{t('applyHint')}</p>
+        <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+          {message.length.toLocaleString()}/1000
+        </p>
 
         {error && (
           <Alert variant="destructive">

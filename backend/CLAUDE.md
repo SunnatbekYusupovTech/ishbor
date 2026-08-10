@@ -99,13 +99,16 @@ to'qnashadi) — yangi namespace qo'shsang shu bitta io ustiga `.of(...)` och.
     (imzo + `aud === GOOGLE_CLIENT_ID`).
   - Token haqiqiy bo'lsa (`authController.findOrCreateGoogleUser`): `googleId`
     yoki `email` bo'yicha mavjud userni topadi; topilmasa **darhol yangi hisob
-    yaratadi** (`role: 'seeker'`, parolsiz, `emailVerified: true` — Google
-    email'ni allaqachon tasdiqlagan); mavjud email/parol hisobi birinchi
-    marta Google bilan kirsa, `googleId` o'sha hujjatga bog'lanadi (dublikat
-    hisob yaratilmaydi).
+    yaratadi** (`role: 'seeker'` — o'rinbosar default, keyingi qadamda
+    o'zgartiriladi, parolsiz, `emailVerified: true` — Google email'ni
+    allaqachon tasdiqlagan); mavjud email/parol hisobi birinchi marta Google
+    bilan kirsa, `googleId` o'sha hujjatga bog'lanadi (dublikat hisob
+    yaratilmaydi).
   - Muvaffaqiyatli bo'lsa oddiy `login` bilan bir xil cookie'lar o'rnatiladi,
-    so'ng brauzer frontend origin'iga (`env.clientOrigins[0]`) `?googleAuth=1`
-    bilan redirect qilinadi — bu **oddiy server redirect**, `lib/api.ts`
+    so'ng brauzer frontend origin'iga (`env.clientOrigins[0]`) redirect
+    qilinadi: **yangi hisob** (OAuth oqimida "seeker/employer?" formasi yo'q
+    edi) `?googleAuth=1` bilan `/role-select`ga, mavjud akkaunt esa
+    `?googleAuth=1` bilan `/`ga. Bu **oddiy server redirect**, `lib/api.ts`
     orqali o'tmaydi, shuning uchun `tokenStore.markAuthed()` alohida
     (`frontend/hooks/useCurrentUser.ts`da, quyiga qarang) chaqiriladi. Xato
     bo'lsa (`state` mos kelmasa, foydalanuvchi rad etsa, token almashinuvi
@@ -209,7 +212,10 @@ to'qnashadi) — yangi namespace qo'shsang shu bitta io ustiga `.of(...)` och.
   tanlagan "men kimman" (`PATCH /auth/me` orqali tahrirlanadi, faqat ko'rsatish uchun,
   hech narsani ochmaydi/blokламайди). `bestPercentage`, `bestScore`, `attempts` — umumiy
   (yo'nalishlarga bo'linmagan). Reyting shu yerdan.
-- **Job** — `type` (vacancy|resume), `level`, `stack`, `postedBy` (→User), denormallashtirilgan `postedByName`,
+- **Job** — `type` (vacancy|resume), `level`, `stacks` (multi-select,
+  `JobStack[]`, min 1 / max 4 — `stack` endi legacy ixtiyoriy maydon,
+  `stacks[0]`; eski single-stack hujjatlar `stack`dan fallback qiladi,
+  migratsiya kerak emas), `postedBy` (→User), denormallashtirilgan `postedByName`,
   `location`, `salaryMin`, `salaryMax`.
 - **Question** — test savoli (`technology`, `category`, daraja, variantlar).
 - **Session** — test sessiyasi, tab-switch/heartbeat nazorati, `direction` (qaysi
@@ -524,6 +530,7 @@ refresh, logout, logout-all, forgot-password,
 reset-password, me [GET/PATCH/DELETE]) ·
 `/test` (catalog, start, submit, auto-complete [QA-tester only], tab-switch, violation) · `/jobs`
 (GET list `?type=&level=&stack=&keyword=&location=&salaryMin=&salaryMax=&sort=`,
+`stack` comma-separated multi-list, e.g. `?stack=frontend,backend`),
 GET `:id` [public, `optionalAuthenticate`], POST create, POST `:id/apply` [ariza],
 GET `:id/applications` [faqat employer]) ·
 `/users` (leaderboard · GET `profile/:handle` [ommaviy, `optionalAuthenticate`] ·
@@ -536,10 +543,12 @@ sessions/list, questions/list — admin-only) · `/webhooks` (POST `questions` �
 AI savol import, `X-Webhook-Secret` bilan himoyalangan).
 
 - **`PATCH /auth/me`** (`userController.updateMe`, `validation/userSchemas.ts`) —
-  o'z profilini tahrirlash: `name`/`email`/`newPassword`/`primaryDirection` **va
-  barcha frilanser-profil maydonlari** (`username`, `avatarUrl`, `coverUrl`,
-  `specialization`, `skills`, `about`, `socials`, `country`, `language`,
-  `timezone`) — barchasi ixtiyoriy, faqat yuborilgan maydon o'zgaradi.
+  o'z profilini tahrirlash: `role` (seeker ⇄ employer), `name`/`email`/`newPassword`/
+  `primaryDirection` **va barcha frilanser-profil maydonlari** (`username`,
+  `avatarUrl`, `coverUrl`, `specialization`, `skills`, `about`, `socials`,
+  `country`, `language`, `timezone`) — barchasi ixtiyoriy, faqat yuborilgan
+  maydon o'zgaradi. `role` faqat `employer | seeker` (admin panel orqali
+  o'zgartiriladi, bu yerda emas — `updateMeSchema` da `admin` yo'q).
   `username` band bo'lsa `409`. `skills` butun ro'yxatni almashtiradi
   (registrsiz dublikatlar olib tashlanadi). `newPassword` yuborilsa `currentPassword`
   ham majburiy (schema `refine` + controllerda qayta tekshiriladi,

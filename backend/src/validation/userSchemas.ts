@@ -92,6 +92,13 @@ export const updateMeSchema = z.object({
       email: z.string().trim().toLowerCase().email().optional(),
       currentPassword: z.string().min(1).max(128).optional(),
       newPassword: passwordPolicy.optional(),
+      /**
+       * The account's side of the market — `seeker` applies to vacancies and
+       * posts a resume, `employer` posts vacancies. `admin` is deliberately
+       * NOT in the enum: it can only ever be granted by editing the database
+       * (same rule as `registerSchema`'s role field).
+       */
+      role: z.enum(['employer', 'seeker']).optional(),
       /** The candidate's own "who am I" pick — `null` clears it. */
       primaryDirection: z.enum(DIRECTIONS as [string, ...string[]]).nullable().optional(),
 

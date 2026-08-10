@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { Application, type IApplication } from '@/models/Application';
-import { Job } from '@/models/Job';
+import { Job, type JobStack } from '@/models/Job';
 import { User, ONLINE_WINDOW_MS } from '@/models/User';
 import { PortfolioItem } from '@/models/PortfolioItem';
 import { Review } from '@/models/Review';
@@ -29,6 +29,11 @@ const SEEKER_CARD_FIELDS =
 
 function isOnline(user: { lastSeenAt?: Date | null }): boolean {
   return !!user.lastSeenAt && Date.now() - user.lastSeenAt.getTime() < ONLINE_WINDOW_MS;
+}
+
+/** The job's primary stack — first of `stacks`, falling back to the legacy field. */
+function primaryStack(job: { stacks?: JobStack[]; stack?: JobStack }): JobStack {
+  return (job.stacks && job.stacks.length ? job.stacks[0] : (job.stack ?? 'frontend')) as JobStack;
 }
 
 /** Builds the FULL profile form attached to each application for the employer. */
@@ -242,7 +247,7 @@ export const listJobApplications = asyncHandler(async (req: Request, res: Respon
         id: job._id.toString(),
         title: job.title,
         level: job.level,
-        stack: job.stack,
+        stack: primaryStack(job),
         salary: job.salary ?? null,
         location: job.location ?? null,
       },
@@ -283,7 +288,7 @@ export const listMyApplications = asyncHandler(async (req: Request, res: Respons
   const employerIds = [...new Set(applications.map((a) => a.employerId))];
 
   const [jobs, employers] = await Promise.all([
-    Job.find({ _id: { $in: jobIds } }).select('title company stack level salary location').lean(),
+    Job.find({ _id: { $in: jobIds } }).select('title company stacks stack level salary location').lean(),
     User.find({ _id: { $in: employerIds } }).select('name username avatarUrl specialization').lean(),
   ]);
 
@@ -306,7 +311,7 @@ export const listMyApplications = asyncHandler(async (req: Request, res: Respons
               id: job._id.toString(),
               title: job.title,
               company: job.company ?? null,
-              stack: job.stack,
+              stack: primaryStack(job),
               level: job.level,
               salary: job.salary ?? null,
               location: job.location ?? null,

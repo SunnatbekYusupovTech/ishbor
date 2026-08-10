@@ -67,6 +67,98 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
+- **E'lon detal sahifasi + chat badge jonli yangilanishi (2026-08-11):**
+  chat suhbatining `job` banneri `/jobs/<id>`ga ishora qilardi, lekin bu route
+  yo'q edi — 404 berardi. Yangi `frontend/src/app/[locale]/jobs/[id]/page.tsx`:
+  `api.getJob(id)` → `JobDetailDialog` **`mode="page"`** prop bilan — **modal
+  emas**, modalning to'liq mazmuni (hero karta, reyting, tavsif, kontakt,
+  action bar: Respond/Arizalar/Contact/Heart/More) sahifaning o'zida inline
+  render bo'ladi; yuqorida breadcrumb `jobs.backToAll` orqaga link.
+  `JobDetailDialog` endi ikkita rejimni bitta komponentda birlashtiradi:
+  `dialog` (default, feed overlay) va `page` (overlaysiz; Radix title/description
+  o'rniga `h1`/`p`, body scroll cheklovi faqat dialog rejimida, action-flag'lar
+  mount'da yuklanadi). Shuningdek header'dagi **o'qilmagan chat badge'i**
+  endi refresh'ni kutmaydi: `markConversationRead` muvaffaqiyatli bo'lganda
+  `window`ga **`CHAT_READ_EVENT`** (`lib/chatSocket.ts` export) yuboriladi,
+  `useChatUnread` shuni tinglab `listConversations`ni qayta chaqiradi (socket'ning
+  `chat:read`i faqat **boshqa** ishtirokchiga boradi — o'quvchining o'z badge'i
+  eskirib qolardi). Qo'shimcha: dialog'da ariza yuborilgan e'lon uchun tugma
+  endi qisqa **`chat.applied`** ("Ariza yuborildi" ✓ `CheckCircle2`) — bosilganda
+  `goToMessages()` bilan to'g'ridan-to'g'ri `/messages?convo=<id>`ga o'tadi;
+  eski uzun "Ariza yuborilgan — xabarlarga o'tish" (`chat.goToMessages`) keyi
+  olib tashlandi. Batafsil: `frontend/CLAUDE.md` → "Marshrutlar → jobs/[id]" va
+  "Asosiy komponentlar → JobDetailDialog / useChatUnread".
+
+- **Multi-select stacklar (2026-08-11):** `Job.stack` endi legacy (ixtiyoriy)
+  maydon — asosiy maydon `Job.stacks: JobStack[]` (min 1, max 4). Eski
+  hujjatlar `stack`dan fallback qiladi, migratsiya kerak emas. Backend:
+  `createJobSchema.stacks`, `listJobsSchema.stack` endi comma-list
+  (`?stack=frontend,backend`; filterda `$or: [{stacks:{$in}}, {stack:{$in}}]`
+  — eski single-stack hujjatlar ham mos keladi), `listJobs` query-builder'i
+  bitta `$and` massiviga qayta yozildi, serializatsiya `stacks` massivi +
+  `stack: stacks[0]` (back-compat), `rating.verificationLevel` — e'lonning
+  tanlangan stacklari orasidan **eng yuqori** tier. Seeker rezyumesi uchun
+  tanlanganlardan **kamida bittasi** tasdiqlangan bo'lishi shart
+  (`bestTier`); `resolvedLevel` = o'sha eng yuqori tier (`tierToJobLevel`).
+  Frontend: `Job.stacks`/`CreateJobInput.stacks`, e'lon berish formasi
+  **multi-select chip tanlagich** (`MultiPills`), e'lonlar sahifasida stack
+  filtri ham multi-select (`?stack=a,b`, `MultiFilterGroup`), `JobCard`/
+  `JobDetailDialog`/`RightSidebar` e'lonning **barcha** stack badge'larini
+  ko'rsatadi. Yangi `post` kalitlari: `stackSelectHint`, `errStackRequired`
+  (uz/ru/en).
+
+- **Google orqali kirgan yangi hisoblar uchun rol tanlash (2026-08-11):**
+  email/parol registratsiyasi "seeker/employer?"ni oldindan so'raydi, lekin
+  OAuth oqimi yagona redirect edi — shu sabab Google orqali yangi ro'yxatdan
+  o'tgan foydalanuvchi endi **`/role-select`** sahifasiga tushadi
+  (`GET /auth/google/callback` `created` bo'lsa `/role-select?googleAuth=1`ga,
+  aks holda `/`ga redirect qiladi; `RoleSelectPage` `useCurrentUser`ning
+  `googleAuth` markerini kutib, keyin `api.updateMe({ role })` bilan saqlaydi).
+  Bundan tashqari rol endi **istalgan payt o'zgartiriladi**: `PATCH /auth/me`
+  `role` maydonini qabul qiladi (faqat `employer|seeker`, `admin` emas),
+  header'dagi avatar dropdown'ida rol bejligi bosilganda `RoleSelectDialog`
+  ochiladi (yashil `Ish qidiruvchi` / ko'k `Ish beruvchi`), hisob sozlamalari
+  kartasida ham `RolePicker` bor. Uchala sirt ham bitta `RolePicker`
+  komponentini ishlatadi. Yangi `auth` kalitlari: `roleSelectTitle`,
+  `roleSelectSubtitle`, `roleContinue`, `roleSkip`, `roleSeeker`/`roleEmployer`
+  + `role*Hint`, `pleaseWait` (uz/ru/en).
+
+- **Yashirilgan e'lonlar filtri + soni (2026-08-11):** e'lonlar sahifasidagi
+  sidebar "Filtrlar" kartasiga `Yashirilganlar (N)` toggle'u qo'shildi — N
+  soni `useHiddenJobs`dan real-time. Bosilganda feed faqat yashirilgan
+  e'lonlarni ko'rsatadi (URL `?hidden=1`, `savedOnly` bilan bir xil naqsh):
+  header'da "Yashirilgan e'lonlar · N" + "Barchasini qaytarish"
+  (`hiddenJobs.clear()`) + "Barcha e'lonlar" (chiqish); har qator —
+  ixcham `HiddenJobRow` (sarlavha + kompaniya + `Qaytarish` tugmasi,
+  `hiddenJobs.unhide`). Bo'sh holat uchun alohida `hiddenEmpty` matni.
+  `filtered` pipeline'da `hiddenOnly` rejimi hidden-setni ko'rsatishga
+  invert qiladi (boshqa filtrlar/hidden-drop-qilish qatlami chetlab
+  o'tiladi). Yangi `jobs` kalitlari: `sidebarHidden`, `hiddenViewTitle`,
+  `hiddenEmpty`, `unhide`, `restoreAll`, `backToAll` (uz/ru/en).
+- **More menyu + shikoyat (report) + kompaniya yashirish (2026-08-11):**
+  e'lon kartasidagi `More` tugmasi endi ochiladigan dropdown — `Yashirish`
+  (fade-out + Undo-toast), `Kompaniyani yashirish` (butun kompaniya
+  e'lonlarini `lib/companyBlacklist.ts` localStorage orqali filtrdan
+  chiqaradi, Undo bilan) va qizil `Shikoyat qilish` (yangi `ReportDialog`
+  + `POST /jobs/:id/report` → `JobReport` modeli, moderatsiya uchun
+  saqlanadi, e'longa tegmaydi). `reason.*` kalitlari next-intl nestingiga
+  o'tkazildi (yassi `reason.spam` → `reason: { spam }`) — console'dagi
+  `INVALID_KEY` xatosi shu bilan hal bo'ldi. Feed'dagi `Respond`/`Contact`
+  tugmalari h-12 flex-1, 50/50 bo'lindi. Batafsil:
+  `frontend/CLAUDE.md` → "Asosiy komponentlar".
+
+- **E'lon detal modali — hh.uz-uslubidagi hero-karta (2026-08-11):**
+  `JobDetailDialog` strukturasi yangilandi (ranglar/matnlar emas, faqat layout):
+  yuqorida rol bejligi → sarlavha → kompaniya → yashil maosh → **spec qatorlari**
+  (Daraja/Yo'nalish/Joylashuv — `LevelBadge`/`StackBadge`/location), o'rtada
+  scroll tana (reyting, tavsif, kontakt), **pastda sticky harakat paneli**:
+  `Respond` (asosiy — Ariza yuborish/Xabarlarga o'tish/Arizalar (N)/Kirish),
+  `Contact` (och ko'k, faqat `canApply && canMessage`), `Heart` (saqlash),
+  `More` (`…` — hover'da qora bubble-tooltip, bosilganda `onHide` + dialog
+  yopiladi). Dialog boshqariladigan `open` state'ga o'tkazildi (More bilan
+  yopish uchun); `JobCard` o'z `onHide`ini dialogga uzatadi. Yangi matn kerak
+  emas edi — barcha keyinglar mavjud `jobs`/`chat` namespace'laridan. Batafsil:
+  `frontend/CLAUDE.md` → "Asosiy komponentlar".
 - **Live chat + arizalar — brauzerda E2E sinovdan o'tkazildi (2026-08-10):**
   `scripts/chat-e2e-test.py` (Playwright, tizimdagi Chrome) 45/45 tekshiruv bilan
   to'liq oqimni sinaydi: seeker ariza yuboradi → employer "Arizalar" panelida

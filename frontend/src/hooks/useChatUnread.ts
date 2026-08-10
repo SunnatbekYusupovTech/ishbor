@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api, tokenStore, AUTH_CHANGED_EVENT } from '@/lib/api';
-import { getChatSocket, disconnectChatSocket } from '@/lib/chatSocket';
+import { getChatSocket, disconnectChatSocket, CHAT_READ_EVENT } from '@/lib/chatSocket';
 
 /**
  * Total unread messages across the signed-in user's conversations — powers
@@ -52,6 +52,11 @@ export function useChatUnread(): number {
     socket.on('chat:message', refresh);
     socket.on('chat:conversation', refresh);
     socket.on('chat:application', refresh);
+    // The signed-in user reading a thread elsewhere (messages page) clears its
+    // unread count server-side; the socket's `chat:read` only reaches the
+    // OTHER participant, so we listen for the local signal instead.
+    const onLocalRead = () => refresh();
+    window.addEventListener(CHAT_READ_EVENT, onLocalRead);
 
     return () => {
       alive = false;
@@ -59,6 +64,7 @@ export function useChatUnread(): number {
       socket.off('chat:message', refresh);
       socket.off('chat:conversation', refresh);
       socket.off('chat:application', refresh);
+      window.removeEventListener(CHAT_READ_EVENT, onLocalRead);
     };
   }, [authed]);
 
