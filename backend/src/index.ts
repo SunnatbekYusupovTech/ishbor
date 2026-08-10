@@ -1,7 +1,9 @@
 import http from 'node:http';
+import { Server } from 'socket.io';
 import { createApp } from '@/app';
 import { connectDatabase, disconnectDatabase } from '@/config/db';
 import { initAntiCheatSocket } from '@/sockets/antiCheat';
+import { initChatSocket } from '@/sockets/chatSocket';
 import { scheduleUploadCleanup } from '@/services/uploadCleanup';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
@@ -12,8 +14,18 @@ async function bootstrap(): Promise<void> {
   const app = createApp();
   const server = http.createServer(app);
 
-  // Attach the real-time anti-cheat monitor to the same HTTP server.
-  initAntiCheatSocket(server);
+  // ONE shared Socket.io server for every namespace (anti-cheat + chat) —
+  // creating a second `new Server(server)` would spin up a second engine on
+  // the same port and the namespaces would fight over connections.
+  const io = new Server(server, {
+    cors: { origin: env.clientOrigins, methods: ['GET', 'POST'], credentials: true },
+    pingTimeout: 20_000,
+  });
+
+  // Real-time anti-cheat monitor (default namespace).
+  initAntiCheatSocket(io);
+  // Live employer ↔ seeker chat (/chat namespace).
+  initChatSocket(io);
 
   // Periodic housekeeping for images uploaded but never saved (edit dialog
   // opened, picture chosen, dialog closed) — nothing else would remove those.

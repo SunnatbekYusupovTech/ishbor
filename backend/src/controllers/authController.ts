@@ -14,6 +14,7 @@ import { issueVerificationCode } from '@/services/emailVerificationService';
 import { passwordPolicy } from '@/validation/userSchemas';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
+import { logger } from '@/utils/logger';
 import { env } from '@/config/env';
 import {
   setAuthCookies,
@@ -285,6 +286,26 @@ function frontendOrigin(): string {
 }
 
 /**
+ * The `redirect_uri` Google sends the browser back to after consent.
+ * Production always uses the explicit `GOOGLE_REDIRECT_URI` env var; in
+ * development it falls back to deriving it from the incoming request
+ * (`http://localhost:5000/api/auth/google/callback`), so a fresh clone works
+ * against Google's consent screen with zero env fiddling.
+ *
+ * IMPORTANT: the derivation only guarantees the two ends of the handshake
+ * agree with each other — Google still validates the value against the OAuth
+ * client's "Authorized redirect URIs" allowlist, so
+ * `http://localhost:5000/api/auth/google/callback` must ALSO be registered
+ * there. The classic `400: redirect_uri_mismatch` on localhost (while the
+ * deployed site works) means the production URI is registered but the
+ * localhost one isn't (see `.env.example` for the exact steps).
+ */
+function googleRedirectUri(req: Request): string {
+  if (env.googleRedirectUri) return env.googleRedirectUri;
+  return `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+}
+
+/**
  * Shared by `googleAuthCallback`: given a verified Google identity, finds a
  * matching account (by `googleId` or `email`), links Google to an existing
  * email/password account on first Google sign-in, or creates a brand-new
@@ -335,7 +356,7 @@ async function findOrCreateGoogleUser(params: {
  * in a short-lived cookie so the callback can confirm the response actually
  * belongs to this handshake (CSRF/replay guard).
  */
-export const googleAuthStart = asyncHandler(async (_req: Request, res: Response) => {
+export const googleAuthStart = asyncHandler(async (req: Request, res: Response) => {
   if (!env.googleClientId || !env.googleClientSecret || !env.googleRedirectUri) {
     throw ApiError.internal('Google sign-in is not configured on this server yet.');
   }
@@ -345,7 +366,9 @@ export const googleAuthStart = asyncHandler(async (_req: Request, res: Response)
 
   const authorizeUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authorizeUrl.searchParams.set('client_id', env.googleClientId);
-  authorizeUrl.searchParams.set('redirect_uri', env.googleRedirectUri);
+  // Must be byte-for-byte identical to the URI used in the token exchange in
+  // `googleAuthCallback` (Google rejects mismatched pairs).
+  authorizeUrl.searchParams.set('redirect_uri', googleRedirectUri(req));
   authorizeUrl.searchParams.set('response_type', 'code');
   authorizeUrl.searchParams.set('scope', 'openid email profile');
   authorizeUrl.searchParams.set('state', state);
@@ -388,6 +411,7 @@ export const googleAuthCallback = asyncHandler(async (req: Request, res: Respons
 
   let tokenJson: { id_token?: string };
   try {
+    const redirectUri = googleRedirectUri(req);
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -395,11 +419,27 @@ export const googleAuthCallback = asyncHandler(async (req: Request, res: Respons
         code,
         client_id: env.googleClientId,
         client_secret: env.googleClientSecret,
-        redirect_uri: env.googleRedirectUri,
+        // Re-derived from THIS request so it can never drift from the value
+        // used in `googleAuthStart` — a mismatch here is exactly what Google
+        // reports as `400: redirect_uri_mismatch`.
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
     });
-    if (!tokenRes.ok) throw new Error('token exchange failed');
+    if (!tokenRes.ok) {
+      // `redirect_uri_mismatch` is by far the most common cause — surface the
+      // exact URI Google is comparing, so the fix (registering it in Google
+      // Cloud Console) is a copy-paste, not a hunt.
+      const body = (await tokenRes.text().catch(() => '')) || '';
+      if (body.includes('redirect_uri_mismatch')) {
+        logger.error(
+          `Google OAuth redirect_uri_mismatch — register "${googleRedirectUri(
+            req,
+          )}" under the OAuth client's Authorized redirect URIs in Google Cloud Console`,
+        );
+      }
+      throw new Error('token exchange failed');
+    }
     tokenJson = (await tokenRes.json()) as { id_token?: string };
   } catch {
     return failWith('token_exchange_failed');

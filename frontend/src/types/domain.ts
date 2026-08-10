@@ -185,3 +185,135 @@ export interface PortfolioItemInput {
   imageUrl?: string;
   link?: string;
 }
+
+/* ------------------------- Job detail (dialog) ------------------------- */
+
+/** `GET /jobs/:id` — the list shape plus the request/chat action flags. */
+export interface JobDetail extends Job {
+  /** Whose listing this is — lets the viewer tell "my vacancy" apart. */
+  postedById: string | null;
+  /** True when the signed-in seeker already sent a request for this vacancy. */
+  appliedByMe: boolean;
+  /** The viewer's own request status, when they applied. */
+  myApplicationStatus: ApplicationStatus | null;
+  /** The auto-created thread for my request — jump straight to it. */
+  myApplicationConversationId: string | null;
+  /** Requests received — only populated for the vacancy's own employer. */
+  applicationCount: number;
+}
+
+/* ------------------------- Live chat ------------------------- */
+
+export type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
+
+export interface ChatParticipantSnippet {
+  id: string;
+  name: string;
+  username: string | null;
+  avatarUrl: string | null;
+  specialization: string | null;
+  role: Role;
+  isOnline: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  /** Participant ids who have seen this message (sender always included). */
+  readBy: string[];
+  createdAt: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  jobId: string | null;
+  applicationId: string | null;
+  /** The linked request's live status (accept/reject shows in the chat banner). */
+  application: { id: string; status: ApplicationStatus } | null;
+  /** The listing this thread was opened from (title for the header banner). */
+  job: { id: string; title: string; type: ListingType } | null;
+  lastMessageAt: string;
+  other: ChatParticipantSnippet;
+  lastMessage: { id: string; text: string; senderId: string; createdAt: string } | null;
+  unreadCount: number;
+  meId: string;
+}
+
+export interface MessagesPage {
+  messages: ChatMessage[];
+  hasMore: boolean;
+}
+
+/* --------------------- Job application (request) --------------------- */
+
+/** The FULL seeker profile form attached to every request for the employer. */
+export interface SeekerCard {
+  id: string;
+  name: string;
+  username: string | null;
+  avatarUrl: string | null;
+  coverUrl: string | null;
+  specialization: string | null;
+  skills: string[];
+  about: string | null;
+  socials: SocialLinks;
+  country: string | null;
+  language: string | null;
+  timezone: string | null;
+  memberSince: string;
+  isOnline: boolean;
+  verificationLevels: Record<Direction, VerificationLevel>;
+  primaryDirection: Direction | null;
+  bestPercentage: number;
+  bestScore: number;
+  attempts: number;
+  portfolio: PortfolioItem[];
+  reviewCount: number;
+  reviewAverage: number;
+  /** The `/u/<handle>` slug (username, or the id when there's no username). */
+  handle: string;
+}
+
+export interface Application {
+  id: string;
+  jobId: string;
+  seekerId: string;
+  employerId: string;
+  message: string | null;
+  status: ApplicationStatus;
+  conversationId: string;
+  seenByEmployer: boolean;
+  createdAt: string;
+}
+
+/** One request as the vacancy's employer sees it — application + full form. */
+export interface JobApplication extends Application {
+  seeker: SeekerCard | null;
+}
+
+export interface JobApplicationsResponse {
+  job: { id: string; title: string; level: Level; stack: Stack; salary: string | null; location: string | null };
+  applications: JobApplication[];
+}
+
+/** One request as the seeker sees it (their own applications). */
+export interface MyApplication extends Application {
+  job: {
+    id: string;
+    title: string;
+    company: string | null;
+    stack: Stack;
+    level: Level;
+    salary: string | null;
+    location: string | null;
+  } | null;
+  employer: {
+    id: string;
+    name: string;
+    username: string | null;
+    avatarUrl: string | null;
+    specialization: string | null;
+  } | null;
+}

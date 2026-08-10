@@ -27,14 +27,16 @@ async function resolveUser(handle: string) {
   return null;
 }
 
-/** Drops empty/missing links so the client can render "only what's filled in". */
-function publicSocials(socials: IUser['socials'] | undefined) {
+/** Drops empty/missing links so the client can render "only what's filled in".
+ *  Exported for reuse by the job-application "full seeker form" (`applicationController`). */
+export function publicSocials(socials: IUser['socials'] | undefined) {
   return Object.fromEntries(
     Object.entries(socials ?? {}).filter(([, v]) => typeof v === 'string' && v.trim() !== ''),
   );
 }
 
-function serializePortfolioItem(item: {
+/** Exported for reuse by the job-application "full seeker form" (`applicationController`). */
+export function serializePortfolioItem(item: {
   _id: Types.ObjectId;
   title: string;
   category?: string;

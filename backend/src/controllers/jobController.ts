@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { Job, type JobLevel, type JobStack, type ListingType } from '@/models/Job';
 import { User, type IUser } from '@/models/User';
+import { Application } from '@/models/Application';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { logger } from '@/utils/logger';
@@ -126,6 +127,78 @@ export const listJobs = asyncHandler(async (req: Request, res: Response) => {
           : null,
       };
     }),
+  });
+});
+
+/**
+ * GET /api/jobs/:id
+ * PUBLIC (optionally authenticated) — the same shape `listJobs` returns, plus
+ * the fields the detail dialog needs for the request/chat actions:
+ * `postedById` (whose listing it is), and — when signed in — `appliedByMe` /
+ * `myApplicationStatus` (did I already request this vacancy) and, for the
+ * listing's own employer, `applicationCount` (how many requests arrived).
+ */
+export const getJobById = asyncHandler(async (req: Request, res: Response) => {
+  const job = await Job.findById(req.params.id)
+    .populate<{ postedBy: Pick<IUser, '_id' | 'role' | 'verificationLevels' | 'bestPercentage' | 'bestScore' | 'attempts' | 'createdAt'> | null }>(
+      'postedBy',
+      'role verificationLevels bestPercentage bestScore attempts createdAt',
+    )
+    .lean();
+  if (!job) throw ApiError.notFound('Job not found.');
+
+  const author = job.postedBy;
+  const viewerId = req.user?.userId ?? null;
+  const postedById = job.postedBy?._id?.toString() ?? null;
+
+  let appliedByMe = false;
+  let myApplicationStatus: string | null = null;
+  let myApplicationConversationId: string | null = null;
+  let applicationCount = 0;
+  if (viewerId) {
+    const mine = await Application.findOne({ jobId: job._id, seekerId: viewerId })
+      .select('status conversationId')
+      .lean();
+    appliedByMe = !!mine;
+    myApplicationStatus = mine?.status ?? null;
+    myApplicationConversationId = mine?.conversationId?.toString() ?? null;
+    if (postedById === viewerId) {
+      applicationCount = await Application.countDocuments({ jobId: job._id });
+    }
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      id: job._id.toString(),
+      type: job.type,
+      title: job.title,
+      company: job.company ?? null,
+      description: job.description,
+      level: job.level,
+      stack: job.stack,
+      salary: job.salary ?? null,
+      location: job.location ?? null,
+      contactPhone: job.contactPhone ?? null,
+      contactTelegram: job.contactTelegram ?? null,
+      postedByName: job.postedByName,
+      postedByRole: author?.role ?? (job.type === 'resume' ? 'seeker' : 'employer'),
+      postedById,
+      createdAt: job.createdAt,
+      rating: author
+        ? {
+            verificationLevel: author.verificationLevels?.[job.stack] ?? 'none',
+            bestPercentage: author.bestPercentage,
+            bestScore: author.bestScore,
+            attempts: author.attempts,
+            memberSince: author.createdAt,
+          }
+        : null,
+      appliedByMe,
+      myApplicationStatus,
+      myApplicationConversationId,
+      applicationCount,
+    },
   });
 });
 

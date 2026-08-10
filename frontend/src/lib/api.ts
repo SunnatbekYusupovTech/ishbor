@@ -8,6 +8,7 @@ import type {
 } from '@/types/test';
 import type {
   Job,
+  JobDetail,
   CreateJobInput,
   LeaderboardEntry,
   Me,
@@ -18,6 +19,14 @@ import type {
   PortfolioItemInput,
   ProfileReview,
   SocialLinks,
+  ChatConversation,
+  ChatMessage,
+  MessagesPage,
+  Application,
+  JobApplication,
+  JobApplicationsResponse,
+  MyApplication,
+  ApplicationStatus,
 } from '@/types/domain';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
@@ -383,6 +392,61 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+
+  /** Full listing detail + request/chat flags (`appliedByMe`, `applicationCount`, ...). */
+  getJob: (id: string) => request<JobDetail>(`/jobs/${encodeURIComponent(id)}`),
+
+  // --- Live chat (employer ↔ seeker) ---
+
+  listConversations: () => request<ChatConversation[]>('/chat/conversations'),
+
+  getMessages: (conversationId: string, before?: string) => {
+    const qs = before ? `?before=${encodeURIComponent(before)}` : '';
+    return request<MessagesPage>(`/chat/conversations/${conversationId}/messages${qs}`);
+  },
+
+  sendMessage: (conversationId: string, text: string) =>
+    request<ChatMessage>(`/chat/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }),
+
+  markConversationRead: (conversationId: string) =>
+    request<{ read: boolean }>(`/chat/conversations/${conversationId}/read`, {
+      method: 'POST',
+    }),
+
+  /** Opens (or finds) the thread with another user — idempotent per pair. */
+  startConversation: (userId: string, jobId?: string) =>
+    request<{ id: string }>('/chat/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ userId, ...(jobId ? { jobId } : {}) }),
+    }),
+
+  // --- Job applications (requests) ---
+
+  /** Seeker → employer: the request. Auto-creates the chat thread. */
+  applyToJob: (jobId: string, message?: string) =>
+    request<{ application: Application; conversationId: string }>(`/jobs/${jobId}/apply`, {
+      method: 'POST',
+      body: JSON.stringify(message ? { message } : {}),
+    }),
+
+  /** The vacancy's employer reviews every request with the seeker's FULL form. */
+  listJobApplications: (jobId: string) =>
+    request<JobApplicationsResponse>(`/jobs/${jobId}/applications`),
+
+  /** The requests I (a seeker) sent. */
+  listMyApplications: () => request<MyApplication[]>('/applications/mine'),
+
+  /** Employer decision on one request — updates the seeker live via socket. */
+  updateApplication: (applicationId: string, status: ApplicationStatus) =>
+    request<{ id: string; status: ApplicationStatus }>(`/applications/${applicationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+
+  // --- Leaderboard ---
 
   // --- Leaderboard ---
   getLeaderboard: () => request<LeaderboardEntry[]>('/users/leaderboard'),

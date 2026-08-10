@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Menu, X, Search, Bell, Mail, FlaskConical, LayoutGrid, Briefcase, Star, Settings, LogOut } from 'lucide-react';
+import { Menu, X, Search, Bell, Mail, MessageCircle, FlaskConical, LayoutGrid, Briefcase, Star, Settings, LogOut } from 'lucide-react';
+import { useChatUnread } from '@/hooks/useChatUnread';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { api } from '@/lib/api';
 import { LanguageSelector } from '@/components/language-selector';
@@ -81,6 +82,8 @@ export function TopHeader({
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <LanguageSelector />
           <ThemeToggle />
+
+          {authed && <MessagesLink label={th('messages')} />}
 
           <NotificationsBell label={th('notifications')} />
 
@@ -311,6 +314,25 @@ function LogoutDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Chat icon → /messages, with a live unread badge (updates on socket events). */
+function MessagesLink({ label }: { label: string }) {
+  const unread = useChatUnread();
+  return (
+    <Link
+      href="/messages"
+      aria-label={label}
+      className="relative rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
+    >
+      <MessageCircle className="h-5 w-5" />
+      {unread > 0 && (
+        <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-brand-foreground ring-2 ring-background">
+          {unread > 99 ? '99+' : unread}
+        </span>
+      )}
+    </Link>
   );
 }
 

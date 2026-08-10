@@ -1,5 +1,4 @@
-import type { Server as HttpServer } from 'node:http';
-import { Server, type Socket } from 'socket.io';
+import type { Server, Socket } from 'socket.io';
 import { parse as parseCookieHeader } from 'cookie';
 import { verifyAuthToken, type AuthTokenPayload } from '@/utils/jwt';
 import { Session } from '@/models/Session';
@@ -37,11 +36,7 @@ async function terminateSession(sessionId: string, userId: string, reason: strin
   return result.modifiedCount > 0;
 }
 
-export function initAntiCheatSocket(httpServer: HttpServer): Server {
-  const io = new Server(httpServer, {
-    cors: { origin: env.clientOrigins, methods: ['GET', 'POST'], credentials: true },
-    pingTimeout: 20_000,
-  });
+export function initAntiCheatSocket(io: Server): Server {
 
   // --- Handshake authentication: reject unauthenticated sockets. ---
   // The access token lives in an httpOnly cookie now, so client JS never

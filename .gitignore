@@ -27,6 +27,7 @@ Thumbs.db
 
 # Testing
 coverage/
+scripts/e2e-shots/
 
 # Claude
 .claude/

@@ -20,7 +20,11 @@ npm run typecheck -w backend  # tsc --noEmit
 ## Arxitektura oqimi
 
 `index.ts` → `app.ts` (`createApp`: helmet, cors, json, `/api` routes, error handler)
-→ `routes/index.ts` → controller → model. Socket.io alohida `sockets/antiCheat.ts` da.
+→ `routes/index.ts` → controller → model. Socket.io — bitta umumiy `Server`
+`index.ts`da yaratiladi va ikkala namespace'ga uzatiladi: `sockets/antiCheat.ts`
+(default namespace) + `sockets/chatSocket.ts` (`/chat` — live chat). **Diqqat:**
+`new Server(httpServer)` ikkita bo'lmasligi kerak (bitta portda ikkita engine
+to'qnashadi) — yangi namespace qo'shsang shu bitta io ustiga `.of(...)` och.
 
 - **Xatolar:** `ApiError` (utils) tashlanadi, `middleware/errorHandler` ushlaydi.
   Controllerlar `asyncHandler` bilan o'ralgan.
@@ -119,6 +123,21 @@ npm run typecheck -w backend  # tsc --noEmit
     redirect URIs"ga bayt-bayt mos qo'shilgan bo'lishi shart). Ixtiyoriy env
     (`cloudinary`/`groqApiKey` bilan bir xil naqsh) — sozlanmagan bo'lsa
     faqat `GET /auth/google` 500 qaytaradi, boshqa hech narsa buzilmaydi.
+  - **Dev'dagi `redirect_uri_mismatch` (2026-08-10 tuzatish):** `googleRedirectUri(req)`
+    helper'i — prod'da `GOOGLE_REDIRECT_URI` env'ini ishlatadi, dev'da esa
+    uni so'rovdan hosil qiladi (`${req.protocol}://${req.get('host')}/api/auth/google/callback`,
+    ya'ni `http://localhost:5000/...`). Oldingi xato: lokal `.env`'da
+    production callback URI'ni o'rnatilgan bo'lsa, `googleAuthStart`
+    o'shani jo'natardi → Google consent `400: redirect_uri_mismatch` bilan
+    qaytarardi (production ishlaydi, localhost yo'q). Endi ikkala tomonda
+    (authorize + token exchange) bir xil `googleRedirectUri(req)` ishlatiladi
+    — hech qachon bir-biridan adashmaydi. **Eslatma:** derivation faqat
+    handshake ikki uchining mosligini kafolatlaydi; Google Cloud Console'da
+    `http://localhost:5000/api/auth/google/callback` hali ham "Authorized
+    redirect URIs"ga qo'shilgan bo'lishi shart (mismatch bo'lsa backend log'ida
+    aniq ko'rsatiladi). `FRONTEND_URL` ham dev'da `http://localhost:3000`
+    bo'lishi kerak — aks holda callback foydalanuvchini production'ga
+    qaytaradi.
 - **Parolni tiklash (forgot/reset password):** `POST /auth/forgot-password`
   (`{ email }`) → `PasswordResetCode` (yangi model, 6 xonali kod, faqat SHA-256
   hash'i saqlanadi — `utils/otp.ts`, `RefreshToken` bilan bir xil naqsh) yaratadi
@@ -209,6 +228,68 @@ npm run typecheck -w backend  # tsc --noEmit
   foydalanuvchi bitta profilga faqat bitta sharh qoldiradi; qayta yuborish
   eskisini yangilaydi (upsert), ya'ni bitta akkaunt reytingni to'plab
   ketolmaydi.
+- **Conversation** — 1:1 chat suhbati (`userA`/`userB` — **har doim id
+  bo'yicha saralangan** juftlik, `orderedParticipantPair()`; shu sabab
+  `(userA, userB)` **unique index** ishlaydi — ikki foydalanuvchida faqat
+  bitta thread bo'ladi). Ixtiyoriy `jobId` (qaysi e'lon bo'yicha ochilgan),
+  `applicationId` (ariza orqali ochilgan bo'lsa), denormallashtirilgan
+  `lastMessageAt` (inbox tartibi).
+- **Message** — bitta xabar (`conversationId`, `senderId`, `text` ≤2000,
+  `readBy[]` — ko'rgan ishtirokchilar; yuboruvchi doim ichida, qabul
+  qiluvchi bo'lmasa = "o'qilmagan"). Index `(conversationId, createdAt)`
+  (paginatsiya).
+- **Application** — ish arizasi/"request" (`jobId`, `seekerId`,
+  `employerId`, `message?`, `status`: pending/accepted/rejected,
+  `conversationId`, `seenByEmployer`). `(jobId, seekerId)` **unique index**
+  — bitta vakansiyaga bitta ariza. **Request + chat — bitta tizim:** ariza
+  yuborilganda avtomatik Conversation ochiladi va `message` (yoki default
+  matn) shu thread'ning **birinchi xabari** bo'ladi.
+
+## Live chat + arizalar (request) tizimi
+
+> **2026-08-10:** ish beruvchi ↔ ish qidiruvchi real-time chat + "ariza"
+> oqimi. Arizada ish beruvchi ishchining **TO'LIQ formasini** ko'radi
+> (skills, verificationLevels, portfolio, sharhlar, location, ...) —
+> `applicationController.buildSeekerCard` server tomonda yig'adi.
+
+- **Socket:** `sockets/chatSocket.ts` — `/chat` namespace, cookie'li auth
+  (`ACCESS_COOKIE` xom `Cookie` header'dan, `antiCheat.ts` bilan bir xil
+  naqsh). Har socket `user:<id>` xonasiga qo'shiladi; controllerlar
+  `getChatIO()` orqali `user:<id>`ga emit qiladi. Eventlar: `chat:message`
+  (yangi xabar), `chat:read` (boshqa tomon o'qidi), `chat:conversation`
+  (yangi thread), `chat:application` (yangi ariza → employer'ga),
+  `chat:application-updated` (status o'zgardi → seeker'ga). Klient
+  `chat:join`/`chat:leave` bilan `conversation:<id>` xonasiga kiradi
+  (kelajak uchun; hozir faqat `user:` xonasiga emit qilinadi — ikkalasiga
+  birdan emit qilinsa qabul qiluvchi xabarni 2 marta oladi).
+- **Endpointlar:** `GET /chat/conversations` (inbox — `other` snippet,
+  `lastMessage`, `unreadCount`, `job` + `application.status` bannerlari),
+  `POST /chat/conversations {userId, jobId?}` (find-or-create, idempotent),
+  `GET /chat/conversations/:id/messages?before=&limit=` (faqat ishtirokchi,
+  yangidan-eski, qaytarilishi eski-yangi), `POST .../messages {text}`,
+  `POST .../read`. Hammasi `authenticate` — ochiq chat yo'q. Ishtirokchi
+  bo'lmagan foydalanuvchi uchun 404 (borliq oshkor qilinmaydi).
+- **Ariza endpointlari:** `POST /jobs/:id/apply {message?}` (seeker→
+  vakansiya; conversation + birinchi xabar avtomatik; dublikat 409,
+  o'z e'loniga 403, resume'ga 400), `GET /jobs/:id/applications`
+  (faqat o'sha vakansiyaning employer'i; har arizaga `seeker` — to'liq
+  forma; o'qilgach `seenByEmployer=true`), `GET /applications/mine`
+  (seeker'ning o'z arizalari + job/employer snippetlari),
+  `PATCH /applications/:id {status}` (faqat employer; seeker'ga socket
+  orqali `chat:application-updated`). `GET /jobs/:id` (public,
+  `optionalAuthenticate`) — `postedById`, `appliedByMe`,
+  `myApplicationStatus`, `myApplicationConversationId` (ariza yuborgan
+  seeker suhbatga sakrashi uchun), `applicationCount` (faqat egasiga).
+- **Poyga himoyasi:** `(jobId, seekerId)` va `(userA, userB)` unique
+  indexlar `E11000` bilan ikki parallel so'rovni ushlaydi — controllerlar
+  `code === 11000`ni tutib, `409`/qayta-fetch qiladi (xom 500 emas).
+- **To'liq forma qayerdan:** `buildSeekerCard` `User` (SEEKER_CARD_FIELDS)
+  + `PortfolioItem` + `Review` aggregate (avg/count) dan quriladi;
+  `publicSocials`/`serializePortfolioItem` `profileController`dan import
+  qilinadi (dublikat kod emas).
+- Testlar: `applicationController.test.ts` (10) + `chatController.test.ts`
+  (7) — authz, dublikat, to'liq forma, o'qilgan belgilar, idempotent
+  conversation.
 
 ## Test (assessment) engine
 
@@ -442,10 +523,15 @@ ixtiyoriy, `groqApiKey` bilan bir xil pattern).
 refresh, logout, logout-all, forgot-password,
 reset-password, me [GET/PATCH/DELETE]) ·
 `/test` (catalog, start, submit, auto-complete [QA-tester only], tab-switch, violation) · `/jobs`
-(GET list `?type=&level=&stack=&keyword=&location=&salaryMin=&salaryMax=&sort=`, POST create) ·
+(GET list `?type=&level=&stack=&keyword=&location=&salaryMin=&salaryMax=&sort=`,
+GET `:id` [public, `optionalAuthenticate`], POST create, POST `:id/apply` [ariza],
+GET `:id/applications` [faqat employer]) ·
 `/users` (leaderboard · GET `profile/:handle` [ommaviy, `optionalAuthenticate`] ·
 POST `profile/:handle/reviews` · POST/PATCH/DELETE `me/portfolio[/:id]` ·
-DELETE `me/reviews/:id`) · `/uploads` (POST `image` — rasm yuklash) · `/admin` (GET `violations`, stats, users CRUD, jobs CRUD,
+DELETE `me/reviews/:id`) · `/chat` (GET `conversations`, POST `conversations`,
+GET/POST `conversations/:id/messages`, POST `conversations/:id/read` — hammasi
+`authenticate`) · `/applications` (GET `mine`, PATCH `:id`) · `/uploads` (POST
+`image` — rasm yuklash) · `/admin` (GET `violations`, stats, users CRUD, jobs CRUD,
 sessions/list, questions/list — admin-only) · `/webhooks` (POST `questions` —
 AI savol import, `X-Webhook-Secret` bilan himoyalangan).
 
@@ -505,8 +591,9 @@ ham. Batafsil qoida: ildiz `/CLAUDE.md` → "Hujjatlarni yangilab borish".
 
 ## Domen egalari (`docs/team/`)
 
-- **Sardor** — auth, jwt, middleware, sockets/antiCheat, User/Session/RefreshToken, config,
-  infra, admin **auth/xavfsizlik** qatlami (`requireAdmin`, `role`, `/admin/violations`).
+- **Sardor** — auth, jwt, middleware, sockets/antiCheat + chatSocket, User/Session/RefreshToken,
+  Conversation/Message/Application (live chat + arizalar), config, infra, admin
+  **auth/xavfsizlik** qatlami (`requireAdmin`, `role`, `/admin/violations`).
 - **Fazilov** — data/questions, config/catalog (savol kontenti).
 - **Hidoyatov** — jobController, jobRoutes, Job, jobSchemas + admin **panel/biznes mantiq**
   (CRUD, moderatsiya, dashboard UI) — Sardorning admin auth qatlami ustiga quriladi.

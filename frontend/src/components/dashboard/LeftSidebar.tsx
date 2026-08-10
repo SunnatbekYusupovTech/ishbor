@@ -2,9 +2,10 @@
 
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Shield, X } from 'lucide-react';
+import { Shield, X, MessageCircle } from 'lucide-react';
 import { Link, usePathname } from '@/i18n/navigation';
 import { useAnimatedOverlay } from '@/hooks/useAnimatedOverlay';
+import { useChatUnread } from '@/hooks/useChatUnread';
 import { useSidebarSlotContent } from '@/components/dashboard/SidebarSlotContext';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +13,7 @@ const links = [
   { href: '/', key: 'jobs' },
   { href: '/leaderboard', key: 'leaderboard' },
   { href: '/jobs/new', key: 'post' },
+  { href: '/messages', key: 'messages' },
 ] as const;
 
 /**
@@ -105,11 +107,26 @@ function SidebarNavContent({ isAdmin, onNavigate }: { isAdmin: boolean; onNaviga
   return (
     <div className="flex flex-1 flex-col gap-1">
       <nav className="flex flex-col gap-1">
-        {links.map((l) => (
-          <Link key={l.href} href={l.href} onClick={onNavigate} className={navItemCls(pathname === l.href)}>
-            {t(l.key)}
-          </Link>
-        ))}
+        {links.map((l) =>
+          l.key === 'messages' ? (
+            <Link
+              key={l.href}
+              href={l.href}
+              onClick={onNavigate}
+              className={cn(navItemCls(pathname === l.href), 'justify-between')}
+            >
+              <span className="flex items-center gap-2.5">
+                <MessageCircle className="h-4 w-4" />
+                {t(l.key)}
+              </span>
+              <ChatUnreadBadge />
+            </Link>
+          ) : (
+            <Link key={l.href} href={l.href} onClick={onNavigate} className={navItemCls(pathname === l.href)}>
+              {t(l.key)}
+            </Link>
+          ),
+        )}
         {isAdmin && (
           <Link href="/admin" onClick={onNavigate} className={navItemCls(pathname.startsWith('/admin'))}>
             <Shield className="h-4 w-4" />
@@ -121,5 +138,16 @@ function SidebarNavContent({ isAdmin, onNavigate }: { isAdmin: boolean; onNaviga
       {/* Page-pushed content — e.g. the jobs page's filters/saved-searches/promo. */}
       {slotContent && <div className="mt-2 space-y-4 border-t pt-4">{slotContent}</div>}
     </div>
+  );
+}
+
+/** Live unread count on the sidebar's messages row (same source as the header). */
+function ChatUnreadBadge() {
+  const unread = useChatUnread();
+  if (unread === 0) return null;
+  return (
+    <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-brand-foreground">
+      {unread > 99 ? '99+' : unread}
+    </span>
   );
 }
