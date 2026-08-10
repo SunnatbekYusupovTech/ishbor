@@ -6,6 +6,8 @@ import userRoutes from '@/routes/userRoutes';
 import adminRoutes from '@/routes/adminRoutes';
 import webhookRoutes from '@/routes/webhookRoutes';
 import uploadRoutes from '@/routes/uploadRoutes';
+import chatRoutes from '@/routes/chatRoutes';
+import applicationRoutes from '@/routes/applicationRoutes';
 
 const router = Router();
 
@@ -20,5 +22,7 @@ router.use('/users', userRoutes);
 router.use('/admin', adminRoutes);
 router.use('/webhooks', webhookRoutes);
 router.use('/uploads', uploadRoutes);
+router.use('/chat', chatRoutes);
+router.use('/applications', applicationRoutes);
 
 export default router;

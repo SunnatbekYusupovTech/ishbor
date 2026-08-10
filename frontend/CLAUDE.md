@@ -37,7 +37,7 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
 
 - **`TopHeader.tsx`** — yupqa, sticky: mobil hamburger, logo, global qidiruv
   input (`Enter` → `/?q=<so'z>`ga o'tadi; `page.tsx` buni `saved=1` bilan bir
-  xil naqshda o'qib `query` state'ni to'ldiradi), `NotificationsBell` (bo'sh
+  xil naqshda o'qib `query` state'ni to'ldiradi), `MessagesLink` (chat ikonkasi → `/messages`, `useChatUnread()`dan jonli o'qilmaganlar badge'i — socket eventlarida yangilanadi), `NotificationsBell` (bo'sh
   holat popover'i, backend'siz — eski SiteNav'dan ko'chirilgan), avatar (endi
   dropdown emas — to'g'ridan-to'g'ri `/u/<handle>`ga link, chunki to'liq menyu
   sidebar'da).
@@ -45,7 +45,7 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   undan past — header hamburgeri bilan ochiladigan fullscreen off-canvas
   (`useAnimatedOverlay`, eski mobil-menyu naqshi). Ichki `SidebarNavContent`
   ikkalasida ham qayta ishlatiladi: asosiy nav (Jobs/Leaderboard/Post a job/
-  Admin), Saqlanganlar qatori (eski header yuragi o'rniga), **sahifa
+  Messages — o'qilmaganlar badge'i bilan/Admin), Saqlanganlar qatori (eski header yuragi o'rniga), **sahifa
   yuboradigan slot-kontent** (pastga qarang — jobs sahifasining filtrlari),
   profil-menyu qatorlari (My stacks/My projects/My reviews/Account settings —
   `/u/<handle>#anchor`), til/tema tugmalari, Chiqish (`LogoutDialog` shu yerda).
@@ -152,6 +152,15 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
   tozalaydi: bu redirect `lib/api.ts#request()` orqali o'tmagani uchun (oddiy
   server redirect, `fetch` emas) hech kim boshqa joyda bu belgi-cookie'ni
   o'rnatmaydi.
+- `messages/page.tsx` — **live chat inbox** (ish beruvchi ↔ ish qidiruvchi, bir
+  tizim arizalar bilan — `2026-08-10`): chapda suhbatlar ro'yxati (avatar +
+  onlayn nuqta, oxirgi xabar, vaqt, o'qilmaganlar soni), o'ngda chat oynasi
+  (`components/chat/ChatWindow.tsx`). Real-time `/chat` socket orqali
+  (`lib/chatSocket.ts` singleton, `hooks/useChatUnread.ts` badge'lar uchun).
+  `?convo=<id>` deep-link (ariza yuborgach "Xabarlarga o'tish") suhbatni
+  avtomatik ochadi. Thread header'ida: suhbatdosh profili (link),
+  `job` banneri + `application.status` chipi (pending/accepted/rejected).
+  Kirish talab qilinadi — kirmagan bo'lsa `/login`ga.
 - `forgot-password/page.tsx` — parolni tiklash, ikki bosqich (bitta sahifa,
   `step` state bilan): email kiritish → `api.forgotPassword` (60s cosmetic
   resend-cooldown, haqiqiy limit backendda) → 6 xonali kod + yangi parol →
@@ -218,6 +227,28 @@ o'zgaradi. Admin qamrovga kirmaydi (yuqoriga qarang).
 
 - `JobCard.tsx` — bosiladigan e'lon kartasi → `JobDetailDialog` ochadi.
 - `JobDetailDialog.tsx` — to'liq detal modal (reyting, tavsif, bog'lanish).
+  `2026-08-10` dan boshlab e'lon ichida **in-app harakatlar** ham bor —
+  dialog ochilganda `api.getJob(id)` + `api.me()` yuklanadi (faqat ochilganda,
+  har karta uchun emas) va turiga qarab: seeker → vakansiyaga "Ariza
+  yuborish" (`ApplyDialog` → `api.applyToJob`), ariza yuborilgan bo'lsa
+  "Ariza yuborilgan — xabarlarga o'tish" (suhbatga sakrash), o'z vakansiyasining
+  employer'i → "Arizalar (N)" (`ApplicantsDialog` — har arizada ishchining
+  **to'liq formasi**: avatar, skills, verificationLevels badge'i + yulduzlar,
+  about, portfolio thumbnails, sharh reytingi, cover-message; Qabul/Rad +
+  suhbatga o'tish), har qanday begona e'lon → "Xabar yozish"
+  (`api.startConversation` → `/messages?convo=`).
+- `components/chat/*` — `ConversationList` (inbox qatori), `ChatWindow`
+  (suhbat: bubble'lar, o'qilgan belgisi `Check`/`CheckCheck`, Enter bilan
+  yuborish, pastga avto-scroll, top'ga chiqib eski xabarlarni yuklash),
+  `ApplyDialog` (ariza formasi, xato modal ichida ko'rsatiladi),
+  `ApplicantsDialog` (employer'ning arizalar ko'rinishi — to'liq forma).
+- `lib/chatSocket.ts` — `/chat` namespace uchun **yagona** socket singleton
+  (`getChatSocket()`, `autoConnect: false`; logout'da `disconnectChatSocket()`).
+  Anti-cheat socketidan farqli — bu app-keng ko'lamda doimiy, per-session emas.
+- `hooks/useChatUnread.ts` — header/sidebar badge'lari uchun jami
+  o'qilmaganlar soni; `tokenStore`ga (emaskin `useCurrentUser` — qo'shimcha
+  `api.me()` chaqirmaslik uchun) + socket eventlariga (`chat:message`,
+  `chat:conversation`, `chat:application`) quloq soladi.
 - `rating.tsx` — `RatingStars` (test %idan yulduz) + `Avatar` (ismdan gradient;
   ixtiyoriy `src` bilan rasm — yuklanmasa yoki havola buzilgan bo'lsa
   avtomatik initsiallarga qaytadi; `size="xl"` profil sahifasi uchun).
@@ -385,4 +416,5 @@ uchtala tilga qo'shing. Batafsil qoida: ildiz `/CLAUDE.md` → "Hujjatlarni yang
 - **Fazilov** — `components/ui/*`, `rating`, `badges`, `theme`, `layout`, `globals.css`, test UI, i18n.
 - **Hidoyatov** — `page.tsx` (e'lonlar), `jobs/new`, `JobCard`, `JobDetailDialog`,
   `admin/*` (dashboard, users, jobs, sessions, questions), `LeftSidebar` (admin link).
-- **Sardor** — `hooks/*` (anti-cheat), `lib/socket.ts`, `AntiCheatBanner`, `ViolationDialog`, login.
+- **Sardor** — `hooks/*` (anti-cheat + chat), `lib/socket.ts`, `lib/chatSocket.ts`,
+  `messages/page.tsx`, `components/chat/*`, `AntiCheatBanner`, `ViolationDialog`, login.

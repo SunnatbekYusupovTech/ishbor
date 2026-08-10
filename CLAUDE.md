@@ -67,6 +67,37 @@ Muhit o'zgaruvchilari: `backend/.env` (namuna: `backend/.env.example`),
 
 ## Yaqinda qilingan ishlar
 
+- **Live chat + arizalar — brauzerda E2E sinovdan o'tkazildi (2026-08-10):**
+  `scripts/chat-e2e-test.py` (Playwright, tizimdagi Chrome) 45/45 tekshiruv bilan
+  to'liq oqimni sinaydi: seeker ariza yuboradi → employer "Arizalar" panelida
+  to'liq formani ko'radi → Qabul qiladi → suhbatda javob yozadi → seeker o'qilgan
+  belgilarini (single/double check) ko'radi → xabarlar reload'da saqlanadi.
+  Shu sinovda topilgan haqiqiy bug: "Ariza yuborilgan — xabarlarga o'tish"
+  tugmasi suhbatga deep-link bermasdi (`detail` ariza yuborilishidan oldin
+  olingan edi) — `JobDetailDialog` endi apply javobidagi `conversationId`ni
+  ishlatadi. Sinov hisoblari (Atlas dev bazasida, `scripts/setup-test-accounts.js`
+  bilan yaratiladi): `test-employer@ishzone.uz` / `test-seeker@ishzone.uz`,
+  parol `TestPass123!`; test e'lon: "React Developer - Live Chat Test".
+  Playwright: `pip install playwright` (Chrome channel).
+- **Live chat + arizalar (request) tizimi (Sardor, 2026-08-10):** ish beruvchi ↔
+  ish qidiruvchi **real-time chat** (`/messages` sahifasi, `/chat` socket
+  namespace, MongoDB'da `Conversation`+`Message` modellari) va **ariza oqimi**
+  (`Application` modeli, `POST /jobs/:id/apply`) — bitta tizim: ariza yuborilganda
+  avtomatik suhbat ochiladi va arizaning matni suhbatning birinchi xabari bo'ladi.
+  Employer e'lonida "Arizalar (N)" paneli — har arizada ishchining **TO'LIQ
+  formasi** (skills, verificationLevels, portfolio, sharhlar, location, ...)
+  ko'rinadi (`buildSeekerCard`). Header/sidebar'da o'qilmaganlar badge'i
+  (socket eventlarida jonli yangilanadi), o'qilgan belgilari (`CheckCheck`),
+  Qabul/Rad etish (seeker'ga live xabar boradi). Batafsil:
+  `backend/CLAUDE.md` → "Live chat + arizalar", `frontend/CLAUDE.md` →
+  "Marshrutlar → messages".
+- **Google OAuth localhost `redirect_uri_mismatch` tuzatildi (2026-08-10):**
+  `googleRedirectUri(req)` helper'i — prod'da `GOOGLE_REDIRECT_URI` env'ini,
+  dev'da so'rovdan hosil qilingan `http://localhost:5000/api/auth/google/callback`ni
+  ishlatadi (authorize + token exchange ikkalasida bir xil). Google Cloud
+  Console'da localhost URI'ni "Authorized redirect URIs"ga qo'shish hali ham
+  shart — `.env.example`da aniq ko'rsatilgan. Eslatma: local `.env`'da
+  `GOOGLE_REDIRECT_URI` va `FRONTEND_URL` localhost'ga qaratilgan bo'lishi kerak.
 - **Parolni tiklash (forgot/reset password) — Gmail SMTP orqali (Sardor):**
   login sahifasidagi "Parolni unutdingizmi?" endi ishlaydi — yangi ikki bosqichli
   sahifa `frontend/src/app/[locale]/forgot-password/page.tsx` (email → 6 xonali
