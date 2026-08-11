@@ -8,8 +8,8 @@ import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { env } from '@/config/env';
 import { logger } from '@/utils/logger';
-import { shuffledIndices, applyOrder } from '@/utils/shuffle';
-import { maybeRefill } from '@/services/autoRefillService';
+import { applyOrder, shuffledIndices } from '@/utils/shuffle';
+import { forceRefillAndWait, maybeRefill } from '@/services/autoRefillService';
 import {
   DIRECTIONS,
   DIRECTION_TECHNOLOGIES,
@@ -57,10 +57,16 @@ function resolveLocale(raw: unknown): Locale {
  * canonical order — the caller applies the per-candidate shuffle afterwards, so
  * index-based scoring is unaffected regardless of language.
  */
-function localizeContent(q: IQuestion, locale: Locale): { text: string; options: string[] } {
-  if (locale === 'en') return { text: q.text, options: q.options };
+function localizeContent(q: IQuestion, locale: Locale): { text: string; options?: string[] } {
+  if (locale === 'en') return { text: q.text, options: q.type === 'open-ended' ? undefined : q.options };
   const localized = q.translations?.[locale];
-  if (localized?.text && Array.isArray(localized.options) && localized.options.length === q.options.length) {
+  
+  if (q.type === 'open-ended') {
+    if (localized?.text) return { text: localized.text };
+    return { text: q.text };
+  }
+
+  if (localized?.text && Array.isArray(localized.options) && localized.options.length === (q.options?.length || 0)) {
     return { text: localized.text, options: localized.options };
   }
   return { text: q.text, options: q.options };
@@ -68,13 +74,13 @@ function localizeContent(q: IQuestion, locale: Locale): { text: string; options:
 
 /**
  * Shape of a question as sent to the client — deliberately WITHOUT
- * `correctAnswer`. The client can render and answer but can never derive
+ * `correctAnswer` or `idealAnswer`. The client can render and answer but can never derive
  * the key.
  */
 interface PublicQuestion {
   _id: string;
-  text: string;
-  options: string[];
+  options?: string[];
+  correctAnswer?: number;
   difficulty: IQuestion['difficulty'];
   category: string;
 }
@@ -82,8 +88,10 @@ interface PublicQuestion {
 function toPublicQuestion(q: IQuestion): PublicQuestion {
   return {
     _id: q._id.toString(),
+    type: q.type || 'multiple-choice',
     text: q.text,
-    options: q.options,
+    options: q.type === 'open-ended' ? undefined : q.options,
+    correctAnswer: q.type === 'open-ended' ? undefined : q.correctAnswer,
     difficulty: q.difficulty,
     category: q.category,
   };
@@ -118,9 +126,10 @@ export const getCatalog = asyncHandler(async (_req: Request, res: Response) => {
  */
 export const startTest = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const { direction, technologies, locale: rawLocale } = req.body as {
+  const { direction, technologies, difficulty: requestedDifficulty, locale: rawLocale } = req.body as {
     direction: Direction;
     technologies: string[];
+    difficulty?: IQuestion['difficulty'];
     locale?: string;
   };
   // Prefer an explicit body locale; fall back to the Accept-Language header.
@@ -135,9 +144,8 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
     throw ApiError.badRequest('Select at least one technology.');
   }
   for (const tech of selected) {
-    if (!isTechnologyInDirection(direction, tech)) {
-      throw ApiError.badRequest(`Technology "${tech}" is not part of ${direction}.`);
-    }
+    // Custom technologies are now allowed, no strict validation against catalog.
+    // The generator will create them on the fly if needed.
   }
 
   // QA/anti-cheat testing accounts (`User.isQaTester`, see model docs) are
@@ -225,11 +233,29 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
 
   const perTech = await Promise.all(
     selected.map(async (tech) => {
-      const unseen = await Question.aggregate<IQuestion>([
-        { $match: { technology: tech, _id: { $nin: seenQuestionIds } } },
+      const matchCriteria: any = { technology: tech, _id: { $nin: seenQuestionIds } };
+      if (requestedDifficulty) matchCriteria.difficulty = requestedDifficulty;
+
+      let unseen = await Question.aggregate<IQuestion>([
+        { $match: matchCriteria },
         { $sample: { size: QUESTIONS_PER_TECH } },
-        { $project: { correctAnswer: 0 } },
+        { $project: { idealAnswer: 0 } }, // keeping correctAnswer for UI real-time validation
       ]);
+
+      if (unseen.length < QUESTIONS_PER_TECH) {
+        try {
+          // Real-time block and generate for custom/empty stacks
+          await forceRefillAndWait(tech, requestedDifficulty || 'middle', QUESTIONS_PER_TECH);
+          // Refetch unseen after generating
+          unseen = await Question.aggregate<IQuestion>([
+            { $match: matchCriteria },
+            { $sample: { size: QUESTIONS_PER_TECH } },
+            { $project: { idealAnswer: 0 } },
+          ]);
+        } catch (e) {
+          logger.warn(`Could not force refill ${tech}, falling back`, e);
+        }
+      }
 
       // The technology's pool is running low on this trigger regardless of
       // whether we had to top up below — check the total, not just unseen.
@@ -243,10 +269,13 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
       // above grows the pool for next time.
       const shortBy = QUESTIONS_PER_TECH - unseen.length;
       const alreadyPicked = unseen.map((q) => q._id);
+      const topUpMatch: any = { technology: tech, _id: { $nin: alreadyPicked } };
+      if (requestedDifficulty) topUpMatch.difficulty = requestedDifficulty;
+
       const topUp = await Question.aggregate<IQuestion>([
-        { $match: { technology: tech, _id: { $nin: alreadyPicked } } },
+        { $match: topUpMatch },
         { $sample: { size: shortBy } },
-        { $project: { correctAnswer: 0 } },
+        { $project: { idealAnswer: 0 } },
       ]);
       return [...unseen, ...topUp];
     }),
@@ -303,7 +332,19 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
         // Localise first (canonical order), then present options in this
         // candidate's shuffled order. Scoring maps display→canonical by index.
         const { text, options } = localizeContent(q, locale);
-        return { ...pub, text, options: applyOrder(options, optionOrders[i].order) };
+        if (pub.type === 'open-ended' || !options) {
+           return { ...pub, text };
+        }
+        
+        // Find where the canonical correctAnswer ended up in the shuffled order
+        const shuffledOptions = applyOrder(options, optionOrders[i].order);
+        let newCorrectAnswer = pub.correctAnswer;
+        if (pub.correctAnswer !== undefined) {
+          // optionOrders[i].order[displayIndex] = originalIndex
+          newCorrectAnswer = optionOrders[i].order.indexOf(pub.correctAnswer);
+        }
+
+        return { ...pub, text, options: shuffledOptions, correctAnswer: newCorrectAnswer };
       }),
     },
   });
@@ -318,15 +359,15 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
  */
 async function finalizeSession(
   session: ISession,
-  sanitizedAnswers: Array<{ questionId: Types.ObjectId; userAnswer: number }>,
+  sanitizedAnswers: Array<{ questionId: Types.ObjectId; userAnswer?: number; userTextAnswer?: string }>,
   opts: { isLate: boolean; ipMismatch?: boolean; suspiciouslyFast?: boolean },
 ) {
   // Load the served questions WITH the hidden key for scoring only.
   const questions = await Question.find({ _id: { $in: session.questionIds } }).select(
-    '+correctAnswer',
+    '+correctAnswer +idealAnswer',
   );
 
-  const result = calculateScore(questions, sanitizedAnswers);
+  const result = await calculateScore(questions, sanitizedAnswers);
 
   // Informational-only integrity signals for admin review — neither one
   // blocks scoring or the candidate's result (see field docs on `ISession`).
@@ -379,7 +420,7 @@ export const submitTest = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { sessionId, answers } = req.body as {
     sessionId: string;
-    answers: Array<{ questionId: string; userAnswer: number }>;
+    answers: Array<{ questionId: string; userAnswer?: number; userTextAnswer?: string }>;
   };
 
   const session = await Session.findOne({ _id: sessionId, userId });
@@ -411,12 +452,13 @@ export const submitTest = asyncHandler(async (req: Request, res: Response) => {
     .map((a) => {
       const order = orderByQuestion.get(a.questionId);
       const originalIndex =
-        order && a.userAnswer >= 0 && a.userAnswer < order.length
+        order && a.userAnswer !== undefined && a.userAnswer >= 0 && a.userAnswer < order.length
           ? order[a.userAnswer]
           : a.userAnswer;
       return {
         questionId: new mongoose.Types.ObjectId(a.questionId),
         userAnswer: originalIndex,
+        userTextAnswer: a.userTextAnswer,
       };
     });
 
@@ -477,11 +519,12 @@ export const autoCompleteTest = asyncHandler(async (req: Request, res: Response)
   }
 
   const questions = await Question.find({ _id: { $in: session.questionIds } }).select(
-    '+correctAnswer',
+    '+correctAnswer +idealAnswer',
   );
   const sanitizedAnswers = questions.map((q) => ({
     questionId: q._id,
     userAnswer: q.correctAnswer,
+    userTextAnswer: q.type === 'open-ended' ? q.idealAnswer : undefined,
   }));
 
   const now = new Date();

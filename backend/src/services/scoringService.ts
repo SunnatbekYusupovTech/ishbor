@@ -1,6 +1,9 @@
 import { DIFFICULTY_WEIGHTS, type IQuestion } from '@/models/Question';
 import type { Tier } from '@/models/User';
 import type { ISessionAnswer } from '@/models/Session';
+import { env } from '@/config/env';
+import { evaluateOpenEndedAnswer } from '@/services/groqQuestionGenerator';
+import { logger } from '@/utils/logger';
 
 /** A technology is "passed" when the candidate answers at least this ratio of
  *  its questions correctly (≥ 80% → 4 of 5). */
@@ -77,11 +80,11 @@ export function techPassThreshold(total: number): number {
  * @param questions Questions served for the session, each WITH `correctAnswer`.
  * @param answers   The candidate's submitted answers.
  */
-export function calculateScore(questions: IQuestion[], answers: ISessionAnswer[]): ScoreResult {
+export async function calculateScore(questions: IQuestion[], answers: ISessionAnswer[]): Promise<ScoreResult> {
   // Index submitted answers by questionId for O(1) lookup.
-  const answerByQuestion = new Map<string, number>();
+  const answerByQuestion = new Map<string, ISessionAnswer>();
   for (const a of answers) {
-    answerByQuestion.set(a.questionId.toString(), a.userAnswer);
+    answerByQuestion.set(a.questionId.toString(), a);
   }
 
   let score = 0;
@@ -100,10 +103,30 @@ export function calculateScore(questions: IQuestion[], answers: ISessionAnswer[]
     bucket.total += 1;
 
     const submitted = answerByQuestion.get(question._id.toString());
-    if (submitted !== undefined && submitted === question.correctAnswer) {
-      score += weight;
-      correctCount += 1;
-      bucket.correct += 1;
+    
+    if (question.type === 'open-ended') {
+      const userTextAnswer = submitted?.userTextAnswer;
+      if (userTextAnswer && question.idealAnswer && env.groqApiKey) {
+        try {
+          const evalScore = await evaluateOpenEndedAnswer(env.groqApiKey, question.text, question.idealAnswer, userTextAnswer);
+          const awardedPoints = weight * evalScore;
+          score += awardedPoints;
+          if (submitted) submitted.awardedPoints = awardedPoints; // mutated to save back to DB
+          if (evalScore >= TECH_PASS_RATIO) {
+            correctCount += 1;
+            bucket.correct += 1;
+          }
+        } catch (e) {
+          logger.error('Failed to eval open-ended answer', e);
+        }
+      }
+    } else {
+      const submittedOption = submitted?.userAnswer;
+      if (submittedOption !== undefined && submittedOption === question.correctAnswer) {
+        score += weight;
+        correctCount += 1;
+        bucket.correct += 1;
+      }
     }
     byTech.set(tech, bucket);
   }

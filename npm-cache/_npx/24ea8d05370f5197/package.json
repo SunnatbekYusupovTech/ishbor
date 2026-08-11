@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "mcp-figma": "^0.1.1"
+  },
+  "_npx": {
+    "packages": [
+      "mcp-figma"
+    ]
+  }
+}

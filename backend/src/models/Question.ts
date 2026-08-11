@@ -18,6 +18,7 @@ export interface LocalizedContent {
 
 export interface IQuestion extends Document {
   _id: Types.ObjectId;
+  type: 'multiple-choice' | 'open-ended';
   /**
    * Stable content key (`<technology>-<n>`) used to pair a question with its
    * translations and to keep localisation reproducible across re-seeds.
@@ -25,6 +26,8 @@ export interface IQuestion extends Document {
   key?: string;
   text: string;
   options: string[];
+  /** Used for AI-evaluation of open-ended questions. Hidden from client. */
+  idealAnswer?: string;
   /**
    * Localised content by locale (e.g. `{ ru: {...}, uz: {...} }`). English lives
    * in `text`/`options` (the canonical scoring reference). `options` in every
@@ -49,24 +52,28 @@ export interface IQuestion extends Document {
 
 const questionSchema = new Schema<IQuestion>(
   {
+    type: { type: String, enum: ['multiple-choice', 'open-ended'], default: 'multiple-choice' },
     key: { type: String, index: true },
     translations: { type: Schema.Types.Mixed },
     text: { type: String, required: true, trim: true },
     options: {
       type: [String],
-      required: true,
       validate: {
-        validator: (opts: string[]) => opts.length >= 2 && opts.length <= 6,
-        message: 'A question must have between 2 and 6 options.',
+        validator: function (this: IQuestion, opts: string[]) {
+          if (this.type === 'open-ended') return true;
+          return opts && opts.length >= 2 && opts.length <= 6;
+        },
+        message: 'A multiple-choice question must have between 2 and 6 options.',
       },
     },
+    idealAnswer: { type: String, select: false },
     correctAnswer: {
       type: Number,
-      required: true,
       select: false, // hidden index — never leaves the server
       validate: {
         validator: function (this: IQuestion, value: number) {
-          return Number.isInteger(value) && value >= 0 && value < this.options.length;
+          if (this.type === 'open-ended') return true;
+          return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < (this.options?.length || 0);
         },
         message: 'correctAnswer must be a valid index into options.',
       },
@@ -79,7 +86,6 @@ const questionSchema = new Schema<IQuestion>(
     },
     technology: {
       type: String,
-      enum: ALL_TECHNOLOGIES,
       required: true,
       index: true,
     },

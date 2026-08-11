@@ -11,16 +11,18 @@ export type Difficulty = 'junior' | 'middle' | 'senior';
 
 export interface LocalizedContent {
   text: string;
-  options: string[];
+  options?: string[];
 }
 
 export interface GeneratedQuestion {
   technology: string;
   difficulty: Difficulty;
+  type: 'multiple-choice' | 'open-ended';
   /** Canonical (English) text — scoring and `correctAnswer` are always keyed to this order. */
   text: string;
-  options: string[];
-  correctAnswer: number;
+  options?: string[];
+  correctAnswer?: number;
+  idealAnswer?: string; // AI's ideal answer for open-ended validation
   /** Same question/options in ru + uz, same order/count as `options` (so shuffling stays index-safe). */
   translations: {
     ru: LocalizedContent;
@@ -45,30 +47,28 @@ export async function generateQuestions(
   difficulty: Difficulty,
   count: number,
 ): Promise<GeneratedQuestion[]> {
-  const prompt = `Generate ${count} unique multiple-choice interview questions for the technology "${technology}" at difficulty "${difficulty}".
+  const prompt = `Generate ${count} unique interview questions for the technology "${technology}" at difficulty "${difficulty}".
+IMPORTANT: Generate a mix of questions. Make 1 of them an "open-ended" practical task (e.g. write code, architect a solution, or explain deeply). Make the rest "multiple-choice" questions.
 
 Return JSON matching exactly this shape:
-{"questions":[{"technology":"${technology}","difficulty":"${difficulty}","text":"question text (English)","options":["A","B","C","D"],"correctAnswer":0,"translations":{"ru":{"text":"вопрос на русском","options":["А","Б","В","Г"]},"uz":{"text":"savol o'zbek tilida","options":["А","Б","В","Г"]}}}]}
+{"questions":[
+  {
+    "technology":"${technology}", "difficulty":"${difficulty}", "type":"multiple-choice",
+    "text":"question text (English)", "options":["A","B","C","D"], "correctAnswer":0,
+    "translations":{"ru":{"text":"вопрос на русском","options":["А","Б","В","Г"]},"uz":{"text":"savol o'zbek tilida","options":["A","B","C","D"]}}
+  },
+  {
+    "technology":"${technology}", "difficulty":"${difficulty}", "type":"open-ended",
+    "text":"Write a small script or explain... (English)", "idealAnswer":"A clear criteria/answer for AI to evaluate user's input against",
+    "translations":{"ru":{"text":"Напишите скрипт..."},"uz":{"text":"Skript yozing..."}}
+  }
+]}
 
 Rules:
-- "options" must have between 2 and 6 items
-- "correctAnswer" is the 0-based index into "options" of the correct choice
-- Questions must be technically accurate and non-trivial
-- CRITICAL: all options must be similar in length, phrasing style, and level of
-  detail. Never make the correct option noticeably longer, more specific, or
-  more "textbook-sounding" than the distractors — that makes it guessable
-  without knowing the answer. Wrong options should be equally plausible and
-  concise, not obviously weaker or vaguer.
-- Vary which index (0, 1, 2, 3...) holds the correct answer across questions —
-  do not default to always putting it first or last.
-- "translations.ru" and "translations.uz" must be faithful, natural
-  translations of the SAME question and SAME options in the SAME order —
-  option N in a translation must correspond to option N in "options". Do not
-  add, remove, reorder, or paraphrase-shift options between languages.
-  Technical terms (API names, keywords, code syntax) may stay in English
-  within the translated text where that's how developers actually say them
-  (e.g. "useState" stays "useState" in Uzbek/Russian text).
-- Uzbek translations use Latin script.`;
+- For "multiple-choice" questions: "options" must have between 2 and 6 items, and "correctAnswer" is the 0-based index. All options must be similar in length and style. Vary correct answer indices.
+- For "open-ended" questions: "idealAnswer" must be provided in English. Omit "options" and "correctAnswer".
+- "translations.ru" and "translations.uz" must be faithful translations. For multiple-choice, translated options must exactly match the canonical options count and order.
+- Technical terms may stay in English. Uzbek translations use Latin script.`;
 
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -102,7 +102,11 @@ Rules:
   return (questions as GeneratedQuestion[]).filter((q) => {
     const ru = q.translations?.ru;
     const uz = q.translations?.uz;
+    if (q.type === 'open-ended') {
+      return q.idealAnswer && ru?.text && uz?.text;
+    }
     return (
+      q.type === 'multiple-choice' &&
       Array.isArray(q.options) &&
       ru?.text &&
       Array.isArray(ru.options) &&
@@ -112,4 +116,47 @@ Rules:
       uz.options.length === q.options.length
     );
   });
+}
+
+/**
+ * Evaluates an open-ended answer from the candidate against the AI's ideal criteria.
+ * Returns a float between 0.0 and 1.0 (0 = completely wrong, 1 = perfect).
+ */
+export async function evaluateOpenEndedAnswer(
+  apiKey: string,
+  questionText: string,
+  idealAnswer: string,
+  userAnswer: string,
+): Promise<number> {
+  const prompt = `Evaluate the candidate's answer to the following practical task.
+Task: ${questionText}
+Ideal Criteria/Answer: ${idealAnswer}
+Candidate's Answer: ${userAnswer}
+
+Return JSON matching exactly this shape: {"score": 0.0}
+Where "score" is a number from 0.0 to 1.0. 0.0 means completely wrong, 0.5 means partially correct, and 1.0 means perfectly correct according to the criteria.`;
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Groq eval API error ${res.status}: ${await res.text()}`);
+  }
+
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const raw = data.choices?.[0]?.message?.content;
+  if (!raw) return 0;
+
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '');
+  const parsed = JSON.parse(cleaned) as { score?: number };
+  
+  const score = typeof parsed.score === 'number' ? parsed.score : 0;
+  return Math.max(0, Math.min(1, score));
 }

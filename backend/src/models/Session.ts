@@ -10,7 +10,9 @@ export type SessionStatus =
 
 export interface ISessionAnswer {
   questionId: Types.ObjectId;
-  userAnswer: number; // index the candidate selected
+  userAnswer?: number; // index the candidate selected (for multiple-choice)
+  userTextAnswer?: string; // text/code answer for open-ended
+  awardedPoints?: number; // AI evaluated points for open-ended
 }
 
 /**
@@ -75,7 +77,9 @@ export interface ISession extends Document {
 const answerSchema = new Schema<ISessionAnswer>(
   {
     questionId: { type: Schema.Types.ObjectId, ref: 'Question', required: true },
-    userAnswer: { type: Number, required: true, min: 0 },
+    userAnswer: { type: Number, min: 0 },
+    userTextAnswer: { type: String },
+    awardedPoints: { type: Number, min: 0 },
   },
   { _id: false },
 );

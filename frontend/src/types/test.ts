@@ -4,8 +4,9 @@ export type VerificationLevel = 'none' | 'junior' | 'middle' | 'senior';
 /** Question as delivered to the client — never contains the answer key. */
 export interface PublicQuestion {
   _id: string;
+  type?: 'multiple-choice' | 'open-ended';
   text: string;
-  options: string[];
+  options?: string[];
   difficulty: Difficulty;
   category: string;
 }

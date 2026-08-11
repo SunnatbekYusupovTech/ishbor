@@ -21,7 +21,11 @@ import type { StartTestResponse, SubmitTestResponse } from '@/types/test';
 import type { Catalog, Direction } from '@/types/domain';
 import { cn } from '@/lib/utils';
 
-type Phase = 'select' | 'active' | 'submitting' | 'result';
+import { cn } from '@/lib/utils';
+
+type Phase = 'select' | 'loading' | 'active' | 'submitting' | 'result';
+const DIFFICULTIES = ['junior', 'middle', 'senior'] as const;
+type Difficulty = typeof DIFFICULTIES[number];
 
 const DIRECTIONS: Direction[] = ['frontend', 'backend', 'fullstack', 'mobile'];
 
@@ -35,11 +39,12 @@ export default function TestPage() {
   const [phase, setPhase] = useState<Phase>('select');
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [direction, setDirection] = useState<Direction | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [techs, setTechs] = useState<Set<string>>(new Set());
 
   const [session, setSession] = useState<StartTestResponse | null>(null);
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [answers, setAnswers] = useState<Record<string, { userAnswer?: number, userTextAnswer?: string }>>({});
   const [secondsLeft, setSecondsLeft] = useState(20);
   const [result, setResult] = useState<SubmitTestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,9 +52,10 @@ export default function TestPage() {
   const [isQaTester, setIsQaTester] = useState(false);
 
   const sessionRef = useRef<StartTestResponse | null>(null);
-  const answersRef = useRef<Record<string, number>>({});
+  const answersRef = useRef<Record<string, { userAnswer?: number, userTextAnswer?: string }>>({});
   const indexRef = useRef(0);
   const submittingRef = useRef(false);
+  const [customTech, setCustomTech] = useState('');
   // Read by the countdown tick so we can pause without resetting the clock.
   const violationOpenRef = useRef(false);
   const lastViolationCountRef = useRef(0);
@@ -58,12 +64,25 @@ export default function TestPage() {
     violationOpenRef.current = violationOpen;
   }, [violationOpen]);
 
+  // Sound effects
+  const playSound = useCallback((type: 'correct' | 'wrong' | 'click') => {
+    try {
+      const audio = new Audio();
+      if (type === 'correct') audio.src = 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3';
+      else if (type === 'wrong') audio.src = 'https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3';
+      else if (type === 'click') audio.src = 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3';
+      audio.volume = 0.5;
+      void audio.play();
+    } catch (e) {}
+  }, []);
+
   const restart = useCallback(() => {
     void fullscreen.exit();
     setPhase('select');
     setSession(null);
     sessionRef.current = null;
     setDirection(null);
+    setDifficulty(null);
     setTechs(new Set());
     setViolationOpen(false);
     lastViolationCountRef.current = 0;
@@ -160,9 +179,10 @@ export default function TestPage() {
     submittingRef.current = true;
     setPhase('submitting');
 
-    const arr = Object.entries(answersRef.current).map(([questionId, userAnswer]) => ({
+    const arr = Object.entries(answersRef.current).map(([questionId, ans]) => ({
       questionId,
-      userAnswer,
+      userAnswer: ans.userAnswer,
+      userTextAnswer: ans.userTextAnswer,
     }));
 
     try {
@@ -245,18 +265,27 @@ export default function TestPage() {
     setTechs(new Set());
   };
 
+  const addCustomTech = () => {
+    const t = customTech.trim().toLowerCase();
+    if (t) {
+      toggleTech(t);
+      setCustomTech('');
+    }
+  };
+
   const start = async () => {
-    if (!direction || techs.size === 0) return;
+    if (!direction || !difficulty || techs.size === 0) return;
     setError(null);
     setResult(null);
     submittingRef.current = false;
     lastViolationCountRef.current = 0;
+    setPhase('loading');
     // Fire synchronously, still inside the click's user-activation window —
     // fullscreen requests made after an `await` can be silently rejected by
     // the browser once that activation has expired.
     void fullscreen.request();
     try {
-      const res = await api.startTest({ direction, technologies: Array.from(techs), locale });
+      const res = await api.startTest({ direction, technologies: Array.from(techs), difficulty, locale });
       sessionRef.current = res;
       answersRef.current = {};
       indexRef.current = 0;
@@ -266,11 +295,27 @@ export default function TestPage() {
       setPhase('active');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('couldNotStart'));
+      setPhase('select');
     }
   };
 
-  const select = (questionId: string, optIndex: number) => {
-    answersRef.current = { ...answersRef.current, [questionId]: optIndex };
+  const select = (questionId: string, optIndex: number, correctIndex?: number) => {
+    // Only allow selection if not already answered
+    if (answersRef.current[questionId]?.userAnswer !== undefined) return;
+    
+    answersRef.current = { ...answersRef.current, [questionId]: { userAnswer: optIndex } };
+    setAnswers(answersRef.current);
+
+    if (correctIndex !== undefined) {
+      if (optIndex === correctIndex) playSound('correct');
+      else playSound('wrong');
+    } else {
+      playSound('click');
+    }
+  };
+
+  const writeText = (questionId: string, text: string) => {
+    answersRef.current = { ...answersRef.current, [questionId]: { userTextAnswer: text } };
     setAnswers(answersRef.current);
   };
 
@@ -278,6 +323,16 @@ export default function TestPage() {
 
   if (phase === 'result' && result) {
     return <ResultCard result={result} onRestart={restart} />;
+  }
+
+  if (phase === 'loading') {
+    return (
+      <div className="mx-auto max-w-2xl py-24 text-center space-y-4">
+        <h2 className="text-xl font-semibold">AI siz uchun maxsus savollar tayyorlamoqda...</h2>
+        <p className="text-muted-foreground">Bu jarayon 10-30 soniya vaqt olishi mumkin.</p>
+        <div className="flex justify-center"><Layers className="h-8 w-8 animate-spin text-primary" /></div>
+      </div>
+    );
   }
 
   if (phase === 'select') {
@@ -325,13 +380,43 @@ export default function TestPage() {
           </CardContent>
         </Card>
 
-        {/* Step 2: technologies */}
+        {/* Step 2: difficulty */}
         {direction && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
                   2
+                </span>
+                Darajangizni tanlang
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {DIFFICULTIES.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setDifficulty(d)}
+                    className={cn(
+                      'flex items-center justify-center rounded-lg border p-3 text-sm font-medium transition-colors capitalize',
+                      difficulty === d ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-accent',
+                    )}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: technologies */}
+        {difficulty && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                  3
                 </span>
                 {t('chooseTech')}
               </CardTitle>
@@ -341,14 +426,14 @@ export default function TestPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
-                {availableTechs.map((tech) => {
+                {Array.from(new Set([...availableTechs, ...Array.from(techs)])).map((tech) => {
                   const selected = techs.has(tech);
                   const count = catalog?.perTech[tech] ?? 0;
                   return (
                     <button
                       key={tech}
                       onClick={() => toggleTech(tech)}
-                      disabled={count === 0}
+                      disabled={count === 0 && !selected} // we allow custom ones already selected
                       aria-pressed={selected}
                       className={cn(
                         'flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-40',
@@ -358,10 +443,22 @@ export default function TestPage() {
                       )}
                     >
                       {selected && <Check className="h-3.5 w-3.5" />}
-                      {tt(tech)}
+                      {tt(tech) === tech ? tech : tt(tech)}
                     </button>
                   );
                 })}
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 max-w-sm">
+                 <input 
+                   type="text"
+                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
+                   placeholder="Yoki o'zingiz boshqa stack yozing..." 
+                   value={customTech}
+                   onChange={e => setCustomTech(e.target.value)}
+                   onKeyDown={e => e.key === 'Enter' && addCustomTech()}
+                 />
+                 <Button type="button" size="sm" onClick={addCustomTech}>Qo'shish</Button>
               </div>
 
               <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -373,7 +470,7 @@ export default function TestPage() {
                 </span>
                 <Button
                   size="lg"
-                  disabled={noTech}
+                  disabled={noTech || !difficulty}
                   onClick={start}
                   className="w-full sm:w-auto"
                 >
@@ -461,31 +558,50 @@ export default function TestPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <fieldset className="space-y-2">
-            <legend className="sr-only">{question.text}</legend>
-            {question.options.map((option, optIndex) => (
-              <label
-                key={optIndex}
-                className={cn(
-                  'flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-accent',
-                  selected === optIndex && 'border-primary bg-accent',
-                )}
-              >
-                <input
-                  type="radio"
-                  name={question._id}
-                  checked={selected === optIndex}
-                  onChange={() => select(question._id, optIndex)}
-                  className="h-4 w-4 shrink-0 accent-primary"
-                />
-                <span className="text-sm">{option}</span>
-              </label>
-            ))}
-          </fieldset>
+          {question.type === 'open-ended' || !question.options ? (
+            <textarea
+              className="w-full min-h-[200px] p-3 rounded-md border bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Amaliy javobingizni shu yerga batafsil yozing..."
+              value={selected?.userTextAnswer || ''}
+              onChange={(e) => writeText(question._id, e.target.value)}
+            />
+          ) : (
+            <fieldset className="space-y-2">
+              <legend className="sr-only">{question.text}</legend>
+              {question.options.map((option, optIndex) => {
+                const isSelected = selected?.userAnswer === optIndex;
+                const isCorrect = question.correctAnswer === optIndex;
+                const hasAnswered = selected?.userAnswer !== undefined;
+
+                return (
+                  <label
+                    key={optIndex}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-accent',
+                      !hasAnswered && isSelected && 'border-primary bg-accent',
+                      hasAnswered && isCorrect && 'border-green-500 bg-green-50 text-green-900',
+                      hasAnswered && isSelected && !isCorrect && 'border-destructive bg-destructive/10 text-destructive',
+                      hasAnswered && !isSelected && !isCorrect && 'opacity-60 cursor-not-allowed',
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name={question._id}
+                      checked={isSelected}
+                      disabled={hasAnswered}
+                      onChange={() => select(question._id, optIndex, question.correctAnswer)}
+                      className="h-4 w-4 shrink-0 accent-primary"
+                    />
+                    <span className="text-sm">{option}</span>
+                  </label>
+                );
+              })}
+            </fieldset>
+          )}
         </CardContent>
         <CardFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
           <span className="text-xs text-muted-foreground">
-            {selected === undefined ? t('notAnswered') : t('answered')}
+            {(selected?.userAnswer === undefined && !selected?.userTextAnswer) ? t('notAnswered') : t('answered')}
           </span>
           <Button
             onClick={advance}

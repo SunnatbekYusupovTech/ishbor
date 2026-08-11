@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "obsidian-mcp-server": "^3.2.12"
+  },
+  "_npx": {
+    "packages": [
+      "obsidian-mcp-server"
+    ]
+  }
+}

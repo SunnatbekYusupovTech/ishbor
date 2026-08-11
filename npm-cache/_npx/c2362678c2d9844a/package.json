@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "railway-mcp": "^2.2.0"
+  },
+  "_npx": {
+    "packages": [
+      "railway-mcp"
+    ]
+  }
+}

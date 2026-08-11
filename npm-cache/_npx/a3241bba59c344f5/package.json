@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@modelcontextprotocol/server-filesystem": "^2026.7.10"
+  },
+  "_npx": {
+    "packages": [
+      "@modelcontextprotocol/server-filesystem"
+    ]
+  }
+}
