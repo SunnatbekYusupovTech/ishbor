@@ -7,6 +7,7 @@ export interface PublicQuestion {
   type?: 'multiple-choice' | 'open-ended';
   text: string;
   options?: string[];
+  correctAnswer?: number;
   difficulty: Difficulty;
   category: string;
 }

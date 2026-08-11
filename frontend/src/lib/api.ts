@@ -279,7 +279,7 @@ export const api = {
   // --- Assessment ---
   getCatalog: () => request<Catalog>('/test/catalog'),
 
-  startTest: (body: { direction: string; technologies: string[]; locale?: string }) =>
+  startTest: (body: { direction: string; technologies: string[]; difficulty: string; locale?: string }) =>
     request<StartTestResponse>('/test/start', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -287,7 +287,7 @@ export const api = {
 
   submitTest: (body: {
     sessionId: string;
-    answers: Array<{ questionId: string; userAnswer: number }>;
+    answers: Array<{ questionId: string; userAnswer?: number; userTextAnswer?: string }>;
   }) =>
     request<SubmitTestResponse>('/test/submit', {
       method: 'POST',

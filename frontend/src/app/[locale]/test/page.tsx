@@ -17,10 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import type { StartTestResponse, SubmitTestResponse } from '@/types/test';
 import type { Catalog, Direction } from '@/types/domain';
-import { cn } from '@/lib/utils';
-
 import { cn } from '@/lib/utils';
 
 type Phase = 'select' | 'loading' | 'active' | 'submitting' | 'result';
