@@ -49,7 +49,7 @@ export const uploadImage = asyncHandler(async (req: Request, res: Response) => {
     // format, regardless of what the request claimed.
     stored = await saveImage(file.buffer);
   } catch (err) {
-    const error = err as Error;
+    
     throw ApiError.badRequest(
       `Unsupported image format. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}.`,
     );
