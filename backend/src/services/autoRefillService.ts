@@ -39,7 +39,7 @@ export function maybeRefill(technology: string): void {
     for (const difficulty of DIFFICULTIES) {
       try {
         const questions = await generateQuestions(env.groqApiKey!, technology, difficulty, 5);
-        const result = await importQuestions(questions);
+        const result = await importQuestions(questions as any);
         logger.info('Auto-refill batch imported', { technology, difficulty, ...result });
       } catch (err) {
         logger.error('Auto-refill batch failed', { technology, difficulty, error: (err as Error).message });
@@ -52,15 +52,15 @@ export function maybeRefill(technology: string): void {
  * Synchronous refill used when a requested custom technology has 0 or too few questions.
  * This blocks the client request while Groq generates the required number of questions.
  */
-export async function forceRefillAndWait(technology: string, countNeeded: number = 5): Promise<void> {
+export async function forceRefillAndWait(technology: string, difficulty: Difficulty = 'middle', countNeeded: number = 5): Promise<void> {
   if (!env.groqApiKey) throw new Error('AI Generation unavailable (GROQ_API_KEY missing).');
 
   // We'll just generate one batch of the default difficulty to get the user started quickly.
   // The fire-and-forget `maybeRefill` will eventually fill out the other difficulties.
   try {
     logger.info(`Forcing real-time generation of ${countNeeded} questions for custom stack: ${technology}`);
-    const questions = await generateQuestions(env.groqApiKey, technology, 'middle', countNeeded);
-    const result = await importQuestions(questions);
+    const questions = await generateQuestions(env.groqApiKey, technology, difficulty, countNeeded);
+    const result = await importQuestions(questions as any);
     logger.info('Forced real-time generation imported', { technology, ...result });
   } catch (err) {
     logger.error('Forced real-time generation failed', { technology, error: (err as Error).message });

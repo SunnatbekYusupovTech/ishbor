@@ -51,7 +51,7 @@ describe('calculateScore — technology passing', () => {
   it('passes a technology at 4/5 correct but not at 3/5', () => {
     const a = techBlock('react', 4); // passed
     const b = techBlock('vue', 3); // not passed
-    const result = calculateScore([...a.questions, ...b.questions], [...a.answers, ...b.answers]);
+    const result = await await calculateScore([...a.questions, ...b.questions], [...a.answers, ...b.answers]);
 
     const react = result.technologies.find((t) => t.technology === 'react')!;
     const vue = result.technologies.find((t) => t.technology === 'vue')!;
@@ -65,7 +65,7 @@ describe('calculateScore — technology passing', () => {
     const blocks = ['react', 'vue', 'css'].map((t) => techBlock(t, 5));
     const questions = blocks.flatMap((b) => b.questions);
     const answers = blocks.flatMap((b) => b.answers);
-    const result = calculateScore(questions, answers);
+    const result = await await calculateScore(questions, answers);
     expect(result.passedCount).toBe(3);
     expect(result.awardedLevel).toBe('middle');
   });
@@ -74,7 +74,7 @@ describe('calculateScore — technology passing', () => {
     const blocks = ['react', 'vue', 'css', 'html'].map((t) => techBlock(t, 4));
     const questions = blocks.flatMap((b) => b.questions);
     const answers = blocks.flatMap((b) => b.answers);
-    const result = calculateScore(questions, answers);
+    const result = await await calculateScore(questions, answers);
     expect(result.passedCount).toBe(4);
     expect(result.awardedLevel).toBe('strong-middle');
   });
@@ -83,14 +83,14 @@ describe('calculateScore — technology passing', () => {
     const blocks = ['react', 'vue', 'css', 'html', 'git'].map((t) => techBlock(t, 4));
     const questions = blocks.flatMap((b) => b.questions);
     const answers = blocks.flatMap((b) => b.answers);
-    const result = calculateScore(questions, answers);
+    const result = await await calculateScore(questions, answers);
     expect(result.passedCount).toBe(5);
     expect(result.awardedLevel).toBe('senior');
   });
 
   it('awards none when no technology is passed', () => {
     const a = techBlock('react', 2);
-    const result = calculateScore(a.questions, a.answers);
+    const result = await await calculateScore(a.questions, a.answers);
     expect(result.passedCount).toBe(0);
     expect(result.awardedLevel).toBe('none');
   });
@@ -109,7 +109,7 @@ describe('calculateScore — weighting & edges', () => {
       answer(senior._id, 0), // wrong    -> +0
     ];
 
-    const result = calculateScore(questions, answers);
+    const result = await await calculateScore(questions, answers);
     expect(result.maxScore).toBe(6);
     expect(result.score).toBe(3);
     expect(result.correctCount).toBe(2);
@@ -118,7 +118,7 @@ describe('calculateScore — weighting & edges', () => {
 
   it('ignores unanswered questions', () => {
     const j = q('junior', 0);
-    const result = calculateScore([j], []);
+    const result = await await calculateScore([j], []);
     expect(result.score).toBe(0);
     expect(result.percentage).toBe(0);
   });
@@ -126,12 +126,12 @@ describe('calculateScore — weighting & edges', () => {
   it('does not count answers for questions not in the set', () => {
     const j = q('junior', 0);
     const stray = answer(new mongoose.Types.ObjectId(), 0);
-    const result = calculateScore([j], [stray]);
+    const result = await await calculateScore([j], [stray]);
     expect(result.score).toBe(0);
   });
 
   it('handles an empty question set without dividing by zero', () => {
-    const result = calculateScore([], []);
+    const result = await await calculateScore([], []);
     expect(result.maxScore).toBe(0);
     expect(result.percentage).toBe(0);
     expect(result.awardedLevel).toBe('none');

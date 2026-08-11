@@ -79,6 +79,8 @@ function localizeContent(q: IQuestion, locale: Locale): { text: string; options?
  */
 interface PublicQuestion {
   _id: string;
+  type?: string;
+  text: string;
   options?: string[];
   correctAnswer?: number;
   difficulty: IQuestion['difficulty'];
@@ -143,10 +145,8 @@ export const startTest = asyncHandler(async (req: Request, res: Response) => {
   if (selected.length === 0) {
     throw ApiError.badRequest('Select at least one technology.');
   }
-  for (const tech of selected) {
-    // Custom technologies are now allowed, no strict validation against catalog.
-    // The generator will create them on the fly if needed.
-  }
+  // Custom technologies are now allowed, no strict validation against catalog.
+  // The generator will create them on the fly if needed.
 
   // QA/anti-cheat testing accounts (`User.isQaTester`, see model docs) are
   // exempt from both guards below — they need to restart a test mid-way and

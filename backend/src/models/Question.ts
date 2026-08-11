@@ -1,5 +1,4 @@
 import { Schema, model, type Document, type Types } from 'mongoose';
-import { ALL_TECHNOLOGIES } from '@/config/catalog';
 
 export type Difficulty = 'junior' | 'middle' | 'senior';
 
