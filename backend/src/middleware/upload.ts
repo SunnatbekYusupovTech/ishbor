@@ -23,7 +23,7 @@ export const uploadSingleImage = multer({
     // parser from being usable as a general-purpose form sink.
     fields: 0,
   },
-  fileFilter: (_req, file, callback) => {
+  fileFilter: (_req: any, file: any, callback: any) => {
     // A cheap first pass only — the declared mimetype is caller-controlled, so
     // the authoritative check is the magic-byte sniff in the controller. This
     // just rejects the obvious cases before buffering the whole body.

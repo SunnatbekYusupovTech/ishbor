@@ -41,7 +41,7 @@ export function QuestionCard({ question, index, register }: QuestionCardProps) {
       <CardContent>
         <fieldset className="space-y-2">
           <legend className="sr-only">Question {index + 1} options</legend>
-          {question.options.map((option, optIndex) => (
+          {(question.options || []).map((option, optIndex) => (
             <label
               key={optIndex}
               className="flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-accent has-[:checked]:border-primary has-[:checked]:bg-accent"

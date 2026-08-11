@@ -36,7 +36,8 @@ export function parseImageUpload(req: Request, res: Response, next: NextFunction
  * lets the UI show a preview before anything is committed.
  */
 export const uploadImage = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.file) {
+  const file = (req as any).file;
+  if (!file) {
     throw ApiError.badRequest(
       `No image provided. Send one file in the "file" field (${ALLOWED_MIME_TYPES.join(', ')}).`,
     );
@@ -46,8 +47,9 @@ export const uploadImage = asyncHandler(async (req: Request, res: Response) => {
   try {
     // Authoritative validation: the bytes themselves must be a known raster
     // format, regardless of what the request claimed.
-    stored = await saveImage(req.file.buffer);
-  } catch {
+    stored = await saveImage(file.buffer);
+  } catch (err) {
+    const error = err as Error;
     throw ApiError.badRequest(
       `Unsupported image format. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}.`,
     );

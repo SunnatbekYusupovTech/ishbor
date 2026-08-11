@@ -14,7 +14,6 @@ import {
   DIRECTIONS,
   DIRECTION_TECHNOLOGIES,
   QUESTIONS_PER_TECH,
-  isTechnologyInDirection,
   type Direction,
 } from '@/config/catalog';
 

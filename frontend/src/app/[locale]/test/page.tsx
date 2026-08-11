@@ -18,6 +18,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { Catalog, Direction } from '@/types/domain';
+import type { StartTestResponse, SubmitTestResponse } from '@/types/test';
 import { cn } from '@/lib/utils';
 
 type Phase = 'select' | 'loading' | 'active' | 'submitting' | 'result';
@@ -565,7 +566,7 @@ export default function TestPage() {
           ) : (
             <fieldset className="space-y-2">
               <legend className="sr-only">{question.text}</legend>
-              {question.options.map((option, optIndex) => {
+              {(question.options || []).map((option: string, optIndex: number) => {
                 const isSelected = selected?.userAnswer === optIndex;
                 const isCorrect = question.correctAnswer === optIndex;
                 const hasAnswered = selected?.userAnswer !== undefined;
