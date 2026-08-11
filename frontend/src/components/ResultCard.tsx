@@ -16,15 +16,21 @@ interface ResultCardProps {
 const levelTone: Record<SubmitTestResponse['awardedLevel'], string> = {
   none: 'bg-muted text-muted-foreground',
   junior: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  'strong-junior': 'bg-emerald-200 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
   middle: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  'strong-middle': 'bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   senior: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300',
+  'strong-senior': 'bg-purple-200 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
 };
 
 const levelKey: Record<SubmitTestResponse['awardedLevel'], string> = {
   none: 'levelNone',
   junior: 'levelJunior',
+  'strong-junior': 'levelStrongJunior',
   middle: 'levelMiddle',
+  'strong-middle': 'levelStrongMiddle',
   senior: 'levelSenior',
+  'strong-senior': 'levelStrongSenior',
 };
 
 export function ResultCard({ result, onRestart }: ResultCardProps) {

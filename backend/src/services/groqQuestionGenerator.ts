@@ -47,8 +47,8 @@ export async function generateQuestions(
   difficulty: Difficulty,
   count: number,
 ): Promise<GeneratedQuestion[]> {
-  const prompt = `Generate ${count} unique interview questions for the technology "${technology}" at difficulty "${difficulty}".
-IMPORTANT: Generate a mix of questions. Make 1 of them an "open-ended" practical task (e.g. write code, architect a solution, or explain deeply). Make the rest "multiple-choice" questions.
+  const prompt = `Generate ${count} unique, highly professional, and challenging multiple-choice interview questions for the technology "${technology}" at difficulty "${difficulty}".
+IMPORTANT: Do NOT generate open-ended questions. All questions must be strictly "multiple-choice" with exactly 4 options. Make the questions deep, practical, and highly relevant to real-world scenarios.
 
 Return JSON matching exactly this shape:
 {"questions":[
