@@ -448,15 +448,15 @@ export default function TestPage() {
               </div>
 
               <div className="flex items-center gap-2 mt-4 max-w-sm">
-                 <input 
-                   type="text"
-                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
-                   placeholder="Yoki o'zingiz boshqa stack yozing..." 
-                   value={customTech}
-                   onChange={e => setCustomTech(e.target.value)}
-                   onKeyDown={e => e.key === 'Enter' && addCustomTech()}
-                 />
-                 <Button type="button" size="sm" onClick={addCustomTech}>Qo'shish</Button>
+                  <input 
+                    type="text"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
+                    placeholder="Yoki o&apos;zingiz boshqa stack yozing..." 
+                    value={customTech}
+                    onChange={e => setCustomTech(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addCustomTech()}
+                  />
+                  <Button type="button" size="sm" onClick={addCustomTech}>Qo&apos;shish</Button>
               </div>
 
               <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
